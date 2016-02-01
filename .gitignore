@@ -16,3 +16,4 @@ common/
 *.his
 *_hide
 *.jar
+*.class
