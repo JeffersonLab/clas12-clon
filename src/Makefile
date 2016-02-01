@@ -55,8 +55,8 @@ all:
 
 clean:
 	cd clonutil;                         $(MAKE) clean
-	- cd minuit;                         $(MAKE) clean
-	- cd cmon;                           $(MAKE) clean
+#	- cd minuit;                         $(MAKE) clean
+#	- cd cmon;                           $(MAKE) clean
 	- cd ipc;                            $(MAKE) clean
 	- cd infoserver;                     $(MAKE) clean
 	- cd timeline;                       $(MAKE) clean

@@ -22,7 +22,7 @@ include $(CLON)/src/Makefile.include
 CLON_FLAGS += -Imain -I$(CODA)/common/include -I$(CLON)/common/include \
 				-I$(RTHOME)/include
 
-JFLAGS = -classpath ./:$(CLON)/common/jar/clonutil.jar:$(CLAS)/jar/klg.jar:$(CLAS)/jar/symclass.zip:$(CLAS)/jar/symbeans.jar:$(CLAS)/jar/ss.jar
+JFLAGS = -classpath ./:$(CLON)/common/jar/clonutil.jar:$(IMPORT_JAR)/klg.jar:$(IMPORT_JAR)/symclass.zip:$(IMPORT_JAR)/symbeans.jar:$(IMPORT_JAR)/ss.jar
 
 
 LIBNAMES += $(globallib)/libtimeline.a

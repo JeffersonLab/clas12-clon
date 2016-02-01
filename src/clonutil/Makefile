@@ -26,7 +26,8 @@ CLON_FLAGS += -I./$(MAIN).s -I$(EPICS_BASE)/include \
 
 ###				-I$(RTHOME)/include \
 
-JFLAGS = -classpath $(CLAS)/jar/ss.jar
+# java sets
+JFLAGS = -classpath $(IMPORT_JAR)/ss.jar
 
 
 # 32bit !!!

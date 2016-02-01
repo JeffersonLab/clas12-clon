@@ -49,7 +49,7 @@ endif
 
 
 
-JFLAGS = -classpath $(CLON)/common/jar/clonutil.jar:$(CLAS)/jar/ss.jar
+JFLAGS = -classpath $(CLON)/common/jar/clonutil.jar:$(IMPORT_JAR)/ss.jar
 
 
 
