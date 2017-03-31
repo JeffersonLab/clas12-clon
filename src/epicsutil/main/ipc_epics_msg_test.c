@@ -33,7 +33,7 @@ main(int argc, char **argv)
 
 
     printf("SENDER %s\n",__FILE__);
-    epics_msg_sender_init("clastest0"/*getenv("EXPID")*/, "bla"); /* SECOND ARG MUST BE UNIQUE !!! */
+    epics_msg_sender_init(getenv("EXPID"), "bla"); /* SECOND ARG MUST BE UNIQUE !!! */
     while(1)
 	{
       /*status = epics_msg_send("channel_name","string",10,dd);*/

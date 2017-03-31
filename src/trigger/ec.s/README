@@ -1,0 +1,14 @@
+ECAL and PCAL reconstruction
+============================
+
+ecal
+ |
+ |-> ecstrip
+ |-> ecpeak
+ |-> ecpeaksort
+ |-> ecpeakcoord
+ |
+ |-> echit
+ |-> ecfrac
+ |-> eccorr
+

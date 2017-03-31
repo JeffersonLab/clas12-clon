@@ -296,7 +296,7 @@ get_epics_data()
   }
 
   /* get channels list from config file */
-  sprintf(fname,"run_log/%s/%s_log_end.cfg",expid,session);
+  sprintf(fname,"run_log/%s/%s_log_begin.cfg",expid,session);
   printf("run_log_begin: fname >%s<\n",fname);
   nepics = epics_parse_config_file(getenv("CLON_PARMS"), fname, MAXEPICS, epics);
 

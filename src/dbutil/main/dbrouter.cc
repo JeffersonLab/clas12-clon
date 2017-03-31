@@ -3,6 +3,8 @@
 
 /* how to run:
 cd $CLON_LOG/database; dbrouter -a clasprod -debug
+NOTE: directory 'backlog_dir' must exist and be writeable, or it should be permited to create
+that directory
 */
 
 //  dbrouter
@@ -112,6 +114,7 @@ int row_return_count = 0;
 
 
 
+
 // output log and error log files
 ofstream logfile;
 ofstream errfile;
@@ -207,7 +210,11 @@ main(int argc, char **argv)
   else
   {
     status = mkdir (backlog_dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    if(status!=0)exit (Exit_Error("Unable to create backlog dir."));
+    if(status!=0)
+	{
+      printf("Unable to create backlog directory >%s< - exit\n",backlog_dir);
+      exit(Exit_Error("Unable to create backlog dir."));
+	}
     sprintf(filename,"%s/%s",backlog_dir,backlog_file);
     ofstream msgout(filename,ios::out);
     if(!msgout)exit (Exit_Error("Unable to create backlog msgcount file."));
@@ -236,8 +243,8 @@ main(int argc, char **argv)
       msg.Destroy(); 
       server.Flush();
     }
-    if(server.NumQueued()<=0)process_backlog();   
-    if(done!=0)break;
+    if(server.NumQueued()<=0) process_backlog();   
+    if(done!=0) break;
   }
 
 
@@ -934,8 +941,9 @@ extern "C" {
 
 // allows sql routines to print to cout
 
-void coutprintf(const char *fmt, ...) {
-
+void
+coutprintf(const char *fmt, ...)
+{
   va_list args;
 
   va_start(args,fmt);
@@ -951,8 +959,9 @@ void coutprintf(const char *fmt, ...) {
 
 // allows sql routines to print to cerr
 
-void cerrprintf(const char *fmt, ...) {
-
+void
+cerrprintf(const char *fmt, ...)
+{
   va_list args;
 
   va_start(args,fmt);
@@ -968,8 +977,9 @@ void cerrprintf(const char *fmt, ...) {
 
 // allows sql routines to print to log file
 
-void logprintf(const char *fmt, ...) {
-
+void
+logprintf(const char *fmt, ...)
+{
   va_list args;
 
   va_start(args,fmt);
@@ -985,8 +995,9 @@ void logprintf(const char *fmt, ...) {
 
 // allows sql routines to print to error file
 
-void errprintf(const char *fmt, ...) {
-
+void
+errprintf(const char *fmt, ...)
+{
   va_list args;
 
   va_start(args,fmt);
@@ -1002,8 +1013,9 @@ void errprintf(const char *fmt, ...) {
 
 // allows TipcMsgPrint to print to errfile
 
-void msgerrprint(T_STR *fmt, ...) {
-
+void
+msgerrprint(T_STR *fmt, ...)
+{
   va_list args;
 
   va_start(args,fmt);

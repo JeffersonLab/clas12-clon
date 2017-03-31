@@ -14,8 +14,8 @@ using namespace std;
 
 
 
-char *session       = getenv("DD_NAME");
-char *msql_database = (char *)"clasdev";
+char *msql_database = getenv("EXPID");
+char *session       = getenv("SESSION");
 
 
 extern "C"{

@@ -187,28 +187,28 @@ epics_msg_callback(T_IPC_CONN conn, T_IPC_CONN_PROCESS_CB_DATA data, T_CB_ARG ar
   T_REAL8 d_double[MAX_ELEM];
   T_STR   d_string[MAX_ELEM];
 
-  //printf("\n\nepics_msg_callback reached\n");
+  if(debug) printf("\n\nepics_msg_callback reached\n");
 
   TipcMsg msg(data->msg);
 
   msg.Current(0);
-  //printf("numfields=%d\n",msg.NumFields());
-  //printf("destination >%s<\n",msg.Dest());
-  //printf("sender >%s<\n",msg.Sender());
+  if(debug) printf("numfields=%d\n",msg.NumFields());
+  if(debug) printf("destination >%s<\n",msg.Dest());
+  if(debug) printf("sender >%s<\n",msg.Sender());
 
   //printf("Message:\n");
 
   msg >> sender >> host >> user >> time;
-  //printf("  Sender >%s<\n",sender);
-  //printf("  Host >%s<\n",host);
-  //printf("  User >%s<\n",user);
-  //printf("  Unixtime >%d<\n",time);
+  if(debug) printf("  Sender >%s<\n",sender);
+  if(debug) printf("  Host >%s<\n",host);
+  if(debug) printf("  User >%s<\n",user);
+  if(debug) printf("  Unixtime >%d<\n",time);
 
   msg >> caname >> catype >> nelem;
 
-  //printf("  caname >%s<\n",caname);
-  //printf("  catype >%s<\n",catype);
-  //printf("  nelem >%d<\n",nelem);
+  if(debug) printf("  caname >%s<\n",caname);
+  if(debug) printf("  catype >%s<\n",catype);
+  if(debug) printf("  nelem >%d<\n",nelem);
   if(nelem > MAX_ELEM)
   {
     printf("WARN: nelem > %d, will set nelem=%d\n",MAX_ELEM,MAX_ELEM);
@@ -229,7 +229,7 @@ epics_msg_callback(T_IPC_CONN conn, T_IPC_CONN_PROCESS_CB_DATA data, T_CB_ARG ar
     printf("epics_msg_callback: ERROR: unknown catype >%s<\n",catype);
     return;
   }
-  //printf("\n");
+  /*printf("\n");*/
 
 
   /* check if we know the channel name */

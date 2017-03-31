@@ -71,6 +71,7 @@ static char old_run_status[80];
 
 // CLAS ipc
 #include <clas_ipc_prototypes.h>
+#include "epicsutil.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -153,6 +154,7 @@ void control_message_callback(T_IPC_CONN,
 void quit_callback(int sig);
 int get_run_number(char *database, char *session);
 char *get_run_status(char *database, char *session);
+char *get_run_operators(char *database, char *session);
 int create_header(int *p, int evlen, int &banksize,
                   int name1, int name2, int nrun, int nevnt, int nphys, int trig);
 int add_bank(int *p2ev, int evlen, 
@@ -404,7 +406,8 @@ bosbank_callback(T_IPC_CONN conn,
 		         T_IPC_CONN_PROCESS_CB_DATA data,
 		         T_CB_ARG arg)
 {  
-  int status;
+  int status, itmp;
+  unsigned char *dch[10], data_char[10][256];
   size_t len, ii, jj;
   int *p,*pstart,i,nused,banksize,nhead,buflen;
   T_STR msgtype;
@@ -454,6 +457,23 @@ bosbank_callback(T_IPC_CONN conn,
   /* sergey: get run state */
   run_status = get_run_status(database,session);
 
+
+
+
+  
+strcpy((char *)data_char[0],run_status);
+if(debug) printf("run_status: data_char[0]>%s<\n",data_char[0]);
+dch[0] = data_char[0];
+status = epics_msg_send("hallb_run_status","string",1,dch);
+
+
+/*
+strcpy((char *)data_char[0],get_run_operators(database,session));
+if(debug) printf("run_operators: data_char[0]>%s<\n",data_char[0]);
+dch[0] = data_char[0];
+status = epics_msg_send("hallb_run_operators","string",1,dch);
+*/
+
   if(strcasecmp(run_status,old_run_status)!=0)
   {
     printf("Run state changed from '%s' to '%s' (UNIX time=%d)\n",old_run_status,run_status,time(NULL));fflush(stdout);
@@ -465,10 +485,16 @@ bosbank_callback(T_IPC_CONN conn,
   {
     if(debug) printf("bosbank_callback: session '%s' is in state '%s', state is not 'active' - set nev_no_run=%d and return\n",
       session,run_status,nev_no_run);
+
+itmp = 0;
+status = epics_msg_send("hallb_daq_status","int",1,&itmp);
+
     nev_no_run++;
 	return;
   }
-  
+
+itmp = 1;
+status = epics_msg_send("ts_status_ttl","int",1,&itmp);
 
 
   // get run number
@@ -476,6 +502,8 @@ bosbank_callback(T_IPC_CONN conn,
   run = get_run_number(database,session);
   if(debug) printf("Obtained run numbr %d\n",run);
   run_number = run;
+
+status = epics_msg_send("hallb_run_number","int",1,&run_number);
 
 
   // get free event 

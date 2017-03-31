@@ -67,6 +67,8 @@ static int epicsToLocalTime  = 20*(365*24*60*60) + 5*(24*60*60) - (60*60); //?da
 
 myPV::myPV(const char *name, aitEnum type, int size)
 {
+  //cout << "myPV::myPV: name >" << name << "<, type " << type << ", size " << size << endl;
+
     myName  = strdup(name);
     myType  = type;
     if(size<=1)
@@ -94,7 +96,7 @@ myPV::myPV(const char *name, aitEnum type, int size)
 
     initFT();
 	
-    if(debug!=0) cout << "myPV constructor: name " << myName << ", type "<< myType << ", dim " 
+    if(debug!=0) cout << "myPV constructor: name >" << myName << "<, type "<< myType << ", dim " 
                       << myDimension << ", size " << myBound << endl;
 }
   

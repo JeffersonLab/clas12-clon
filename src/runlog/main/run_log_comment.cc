@@ -2,7 +2,7 @@
 /* run_log_comment.cc */
 
 /*
- Usage: run_log_comment -a clasprod [-s clashps] [- debug]
+ Usage: run_log_comment -a clasprod [-s clashps] [-fix] [-debug]
 */
 
 // for posix
@@ -55,8 +55,8 @@ static int filep               	 = 0;
 int run_number;
 
 
-#define MAXLABELS 32
-int nlabels;
+#define MAXLABELS 16
+int nlabels; /* the number of lines in .cfg file */
 char *labels[MAXLABELS];
 char *dbnames[MAXLABELS];
 char *values[MAXLABELS];
@@ -64,6 +64,11 @@ char *actions[MAXLABELS];
 Widget text[MAXLABELS];
 char ignore_run;
 
+int nlabels_previous; /* the number of lines in .txt file */
+char *labels_previous[MAXLABELS];
+char *values_previous[MAXLABELS];
+
+char vals[MAXLABELS][256];
 
 char *clonparms;
 char *expid;
@@ -80,6 +85,7 @@ void decode_command_line(int argc, char **argv);
 
 
 static int debug     = 0;
+static int fix       = 0;
 static int no_dbr    = 0;
 
 static int toggle_item_set;
@@ -116,7 +122,7 @@ main (int argc, char *argv[])
   Arg arg[20];
 
   Widget         button, radio_box, one, two;
-  int            i;
+  int            i, j;
   void           print_result(Widget, XtPointer, XtPointer);
   void           button_callback (Widget, XtPointer, XtPointer);
   Arg            args[8];
@@ -126,6 +132,8 @@ main (int argc, char *argv[])
   FILE           *fconf;
   char           temp[256];
   char           *p1, *p2;
+  char           infile[256];
+  FILE           *fin;
 
 
   // decode command line
@@ -135,7 +143,7 @@ main (int argc, char *argv[])
   expid = getenv("EXPID");
   session = getenv("SESSION");
 
-  /* file names */
+  /* config file name */
   sprintf(conffile,"%s/run_log/%s/%s_log_comment.cfg",clonparms,expid,session);
   printf("Use conffile >%s<\n",conffile);
 
@@ -146,9 +154,7 @@ main (int argc, char *argv[])
     exit(1);
   }
 
-
   nlabels = 0;
-
   while ((ch = getc(fconf)) != EOF)
   {
     if ( ch == '#' || ch == ' ' || ch == '\t' )
@@ -180,9 +186,51 @@ main (int argc, char *argv[])
       nlabels ++;
 	}
   }
-
   fclose(fconf);
 
+
+  /* if '-fix' flag is set, read previous comment values from the file */
+  if(fix)
+  {
+    sprintf(infile,"%s/run_log/%s/%s_log_comment.txt",clonparms,expid,session);
+    printf("Use infile >%s<\n",infile);
+    if((fin=fopen(infile,"r")) <= 0)
+    {
+      printf("ERROR: 'fix' is set, but cannot open input comment file >%s<\n",infile);
+    }
+    else
+	{
+
+      nlabels_previous = 0;
+      while ((ch = getc(fin)) != EOF)
+      {
+        if ( ch == '#' || ch == ' ' || ch == '\t' )
+        {
+          while (getc(fin) != '\n') {}
+        }
+        else if( ch == '\n' ) {}
+        else
+        {
+          ungetc(ch,fin);
+	      fgets(str_tmp, 255, fin);
+
+          p1=strchr(str_tmp,'"')+1;  p2=strchr(p1,'"');  
+          strncpy(temp,p1,p2-p1);   temp[p2-p1]=NULL;
+          labels_previous[nlabels_previous] = strdup(temp);
+
+          p1=strchr(p2+1,'"')+1;    p2=strchr(p1,'"');  
+          strncpy(temp,p1,p2-p1);   temp[p2-p1]=NULL;
+          values_previous[nlabels_previous] = strdup(temp);
+		  /*
+          printf("in[%d] >%s< >%s<\n",nlabels_previous,labels_previous[nlabels_previous],values_previous[nlabels_previous]);
+		  */
+          nlabels_previous ++;
+	    }
+      }
+
+      fclose(fin);
+	}
+  }
 
 
 
@@ -191,14 +239,9 @@ main (int argc, char *argv[])
   /* run number */
   run_number = get_run_number(expid, session);
 
-
-  printf("1\n");fflush(stdout);
-
-
-
   /* open gui */
   XtSetLanguageProc (NULL, NULL, NULL);
-  printf("2: argc=%d argv[0]=%s\n",argc,argv[0]);fflush(stdout);
+  printf("run_log_comment: argc=%d argv[0]=%s\n",argc,argv[0]);fflush(stdout);
   /*
   toplevel = XtVaAppInitialize (&app, "Demos", NULL, 0, &argc, argv, NULL,     
                                     sessionShellWidgetClass, NULL);
@@ -206,11 +249,7 @@ main (int argc, char *argv[])
   ac = 0;
   toplevel = XtAppInitialize ( &app, "Editor", NULL, 0, &argc, argv, NULL, arg, ac );
 
-  printf("3\n");fflush(stdout);
-
-
   rowcol = XmCreateRowColumn (toplevel, "rowcol", NULL, 0);
-  printf("4\n");fflush(stdout);
 
   for (i = 0; i < nlabels; i++)
   {
@@ -239,15 +278,38 @@ main (int argc, char *argv[])
     text[i] = XmCreateTextField (form, "text_w", args, n);
     XtManageChild (text[i]);
 
-    if(!strcmp(labels[i],"Operators"))
+    if(fix) /* have to fix previous comment: use previously typed values */
 	{
-      values[i] = get_run_operators("", "");
-      XmTextFieldSetString(text[i],values[i]);
+      for(j=0; j<nlabels_previous; j++)
+	  {
+        if(!strcmp(labels[i],labels_previous[j]))
+		{
+          //printf("txt [%d]>%s< = [%d]>%s<, using >%s<\n",i,labels[i],j,labels_previous[j],values_previous[j]);
+          XmTextFieldSetString(text[i],values_previous[j]);
+		  {
+		  char *txt;
+          txt = XmTextFieldGetString(text[i]);
+          //printf(" ttt[%d] >%s< >%s<\n",i,labels[i],txt);
+          XtFree (txt);
+		  }
+
+          break;
+		}
+	  }
 	}
-    else
+    else /* 'fix' not defined */
 	{
-	  XmTextFieldSetString(text[i],values[i]);
+      if(!strcmp(labels[i],"Operators"))
+	  {
+        values[i] = get_run_operators("", "");
+        XmTextFieldSetString(text[i],values[i]);
+	  }
+      else
+	  {
+	    XmTextFieldSetString(text[i],values[i]);
+	  }
 	}
+
 
     /* When user hits return, print the label+value of text_w */
     XtAddCallback (text[i], XmNactivateCallback, print_result, 
@@ -255,7 +317,7 @@ main (int argc, char *argv[])
     XtManageChild (form);
   }
 
-
+  //for(i=0; i<nlabels; i++) printf(" 111[%d] >%s<\n",i,labels[i]);
 
 
   /* radio button 'ignore the run' */
@@ -346,6 +408,7 @@ void button_callback (Widget w, XtPointer client_data, XtPointer call_data)
   }
   */
 
+
   printf("Button pushed - exit\n");
 
   sprintf(outfile,"%s/run_log/%s/%s_log_comment.txt",clonparms,expid,session);
@@ -356,24 +419,31 @@ void button_callback (Widget w, XtPointer client_data, XtPointer call_data)
     return;
   }
 
+  //for(i=0; i<nlabels; i++) printf(" 222[%d] >%s<\n",i,labels[i]);
+
   for(i=0; i<nlabels; i++)
   {
     txt = XmTextFieldGetString (text[i]);
-    printf("%s: %s\n",labels[i],txt);
-    strcpy(values[i],txt);
-    fprintf(fout,"%s: %s\n",labels[i],txt);
+    //printf(" out[%d] >%s<  >%s<\n",i,labels[i],txt);
+
+    strcpy(vals[i],txt);
+    fprintf(fout,"\"%s\"  \"%s\"\n",labels[i],txt);
+ 
     XtFree (txt);
   }
 
-  fprintf(fout,"Ignore this run: ");
+  //for(i=0; i<nlabels; i++) printf(" 333[%d] >%s<\n",i,labels[i]);
+
+  /* do NOT save ignore run flag into .txt */
+  /*fprintf(fout,"Ignore this run: ");*/
   if(toggle_item_set==2)
   {
-    fprintf(fout,"yes\n");
+    /*fprintf(fout,"yes\n");*/
     ignore_run = 'Y';
   }
   else
   {
-    fprintf(fout,"no\n");
+    /*fprintf(fout,"no\n");*/
     ignore_run = 'N';
   }
 
@@ -384,7 +454,6 @@ void button_callback (Widget w, XtPointer client_data, XtPointer call_data)
   create_sql(rlb_string);
 
   /* make entries */
-  printf("!!!!!!!!!!!!! debug=%d\n",debug);
   if(debug==0)
   {
     // connect to server
@@ -442,7 +511,7 @@ create_sql(strstream &rlb)
 
   for (i=0; i<nlabels; i++)
   {
-    rlb << comma << prime << values[i] << prime;
+    rlb << comma << prime << vals[i] << prime;
   }
 
   rlb << ")" << ends;
@@ -487,7 +556,7 @@ decode_command_line(int argc, char **argv)
   int i=1;
   const char *help="\nusage:\n\n  run_log_comment [-a application] [-u uniq_subj] [-i id_string]\n"
        "              [-debug] [-m msql_database]  [-s session] [-no_dbr]\n"
-       "              [-g gmd_time] file1 file2 ... \n\n\n";
+       "              [-g gmd_time] [-fix] file1 file2 ... \n\n\n";
 
   while(i<argc)
   {    
@@ -501,6 +570,10 @@ decode_command_line(int argc, char **argv)
     }
     else if (strncasecmp(argv[i],"-debug",6)==0){
       debug=1;
+      i=i+1;
+    }
+    else if (strncasecmp(argv[i],"-fix",6)==0){
+      fix=1;
       i=i+1;
     }
     else if (strncasecmp(argv[i],"-no_dbr",7)==0){

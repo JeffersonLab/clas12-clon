@@ -1,0 +1,57 @@
+
+/* ec_get_least_energy.cc */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <math.h>
+
+#include <iostream>
+using namespace std;
+
+#include "eclib.h"
+
+#undef DEBUG
+
+uint8_t
+ec_get_least_energy(ECPeak0 peak[NPEAK])
+{
+#pragma HLS PIPELINE
+#pragma HLS ARRAY_PARTITION variable=peak complete dim=1
+  uint8_t i, j;
+  uint16_t energy;
+  j = 0;
+  energy = peak[0].energy;
+  for(i=1; i<NPEAK; i++)
+  {
+    if(peak[i].energy < energy)
+	{
+      energy = peak[i].energy;
+      j=i;
+	}
+  }
+  return(j);
+}
+
+/*
+uint8_t
+ec_get_least_energy(ECPeak0 peak[NPEAK])
+{
+#pragma HLS PIPELINE
+#pragma HLS ARRAY_PARTITION variable=peak complete dim=1
+  uint8_t i, j;
+  uint16_t energy;
+  j = 0;
+  energy = peak[0].energy;
+  for(i=1; i<NPEAK; i++)
+  {
+    if(peak[i].energy < energy)
+	{
+      energy = peak[i].energy;
+      j=i;
+	}
+  }
+  return(j);
+}
+*/

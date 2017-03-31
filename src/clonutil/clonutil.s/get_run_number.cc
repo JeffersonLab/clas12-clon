@@ -9,7 +9,9 @@
 #define _POSIX_SOURCE_ 1
 #define __EXTENSIONS__
 
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 using namespace std;
 #include <strstream>

@@ -14,8 +14,8 @@ using namespace std;
 
 
 
-char *session        = getenv("clastest");
-char *mysql_database  = (char*)"clasrun";
+char *mysql_database = getenv("EXPID");
+char *session       = getenv("SESSION");
 
 extern "C" {
 

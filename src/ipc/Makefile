@@ -32,6 +32,7 @@ CLON_FLAGS += -I./$(MAIN).s -I$(CODA)/common/include -I$(CLON)/common/include \
 				-I$(RTHOME)/include
 
 LIBNAMES += $(globallib)/libclonutil.a
+LIBNAMES += $(globallib)/libepicsutil.a
 
 ### 32-bit !!!
 ifeq ("$(OSTYPE)","Linux")

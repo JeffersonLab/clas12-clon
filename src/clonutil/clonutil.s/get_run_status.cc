@@ -8,7 +8,9 @@
 #define _POSIX_SOURCE_ 1
 #define __EXTENSIONS__
 
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 using namespace std;
 #include <strstream>
@@ -30,7 +32,9 @@ get_run_status(char *mysql_database, char *session)
   MYSQL_RES *result;
   MYSQL_ROW row_out;
   ostrstream query;
-  
+  static char chres[1000];
+
+  chres[0] = '\0';
 
   // connect to mysql database
   connNum = dbConnect(getenv("MYSQL_HOST"), mysql_database);
@@ -53,10 +57,11 @@ get_run_status(char *mysql_database, char *session)
   }
   else
   {
+    strcat(chres,row_out[0]);
     mysql_free_result(result);
     dbDisconnect(connNum);
 
-    return(row_out[0]);
+    return(chres);
   }
 
 }

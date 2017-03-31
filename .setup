@@ -4,6 +4,9 @@
 
 if ($?CLAS) then
     setenv CLON $CLAS/clon
+else
+    echo "CLAS environment variable does not defined !!!"
+    exit 1
 endif
 
 setenv CLON_ROOT  ${CLON}/${OSTYPE}\_${MACHINE}
@@ -69,10 +72,22 @@ setenv CLAS_TOOLS /u/group/clas/tools
 # assign different clons to be EB, ER etc
 #
 
-setenv CLON_DAQ  clon10
 
-setenv CLON_EB  clondaq1
-setenv CLON_ER  clondaq2
+setenv CLON_DAQ clondaq4
+# CLON_DAQ must be in EPICS_CA_ADDR_LIST !!!
+setenv EPICS_CA_ADDR_LIST  "$EPICS_CA_ADDR_LIST "129.57.167.227
+# add dcrb2 temporary for dcrb test setup
+setenv EPICS_CA_ADDR_LIST  "$EPICS_CA_ADDR_LIST "129.57.86.65
+
+
+# HPS
+#setenv CLON_EB  clondaq3
+#setenv CLON_ER  clondaq5
+
+#PRAD
+setenv CLON_EB  clondaq6
+setenv CLON_ER  clondaq6
+
 setenv CLON_MON  clon00
 ###setenv CLON_MON0 clonmon0
 setenv CLON_MON0 clonusr3
@@ -104,6 +119,15 @@ setenv CLASSPATH "$CLASSPATH":"$IMPORT_JAR/swingall.jar"
 setenv CLASSPATH "$CLASSPATH":"$IMPORT_JAR/symbeans.jar"
 setenv CLASSPATH "$CLASSPATH":"$IMPORT_JAR/imaginary.jar"
 
+
+#epicsqt settings
+setenv QCAFRAMEWORK $CLON/src/epicsqt1.1.2_hide/ca_framework
+
+#ccdb setting
+setenv CCDB_HOME /usr/local/src/ccdb
+
+#rcdb setting
+setenv RCDB_HOME /usr/local/src/rcdb
 
 ##########################################################
 ##########################################################

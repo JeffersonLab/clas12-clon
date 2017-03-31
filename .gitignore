@@ -9,6 +9,7 @@ SunOS_sun4u/
 VXWORKS_ppc/
 Linux_armv7l/
 Linux_nios2/
+ModelSim/
 common/
 *.o
 *.so
@@ -17,3 +18,5 @@ common/
 *_hide
 *.jar
 *.class
+src/trigger_Aug_2_2016
+src/trigger_Nov_2_2016
