@@ -26,6 +26,7 @@
 #include "uttime.h"
 #include "prlib.h"
 #include "dclib.h"
+#include "sdageom.h"
 #include "sdadraw.h"
 #include "sdaevgen.h"
 #include "sdakeys.h"
@@ -91,24 +92,33 @@ trackpoints(int itr, int *n, int x[NPOINT], int y[NPOINT], int z[NPOINT])
    Called by SDA_MAIN
 */
 
-void
-cminit_()
-{
-  cminit();
-}
 
 void
 cminit()
 {
+  int isec;
+
+  /* get DC geometry */
+  for(isec=0; isec<1/*6*/; isec++)
+  {
+    cminit_geom(sdageom_.dc_wpmid[isec],sdageom_.dc_wdir[isec],sdageom_.dc_wlen[isec]);
+  }
+
+#if 0
   trconfig();   /* read 'cmon.config' file */
   l3init(9999); /* level 3 trigger initialization */
   prinit_();    /* pattern recognition initialization */
   trinit_();    /* track reconstruction initialization */
+#endif
 
   return;
 }
 
 
+
+
+
+#if 0
 
 /* event loop; to process 1 event set Nevents to 0 */
 /* use ifevb=0 if do not want cmloop() to read event */
@@ -418,3 +428,4 @@ a999:
 }
 
 
+#endif

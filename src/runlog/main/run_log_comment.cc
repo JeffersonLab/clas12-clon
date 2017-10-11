@@ -23,12 +23,8 @@ using namespace std;
 
 
 // for ipc
-#include <rtworks/cxxipc.hxx>
+#include "ipc_lib.h"
 
-// online and coda stuff
-extern "C" {
-#include <clas_ipc_prototypes.h>
-}
 
 
 /* motif */
@@ -92,13 +88,13 @@ static int toggle_item_set;
 
 
 // ipc connection
-TipcSrv &server=TipcSrv::Instance();
+IpcServer &server = IpcServer::Instance();
 
 
 void
 toggled (Widget widget, XtPointer client_data, XtPointer call_data)
 {
-  int which = (int) client_data;
+  int which = (int64_t) client_data; // sergey: was (int)
   XmToggleButtonCallbackStruct *state = (XmToggleButtonCallbackStruct *) call_data;
   /*
   printf ("%s: %s\n", XtName (widget),
@@ -457,13 +453,15 @@ void button_callback (Widget w, XtPointer client_data, XtPointer call_data)
   if(debug==0)
   {
     // connect to server
-    dbr_init(uniq_subj,application,id_string);
+    //dbr_init(uniq_subj,application,id_string);
+	server.init(getenv("EXPID"), NULL, NULL, (char *)"run_log_comment");
 
     // ship to database router
     insert_into_database(rlb_string.str());
 
     // close ipc connection
-    dbr_close();
+    //dbr_close();
+    server.close();
   }
   else
   {
@@ -529,6 +527,9 @@ insert_into_database(const char *entry)
   {
     printf("run_log_comment: QUERY >%s<\n",entry);
 
+    server << clrm << "json" << (char *)entry << endm;
+
+	/*
     // disable gmd timeout
     T_OPTION opt = TutOptionLookup((T_STR)"Server_Delivery_Timeout");
     TutOptionSetNum(opt,0.0);
@@ -544,6 +545,7 @@ insert_into_database(const char *entry)
     server.Send(dbr);
     server.Flush();
     dbr_check((double) gmd_time);
+	*/
   }
 
   return;

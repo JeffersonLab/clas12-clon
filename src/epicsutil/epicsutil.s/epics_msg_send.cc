@@ -11,13 +11,12 @@
 #define _POSIX_SOURCE_ 1
 #define __EXTENSIONS__
 
-// for smartsockets
-#include <rtworks/cxxipc.hxx>
 
+#define USE_ACTIVEMQ
 
-// CLAS ipc
-#include <clas_ipc_prototypes.h>
 #include "epicsutil.h"
+#include "ipc_lib.h"
+
 
 // misc
 using namespace std;
@@ -26,6 +25,7 @@ using namespace std;
 #include <iostream>
 #include <iomanip>
 
+static IpcServer &server = IpcServer::Instance();
 
 int
 epics_msg_sender_init(char *application, char *unique_id)
@@ -37,16 +37,7 @@ epics_msg_sender_init(char *application, char *unique_id)
   // synch with stdio
   ios::sync_with_stdio();
 
-  /*
-  // set ipc parameters and connect to ipc system
-  if(!TipcInitThreads())
-  {
-    cerr << "Unable to init IPC thread package" << endl;
-    exit(EXIT_FAILURE);
-  }
-  */
-
-  ipc_set_application(application);
+  //ipc_set_application(application);
   /*
   ipc_set_user_status_poll_callback(status_poll_callback);
   ipc_set_quit_callback(quit_callback);
@@ -56,7 +47,7 @@ epics_msg_sender_init(char *application, char *unique_id)
 
   printf("epics_msg_sender_init: unique_id set to >%s<\n",unique_id);
 
-  status = ipc_init(unique_id,"epics_msg_sender");
+  status = server.init(getenv("EXPID"), NULL, NULL, (char *)"epics_msg_send", NULL, "*");
   if(status<0)
   {
     cerr << "\n?Unable to connect to server...probably duplicate unique id\n"
@@ -64,11 +55,10 @@ epics_msg_sender_init(char *application, char *unique_id)
 	 << "   ...only one connection allowed!" << endl << endl;
     return(EXIT_FAILURE);
   }
-
+  
   // post startup message
   temp << "Process startup: ipc_epics_msg starting in " << application << ends;
   status = insert_msg("ipc_epics_msg","online",unique_id,"status",0,"START",0,temp.str());
-  
 
   // flush output to log files, etc
   fflush(NULL);
@@ -82,11 +72,11 @@ int
 epics_msg_send(const char *caname, const char *catype, int nelem, void *data)
 {
   int ii;
-  T_STR  domain   = (char*) "epics_msg_send";
-  T_STR  user     = getenv("USER");
-  T_INT4 msgtime = time(NULL);
-  T_STR  host     = getenv("HOST");
-  
+
+  char   *domain   = (char*) "epics_msg_send";
+  char   *user     = getenv("USER");
+  int32_t msgtime = time(NULL);
+  char   *host     = getenv("HOST");
 
   /* params check */
   if(strlen(host)==0)
@@ -109,39 +99,44 @@ epics_msg_send(const char *caname, const char *catype, int nelem, void *data)
 
 
   // get ref to server
-  TipcSrv &server=TipcSrv::Instance();
-
+  //TipcSrv &server = TipcSrv::Instance();
   // form and send message
-  TipcMsg msg((char*)"epics");
+  //TipcMsg msg((char*)"epics");
+  //msg.Dest((char*)"epics_msg"); /* receiver will subscribe for that with '/' in front of it !!! */
+  //msg.Sender((char*)caname); 
 
-  msg.Dest((char*)"epics_msg"); /* receiver will subscribe for that with '/' in front of it !!! */
-  msg.Sender((char*)caname); 
+
+  /* clear message and send 'epics' keyword */
+  server << clrm << "epics";
 
   /* standard section */
-  msg << (T_STR)  domain
-      << (T_STR)  host
-      << (T_STR)  user
-      << (T_INT4) msgtime;
+  server << domain << host << user << msgtime;
 
 	/* epics section */
-  msg << (T_STR)  caname
-      << (T_STR)  catype
-      << (T_INT4) nelem;
+  server << caname << catype << nelem;
 
-  if( !strcmp(catype,"int"))         for(ii=0; ii<nelem; ii++) msg << (T_INT4)((int *)data)[ii];
-  else if( !strcmp(catype,"uint"))   for(ii=0; ii<nelem; ii++) msg << (T_INT4)((int *)data)[ii];
-  else if( !strcmp(catype,"float"))  for(ii=0; ii<nelem; ii++) msg << (T_REAL4)((float *)data)[ii];
-  else if( !strcmp(catype,"double")) for(ii=0; ii<nelem; ii++) msg << (T_REAL8)((double *)data)[ii];
-  else if( !strcmp(catype,"uchar"))  for(ii=0; ii<nelem; ii++) msg << (T_UCHAR)((char *)data)[ii];
-  else if( !strcmp(catype,"string")) for(ii=0; ii<nelem; ii++) msg << (T_STR)((char **)data)[ii];
+  if( !strcmp(catype,"int"))         for(ii=0; ii<nelem; ii++) server << (int32_t)((int *)data)[ii];
+  else if( !strcmp(catype,"uint"))   for(ii=0; ii<nelem; ii++) server << (int32_t)((int *)data)[ii];
+  else if( !strcmp(catype,"float"))  for(ii=0; ii<nelem; ii++) server << (float)((float *)data)[ii];
+  else if( !strcmp(catype,"double")) for(ii=0; ii<nelem; ii++) server << (double)((double *)data)[ii];
+  else if( !strcmp(catype,"uchar"))  for(ii=0; ii<nelem; ii++) server << (char)((char *)data)[ii];
+  else if( !strcmp(catype,"string")) for(ii=0; ii<nelem; ii++) server << (char *)(((char **)data)[ii]);
+
   else
   {
     printf("epics_msg_send: ERROR: unknown catype >%s<\n",catype);
     return(-1);
   }
 
-  server.Send(msg);
-  server.Flush();
+  server << endm;
 
   return(0);
+}
+
+int
+epics_msg_close()
+{
+  int status;
+
+  status = server.close();
 }

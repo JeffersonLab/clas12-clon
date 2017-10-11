@@ -1,5 +1,9 @@
 
 /* trigtest2.cc */
+/*
+ECAL: ./Linux_i686/bin/trigtest2 /work/boiarino/data/c.evio
+PCAL: ./Linux_i686/bin/trigtest2 /work/boiarino/data/z.evio
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,8 +16,9 @@
 
 #define USE_ECAL
 //#define USE_PCAL
+//#define USE_HTCC
 
-#define USE_ROOT
+//#define USE_ROOT
 
 #ifdef USE_ROOT
 #include "TFile.h"
@@ -33,7 +38,7 @@ using namespace ccdb;
 
 #define ENCORR 10000. /* sergey: clara applies 1/10000 to ADC values */ 
 
-#define MAXEVENTS /*59*/1000
+#define MAXEVENTS 10000
 
 #define MAXBUF 10000000
 unsigned int buf[MAXBUF];
@@ -45,7 +50,7 @@ static double inFBuf[25][NHITS];
 
 string create_connection_string()
 {
-  /** creates example connection string to ccdb demo sqlite database*/
+  /* creates example connection string to ccdb demo sqlite database*/
   string clon_parms(getenv("CLON_PARMS"));
   return string("sqlite://" + clon_parms + "/clas12.sqlite");
 }
@@ -54,12 +59,18 @@ string create_connection_string()
 #include "evioBankUtil.h"
 #include "prlib.h"
 
+/*
 #ifdef USE_ECAL
 #include "eclib.h"
 #endif
 #ifdef USE_PCAL
 #include "pclib.h"
 #endif
+#ifdef USE_HTCC
+#include "htcclib.h"
+#endif
+*/
+#include "trigger.h"
 
 #ifdef USE_PCAL
 #define ndalz  ndalzPC
@@ -67,6 +78,7 @@ string create_connection_string()
 #define ndalz2 ndalz2PC
 #define dalz2  dalz2PC
 #endif
+
 #define MAXDALZ 100
 extern int ndalz;
 extern int dalz[MAXDALZ];
@@ -74,21 +86,29 @@ extern int ndalz2;
 extern int dalz2[MAXDALZ];
 
 const int option[3] = {0,0,0};
-unsigned short threshold[3] = {1,1,3};
+uint16_t threshold[3] = {1,1,3};
+uint16_t nframes = 0;
+uint16_t dipfactor = EC_STRIP_DIP_FACTOR;
+uint16_t dalitzmin = EC_DALITZ_MIN;
+uint16_t dalitzmax = EC_DALITZ_MAX;
+uint16_t nstripmax = 0;
 
 int
 main(int argc, char **argv)
 {
   int run = 11; /* sergey: was told to use 11, do not know why .. */
-  int ii, ind, fragtag, fragnum, tag, num, nbytes, ind_data, nhitp, nhiti, nhito, nhitp_offline, nhiti_offline, nhito_offline;
+  int ii, ind, fragtag, fragnum, tag, num, nbytes, ind_data;
+  int nhitp, nhiti, nhito, nhitp_offline, nhiti_offline, nhito_offline;
   float tmp;
+
+#if 0
   /*PCAL*/
   ECHit hitp[NHIT];
   ECHit hitp_offline[NHIT];
   /*ECAL*/
   ECHit hiti[NHIT], hito[NHIT];
   ECHit hiti_offline[NHIT], hito_offline[NHIT];
-
+#endif
 
 #ifdef USE_ROOT
   /* Create a new ROOT binary machine independent file.
@@ -168,11 +188,16 @@ main(int argc, char **argv)
 
   int runnum = 0;
 
+#if 0
 #ifdef USE_ECAL
   ecinit(runnum, option[0], option[1], option[2]);
 #endif
 #ifdef USE_PCAL
   pcinit(runnum, option[0], option[1], option[2]);
+#endif
+#ifdef USE_HTCC
+  htccinit(runnum, option[0], option[1], option[2]);
+#endif
 #endif
 
   char filename[1024];
@@ -220,18 +245,28 @@ main(int argc, char **argv)
     nhiti = 0;
     nhito = 0;
 
+#ifdef USE_HTCC
+    nhith = htcc(bufptr, threshold, 0, hith); /* htcc */
+    cout<<"AFTER htcc: nhith="<<+nhith<<endl;
+#endif
+
 #ifdef USE_PCAL
     nhitp = pcl3(bufptr, threshold, 0, hitp); /* pcal */
-    for(ii=0; ii<ndalz; ii++) dalitz->Fill(dalz[ii]);
-    for(ii=0; ii<ndalz2; ii++) dalitz2->Fill(dalz2[ii]);
+    //for(ii=0; ii<ndalz; ii++) dalitz->Fill(dalz[ii]);
+    //for(ii=0; ii<ndalz2; ii++) dalitz2->Fill(dalz2[ii]);
     cout<<"AFTER ecl3: nhitp="<<nhitp<<endl;
 #endif
+
 #ifdef USE_ECAL
+    eclib(bufptr, threshold, nframes, dipfactor, dalitzmin, dalitzmax, nstripmax);
+#if 0
     nhiti = ecl3(bufptr, threshold, 0, hiti); /* ecal inner */
     cout<<"AFTER ecl3(inner): nhiti="<<+nhiti<<endl;
     nhito = ecl3(bufptr, threshold, 1, hito); /* ecal outer */
     cout<<"AFTER ecl3(outer): nhito="<<+nhito<<endl;
 #endif
+#endif
+
 
 
 
@@ -437,6 +472,8 @@ main(int argc, char **argv)
 	}
 #endif
 
+
+#if 0
     printf("\n\nHITS (bank 1643) =======================================================================\n");
 	{
       char *label[22] = {"", "sector", "layer ", "energy", "time  ","","","","","","","","","","","","","","", "coordX", "coordY", "coordZ"};
@@ -497,7 +534,6 @@ main(int argc, char **argv)
 	}
 
 
-/*#ifdef USE_ECAL*/
     /* fills hitx_offline using bank 1643 */
     nhitp_offline = 0;
     nhiti_offline = 0;
@@ -535,11 +571,10 @@ main(int argc, char **argv)
         nhito_offline ++;
 	  }
 	}
-/*#endif*/
+#endif
 
-
+#if 0
 #ifdef USE_ROOT
-/*#ifdef USE_ECAL*/
 
 	cout<<endl<<"trigtest2: nhitp_offline="<<nhitp_offline<<endl;
     for(ii=0; ii<nhitp_offline; ii++)
@@ -665,7 +700,7 @@ main(int argc, char **argv)
     }
 	*/
 
-/*#endif*/
+#endif
 #endif
 
   } /*while*/

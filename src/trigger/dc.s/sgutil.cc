@@ -18,7 +18,7 @@ using namespace std;
 #endif
 
 
-#define DEBUG
+//#define DEBUG
 
 /*xc7vx550tffg1158-1*/
 
@@ -135,6 +135,24 @@ Word16Print(int num, word16_t w)
 }
 
 void
+Word96Print(int num, word96_t w)
+{
+  int i;
+  ap_uint<1> test;
+  printf("%3d> ",num);
+  for(i=95; i>=0; i--)
+  {
+    if(!((i+1)%16) && i<95) printf(" ");
+    test = (w>>i) & 1;
+    if(test) printf("X");
+    else     printf("-");
+  }
+  printf("\n");
+
+  return;
+}
+
+void
 Word112Print(int num, word112_t w)
 {
   int i;
@@ -161,6 +179,24 @@ Word128Print(int num, word128_t w)
   for(i=(128-1); i>=0; i--)
   {
     if(!((i+1)%16) && i<127) printf(" ");
+    test = (w>>i) & 1;
+    if(test) printf("X");
+    else     printf("-");
+  }
+  printf("\n");
+
+  return;
+}
+
+void
+Word224Print(int num, word224_t w)
+{
+  int i;
+  ap_uint<1> test;
+  printf("%3d> ",num);
+  for(i=223; i>=0; i--)
+  {
+    if(!((i+1)%16) && i<223) printf(" ");
     test = (w>>i) & 1;
     if(test) printf("X");
     else     printf("-");
@@ -360,7 +396,7 @@ SegmentSearch2(word112_t in[6], word112_t out[NOFFSETS])
 
 
 void
-SegmentSearch31(word16_t in[6], word1_t out[NOFFSETS])
+SegmentSearch31(word16_t in[6], word1_t out[NOFFSETS], ap_uint<3> hit_threshold)
 {
 #pragma HLS ARRAY_PARTITION variable=in complete dim=1
 #pragma HLS ARRAY_PARTITION variable=out complete dim=1
@@ -381,7 +417,7 @@ SegmentSearch31(word16_t in[6], word1_t out[NOFFSETS])
   /****************/
 
 #ifdef DEBUG_NO
-  printf("\n16BIT DATA (n=%d):\n",n);
+  printf("\n16BIT DATA:\n");
   for(i=NLAY-1; i>=0; i--) Word16Print(i,in[i]);
 #endif
 
@@ -392,27 +428,44 @@ SegmentSearch31(word16_t in[6], word1_t out[NOFFSETS])
   data[0] = (word1_t)in[0](MAXSHIFT,MAXSHIFT);
 
   stat = 0;
-  //cout<<endl;
+#ifdef DEBUG_NO
+  cout<<endl;
+#endif
   for(j=0; j<MAXSEGM; j++)
   {
+#ifdef DEBUG_NO
+    cout<<"#segm="<<+j<<" itmp[5..1]="<<+shift[j][4]<<","<<+shift[j][3]<<","<<+shift[j][2]<<","<<+shift[j][1]<<","<<+shift[j][0]<<" MAXSHIFT="<<+MAXSHIFT<<endl;
+#endif
     for(i=5; i>0; i--) /* loop over layers 5-1 */
     {
       itmp = shift[j][i-1];
       data[i] = ((in[i]) >> itmp)&((ap_uint<1>)1);
-
-      //Word112Print(i,in[i]);
-	  //cout<<"j="<<+j<<" i="<<+i<<" itmp="<<+itmp<<" n1="<<+n1<<" data="<<+data[i]<<endl;
-
+#ifdef DEBUG_NO
+      Word16Print(i,(((in[i]<<MAXSHIFT)>>itmp)) );
+#endif
     }
-	//cout<<endl;
-
+#ifdef DEBUG_NO
+    Word16Print(0,in[0]);
+	for(i=0; i<20-MAXSHIFT; i++) printf(" ");
+    printf("^\n");
+#endif
 
     /*3.48/2/1/0%/0%/~0%(364)/~0%(2471)*/
 
     sum = data[0]+data[1]+data[2]+data[3]+data[4]+data[5];
-    if(sum>3) out[angle[j]] |= 1;
-
-
+#ifdef DEBUG_NO
+    cout<<"??? sum="<<sum<<" data = "<<data[0]<<" "<<data[1]<<" "<<data[2]<<" "<<data[3]<<" "<<data[4]<<" "<<data[5]<<endl;
+#endif
+    if(sum>=hit_threshold)
+	{
+#ifdef DEBUG_NO
+      cout<<"!!! sum="<<sum<<endl;
+#endif
+      out[angle[j]] |= 1;
+	}
+#ifdef DEBUG_NO
+	cout<<endl;
+#endif
 
     /*3.36/3/2/0%/0%/~0%(671)/~0%(2290)*/
 /*
@@ -453,14 +506,16 @@ SegmentSearch31(word16_t in[6], word1_t out[NOFFSETS])
 /* 3.48/ 4/ 3/0%/0%/3%/28% ii=3 */
 /* 3.48/ 5/ 4/0%/0%/2%/20% ii=4 */
 
+/*     /  /  / %/ %/ %/ % ii=32 */
+
 /* 3.48/15/14/0%/0%/2%/6% II=14 */
 
 void
-SegmentSearch3(word112_t in[6], word112_t out[NOFFSETS])
+SegmentSearch3(word112_t in[6], word112_t out[NOFFSETS], ap_uint<3> hit_threshold)
 {
 #pragma HLS ARRAY_PARTITION variable=in complete dim=1
 #pragma HLS ARRAY_PARTITION variable=out complete dim=1
-#pragma HLS PIPELINE II=4
+#pragma HLS PIPELINE II=32
   int i;
   int8_t n;
   word1_t outout[NOFFSETS];
@@ -469,14 +524,14 @@ SegmentSearch3(word112_t in[6], word112_t out[NOFFSETS])
 
 #ifdef DEBUG
   printf("\nIN DATA:\n");
-  for(i=NLAY-1; i>=0; i--) {printf("        ");Word112Print(i,in[i]);}
+  for(i=NLAY-1; i>=0; i--) {printf("         ");Word112Print(i,in[i]);}
 #endif
 
   for(i=0; i<NLAY; i++)
   {
-	inin[i](127,120) = 0;
-    inin[i](119,8) = in[i]; /*assuming MAXSHIFT=8*/
-    inin[i](7,0) = 0;
+	inin[i](127,112+MAXSHIFT) = 0;
+    inin[i](111+MAXSHIFT,MAXSHIFT) = in[i];
+    inin[i](MAXSHIFT-1,0) = 0;
   }
 
 #ifdef DEBUG
@@ -489,6 +544,9 @@ SegmentSearch3(word112_t in[6], word112_t out[NOFFSETS])
 
   for(n=0; n<112; n++)
   {
+#ifdef DEBUG_NO
+	printf("nnn=%d\n",n);
+#endif
     for(i=0; i<6; i++) ininin[i] = inin[i]>>n;
     /*
     for(i=0; i<6; i++)
@@ -497,7 +555,7 @@ SegmentSearch3(word112_t in[6], word112_t out[NOFFSETS])
       ininin[i] = inin[i];
 	}
     */
-    SegmentSearch31(ininin, outout);
+    SegmentSearch31(ininin, outout, hit_threshold);
     for(i=0; i<NOFFSETS; i++) out[i] |= ((word112_t)outout[i])<<n;
   }
 
@@ -505,10 +563,9 @@ SegmentSearch3(word112_t in[6], word112_t out[NOFFSETS])
   printf("\nOUTPUT ARRAY:\n");
   for(i=(NOFFSETS-1); i>=0; i--)
   {
-    printf("        ");
+    printf("         ");
     Word112Print(i-8,out[i]);
   }
-
 #endif
 
   return;
@@ -529,7 +586,7 @@ SegmentSearch3(word112_t in[6], word112_t out[NOFFSETS])
 /* region (2 superlayers) */
 
 ap_uint<1>
-RegionSearch1(word112_t in1[6], word112_t in2[6], word112_t out[NOFFSETS])
+RegionSearch1(word112_t in1[6], word112_t in2[6], word112_t out[NOFFSETS], ap_uint<3> hit_threshold)
 {
 #pragma HLS ARRAY_PARTITION variable=in1 complete dim=1
 #pragma HLS ARRAY_PARTITION variable=in2 complete dim=1
@@ -539,8 +596,8 @@ RegionSearch1(word112_t in1[6], word112_t in2[6], word112_t out[NOFFSETS])
   int i, j;
   ap_uint<1> ret;
 
-  SegmentSearch3(in1, out1);
-  SegmentSearch3(in2, out2);
+  SegmentSearch3(in1, out1, hit_threshold);
+  SegmentSearch3(in2, out2, hit_threshold);
 
   for(i=0; i<NOFFSETS; i++)
   {

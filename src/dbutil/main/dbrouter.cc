@@ -2,9 +2,8 @@
 // rtlink -cxx -o dbrouter dbrouter.o dbrsql.o -L/usr/lib/mysql/ -lmysqlclient -L/usr/local/clas/devel_new/SunOS_sun4u/lib -lipc -lutil
 
 /* how to run:
-cd $CLON_LOG/database; dbrouter -a clasprod -debug
-NOTE: directory 'backlog_dir' must exist and be writeable, or it should be permited to create
-that directory
+cd $CLON_LOG/database; dbrouter -a clasrun -debug
+NOTE: directory 'backlog_dir' must exist and be writeable, or it should be permited to create that directory
 */
 
 //  dbrouter
@@ -38,6 +37,7 @@ that directory
 //  upgrade to mysql 13-jun-2006, ejw
 //
 
+#define USE_ACTIVEMQ
 
 //-------------------------------------------------------------------
 
@@ -55,9 +55,6 @@ that directory
 #include <sys/types.h>
 #include <sys/stat.h>
 
-// for smartsockets
-#include <rtworks/cxxipc.hxx>
-
 
 // misc 
 
@@ -65,8 +62,33 @@ that directory
 using namespace std;
 #include <strstream>
 #include <fstream>
-#include <iostream>
 #include <iomanip>
+
+#include <string>
+#include <iostream>
+
+
+#ifdef USE_ACTIVEMQ
+
+#include "ipc_lib.h"
+#include "MessageActionControl.h"
+#include "MessageActionJSON.h"
+
+#define T_STR (char *)
+
+#else
+/*********************************************************/
+/*activemq: replace by ActiveMQ header files             */
+
+// for smartsockets
+#include <rtworks/cxxipc.hxx>
+
+// ipc prototypes, message types, etc.
+#include <clas_ipc_prototypes.h>
+
+/*********************************************************/
+/*********************************************************/
+#endif
 
 
 
@@ -74,8 +96,8 @@ using namespace std;
 #include <dbrouter.h>
 
 
-// ipc prototypes, message types, etc.
-#include <clas_ipc_prototypes.h>
+
+
 
 #define MIN(a,b)  ( (a) < (b) ? (a) : (b) )
 
@@ -84,7 +106,7 @@ char *application        = (char*)"clastest";
 char *uniq_name          = (char*)"dbrouter";
 char *dbhost             = (char*)"clondb1";
 char *dbuser             = (char*)"clasrun";
-char *database           = (char*)"clasprod";
+char *database           = (char*)"clasprodtest";
 char *backlog_dir_name   = (char*)"./backlog_%s";
 char *backlog_file       = (char*)"msgcount.dat";
 int debug            	 = 0;
@@ -120,20 +142,33 @@ ofstream logfile;
 ofstream errfile;
 
 
-// prototypes
-extern "C"{
-int insert_msg(const char *name, const char *facility, const char *process, const char *msgclass, 
-	       int severity, const char *status, int code, const char *text);
-}	
+
 void reset_int4ptr_count();
 
 
+/*
 // debug message log file
 TipcMsgFile *debug_msg_file;
+*/
 
+
+
+#ifdef USE_ACTIVEMQ
+
+IpcServer &server = IpcServer::Instance();
+
+#else
+/*********************************************************/
+/*activemq: replace by ActiveMQ server reference if needed */
 
 // ref to server (connection created later)
 TipcSrv &server=TipcSrv::Instance();
+
+/*********************************************************/
+/*********************************************************/
+#endif
+
+
 
 
 //-------------------------------------------------------------------
@@ -143,10 +178,8 @@ main(int argc, char **argv)
 {
   time_t start=time(NULL);
   char filename[132];
-  TipcMsg msg;
   int status;
 
-  
   // decode command line arguments
   decode_command_line(argc,argv);
 	
@@ -171,21 +204,48 @@ main(int argc, char **argv)
           << "  using database: " << database << "  on " <<  ctime(&start) << endl;
 
 
+  /*
   // open message log file if in debug mode
   if(debug!=0) {
     sprintf(filename,"%s.debug",uniq_string);
     debug_msg_file = new TipcMsgFile(filename,T_IPC_MSG_FILE_CREATE_WRITE);
   }
+  */
 
+
+
+
+#ifdef USE_ACTIVEMQ
+  // connect to ipc server
+  server.init(getenv("EXPID"), NULL, NULL, "*", NULL, "*");
+
+  MessageActionControl   *control = new MessageActionControl((char *)"dbrouter",debug);
+  MessageActionJSON         *json = new MessageActionJSON();
+  server.addActionListener(control);
+  server.addActionListener(json);
+
+#else
+/*********************************************************/
+/*activemq: replace by ActiveMQ                          */
 
   // init ipc
-  ipc_set_application(application);
+  ipc_set_application(application);   // topic "application.xxx.xxx"
   ipc_set_quit_callback(quit_callback);
-  ipc_set_disconnect_mode("warm");
+  /*ipc_set_disconnect_mode("warm");*/
   ipc_set_user_status_poll_callback(status_poll_data);
-  ipc_init(uniq_name,"Database Router");
+  ipc_init(uniq_name,"Database Router"); // actual connection
   server.Flush();
 
+/*********************************************************/
+/*********************************************************/
+#endif
+
+
+
+#ifdef USE_ACTIVEMQ
+#else
+/*********************************************************/
+/*activemq: replace by ActiveMQ                          */
 
   // create mt objects
   TipcMt request_mt((char*)"dbr_request");
@@ -199,8 +259,16 @@ main(int argc, char **argv)
     exit (Exit_Error("Unable to create process callback for request messages"));
   }
 
+/*********************************************************/
+/*********************************************************/
+#endif
 
 
+
+
+
+
+  
   // create backlog dir and file if they don't exist
   sprintf(backlog_dir, backlog_dir_name, application);
   if (chdir(backlog_dir)==0)
@@ -221,21 +289,38 @@ main(int argc, char **argv)
     msgout << 0;
     msgout.close();
   }
+  
 
 
   // post startup message
   sprintf(temp,"Process startup:   %15s  in application:  %s",uniq_name,application);
+  printf("insert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msg - begin\n");
   status = insert_msg("dbrouter","dbrouter",uniq_name,"status",0,"START",0,temp);
+  printf("insert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msg - end\n");
 
-
+  
   // process prexisting messages in backlog dir
   process_backlog();
+  
+
+
+
 
 
   //  process incoming messages until quit command or signal arrives
   //  only process messages after incoming queue is empty (i.e. all msg safely stored on disk)
-  while(1==1)
+  while(done==0)
   {
+
+
+
+#ifdef USE_ACTIVEMQ
+    sleep(1);
+#else
+/*********************************************/
+/*activemq: replace by ActiveMQ              */
+
+    TipcMsg msg;
     msg=server.Next(T_TIMEOUT_FOREVER);
     if(msg!=NULL)
     {
@@ -243,13 +328,23 @@ main(int argc, char **argv)
       msg.Destroy(); 
       server.Flush();
     }
+
     if(server.NumQueued()<=0) process_backlog();   
-    if(done!=0) break;
+	
+/*********************************************/
+/*********************************************/
+#endif
+
+
+
+    done = control->getDone();
+    //printf("done=%d\n",done);
   }
 
 
   // done
   dbrouter_done();
+
   exit(EXIT_SUCCESS);
 }
 
@@ -257,24 +352,28 @@ main(int argc, char **argv)
 //--------------------------------------------------------------------------------
 
 
+
+#ifndef USE_ACTIVEMQ
 void
 receive_database_request(
 	T_IPC_CONN                 conn,
 	T_IPC_CONN_DEFAULT_CB_DATA data,
 	T_CB_ARG                   arg)
 {
-  TipcMsg msg(data->msg);
   int num = 0;
   char filename[200];
   char sender[200];
+
   
 
   // count messages received
   msg_count++;
 
 
+  /*
   // dump message to log file if in debug mode
   if(debug!=0)*debug_msg_file << msg;
+  */
 
 
   // get next sequence number from file, increment, then write back out
@@ -304,12 +403,29 @@ receive_database_request(
   }
 
 
+
+
+
+
+/*********************************************/
+/*activemq: replace by ActiveMQ              */
+
   // form full message file name, including seq number, userprop, and sender
   // change / in sender to \, then invert later
+  TipcMsg msg(data->msg);
   strcpy(sender,msg.Sender());
   for (int i=0; i<strlen(sender); i++) if(sender[i]=='/') sender[i]='\\';
   sprintf(filename,"%s/dbrouter.%06d:%d:%s", backlog_dir, num, msg.UserProp(), &(sender[1]));
 
+/*********************************************/
+/*********************************************/
+
+
+
+
+
+/*********************************************/
+/*activemq: replace by ActiveMQ              */
 
   // copy message to backlog area in its own file
   TipcMsgFile msgfile(filename, T_IPC_MSG_FILE_CREATE_WRITE);
@@ -320,28 +436,32 @@ receive_database_request(
   }
   else
   {
+    /* PLACE MESSAGE INTO BACKUP FILE */
     msgfile << msg;
   }
 
+/*********************************************/
+/*********************************************/
+
+
   return;
 }
+#endif
+
 
 
 //--------------------------------------------------------------------------------
 
-  
+
+
 void
 process_backlog(void)
 {
   DIR *dir;
   struct dirent *file;
   struct stat statbuf;
-  T_IPC_MSG_FILE msgfile;
-  T_IPC_MSG msg;
-  T_STR ptr;
-  T_STR sender;
-  T_INT4 userprop;
   int NumFile = 0;
+
   
 
   // open backlog directory
@@ -441,9 +561,26 @@ process_backlog(void)
       continue;
     }
  
+    printf("opening backup file >%s<\n",Fullfilename);
+
+
+
+
+
+#ifndef USE_ACTIVEMQ
+/*********************************************/
+/*activemq: replace by ActiveMQ              */
+
+    /* READING AND PROCESSING BACKUP'ED MESSAGES */
+
+    T_IPC_MSG_FILE msgfile;
+    T_IPC_MSG msg;
+    T_STR ptr;
+    T_STR sender;
+    T_INT4 userprop;
 
     /* open file...bug in c++ stuff, must use c api instead */
-    msgfile=TipcMsgFileCreate(Fullfilename, T_IPC_MSG_FILE_CREATE_READ);
+    msgfile = TipcMsgFileCreate(Fullfilename, T_IPC_MSG_FILE_CREATE_READ);
     if(msgfile==NULL)   /* garbage in file */
 	{
       //printf("garbage in file ..\n");
@@ -489,7 +626,10 @@ process_backlog(void)
 	    exit(Exit_Error("Sender set failed on msg obj."));
       }
      
+
+
       /* process obj, then delete file if successful, otherwise break out of loop..always delete message */
+      //printf("processing message from file ..\n");
       if(process_message(msg_obj)==DBR_OK)
       {
 	    if (!TipcMsgDestroy(msg))
@@ -513,6 +653,13 @@ process_backlog(void)
 
       reset_int4ptr_count();  /* kludge */
     }
+
+/*********************************************/
+/*********************************************/
+#endif
+
+
+
     delete Fullfilename;
   }
 
@@ -534,24 +681,36 @@ process_backlog(void)
 }
 
 
+
+
+
+
+
+
+
 //-------------------------------------------------------------------
 
-
+#ifndef USE_ACTIVEMQ
 dbr_code
 process_message(T_IPC_MSG msg)
 {
+  int i;
+  sql_code status;
+  time_t now;
+
+  // count processed messages
+  proc_count++;
+
+
+
+/*********************************************/
+/*activemq: replace by ActiveMQ              */
+
   T_STR sqlstring;
   T_INT4 id,maxrow,userprop,nfield,msgmtnum;
   T_STR sender;
   T_IPC_MT msgtype;
   T_IPC_FT fieldtype;
-  int i;
-  sql_code status;
-  time_t now;
-
-
-  // count processed messages
-  proc_count++;
 
   // get incoming transaction id
   if (!TipcMsgGetUserProp(msg,&userprop))exit(Exit_Error("GetUserProp failure."));
@@ -593,10 +752,28 @@ process_message(T_IPC_MSG msg)
     {
       status=SQL_BAD_FORMAT;
       sql_trans_count++;
+
+
+
+
+	  /****************************/
+	  /* process incoming message */
+	  /****************************/
       if ((!TipcMsgNextInt4(msg,&maxrow)) || (!TipcMsgNextStr(msg,&sqlstring))) continue;
-      maxrow=MIN(maxrow,DBR_MAX_ROWS_TO_RETURN);
-      count_sqltype(sqlstring);
-      status=sql_process_sql(int(maxrow),sqlstring,reply.Message());
+      maxrow = MIN(maxrow,DBR_MAX_ROWS_TO_RETURN);
+	  //if(debug!=0) cout<<"sqlstring: "<<sqlstring<<endl;
+
+      count_sqltype(sqlstring); /* just for statistics */
+      status = sql_process_sql(int(maxrow),sqlstring,reply.Message()); /*see dbrsql.cc*/
+
+	  /****************************/
+	  /****************************/
+	  /****************************/
+
+
+
+
+
       if(status!=SQL_COMMIT)break;
     }
     if((i>3)&&(status!=SQL_COMMIT))status=SQL_ROLLBACK;  // just in case...
@@ -622,13 +799,31 @@ process_message(T_IPC_MSG msg)
 
   }
 
+/*********************************************/
+/*********************************************/
+
+
+
+
+
+
+
+  /*
   // dump reply into debug file if requested
   if(debug!=0)*debug_msg_file << reply;
+  */
 
   // transaction fails and no reply sent if connection to database was lost
   // otherwise pack user property, send msg, and flush
   if(sql_connect_check()==SQL_OK)
   {
+
+
+
+
+/*********************************************/
+/*activemq: replace by ActiveMQ              */
+
     if (!reply.UserProp(T_INT4(((status&0xFF)<<8)|id)))
 	{
       exit (Exit_Error("Error in packing userprop to reply msg."));
@@ -638,6 +833,11 @@ process_message(T_IPC_MSG msg)
       exit (Exit_Error("Msg send failure."));
 	}
     return(DBR_OK);
+
+/*********************************************/
+/*********************************************/
+
+
 
   }
   else
@@ -649,11 +849,11 @@ process_message(T_IPC_MSG msg)
 
   // reply mt and msg objects destroyed by going out of scope
 }
-
+#endif
 
 //-------------------------------------------------------------------
 
-
+#ifndef USE_ACTIVEMQ
 void
 check_status(int status, T_IPC_MSG msg)
 {
@@ -668,21 +868,33 @@ check_status(int status, T_IPC_MSG msg)
     rollback_count++;
     sql_rollback();
     errfile << "\nRollback performed on msg: " << endl;
+/*********************************************/
+/*activemq: replace by ActiveMQ              */
     if (!TipcMsgPrint(msg,T_OUT_FUNC(msgerrprint))) 
+/*********************************************/
+/*********************************************/
       exit (Exit_Error("Error in Printing message."));
     break;
 
   case SQL_BAD_FORMAT: // illegal format
     err_count++; 
     errfile << "\nReceived bad message format:" << endl;
+/*********************************************/
+/*activemq: replace by ActiveMQ              */
     if (!TipcMsgPrint(msg,T_OUT_FUNC(msgerrprint)))
+/*********************************************/
+/*********************************************/
       exit (Exit_Error("Error in Printing message."));
     break;
 
   case SQL_ERROR:  // general SQL error
     err_count++;
     errfile << "Error found in msg: " << endl;
+/*********************************************/
+/*activemq: replace by ActiveMQ              */
     if (!TipcMsgPrint(msg,T_OUT_FUNC(msgerrprint)))
+/*********************************************/
+/*********************************************/
       exit (Exit_Error("Error in Printing message."));
     errfile << endl << endl << endl;
     break;
@@ -693,11 +905,16 @@ check_status(int status, T_IPC_MSG msg)
 
   default: // unknown status
     errfile << "\nUnknown status return from sql_process_xxx: " << status << endl;
+/*********************************************/
+/*activemq: replace by ActiveMQ              */
     if (!TipcMsgPrint(msg,T_OUT_FUNC(msgerrprint)))
+/*********************************************/
+/*********************************************/
       exit (Exit_Error("Error in Printing message."));
     break;
   }
 }
+#endif
 
 
 //-------------------------------------------------------------------
@@ -766,24 +983,35 @@ dbrouter_done(void)
   errfile.close();
 
 
+  /*
   // close debug message log file if open
   if(debug!=0)delete debug_msg_file;
+  */
 
+#ifdef USE_ACTIVEMQ
+  // close ipc connection
+  server.close(); 
+#else
   // close ipc connection
   ipc_close();
+#endif
 
   // post shutdown message
   sprintf(temp,"Process shutdown:  %15s  in application %s",uniq_name, application);
-  status = insert_msg("dbrouter","dbrouter",uniq_name,"status",0,"STOP",0,temp);
+  //status = insert_msg("dbrouter","dbrouter",uniq_name,"status",0,"STOP",0,temp);
 }
 
 
 //-------------------------------------------------------------------
 
 
+#ifndef USE_ACTIVEMQ
 void
 status_poll_data(T_IPC_MSG msg)
 {
+
+/*********************************************/
+/*activemq: replace by ActiveMQ              */
 
   TipcMsgAppendStr(msg,(char*)"Database");
   TipcMsgAppendStr(msg,database);
@@ -840,7 +1068,11 @@ status_poll_data(T_IPC_MSG msg)
   TipcMsgAppendStr(msg,(char*)"");
   TipcMsgAppendStr(msg,(char*)"");
 
+/*********************************************/
+/*********************************************/
+
 }
+#endif
 
 
 //-------------------------------------------------------------------
@@ -895,6 +1127,7 @@ decode_command_line(int argc, char **argv)
 //-------------------------------------------------------------------
 
 
+#ifndef USE_ACTIVEMQ
 // counts type of sql transaction in sql string
 void
 count_sqltype(T_STR sqlstring)
@@ -923,6 +1156,7 @@ count_sqltype(T_STR sqlstring)
   }
 
 }
+#endif
 
 //-------------------------------------------------------------------
 
@@ -1014,7 +1248,7 @@ errprintf(const char *fmt, ...)
 // allows TipcMsgPrint to print to errfile
 
 void
-msgerrprint(T_STR *fmt, ...)
+msgerrprint(const char *fmt, ...)
 {
   va_list args;
 

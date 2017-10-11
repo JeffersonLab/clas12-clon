@@ -28,29 +28,72 @@ include $(CLON)/src/Makefile.include
 
 
 
+#RCDB
+CLON_FLAGS += -std=c++11 -DRCDB_MYSQL -I/usr/include/mysql -I$(RCDB_HOME)/cpp/include
+
+
+#CLON_FLAGS += -I./$(MAIN).s -I$(CODA)/common/include -I$(CLON)/common/include \
+#				-I$(RTHOME)/include
+
 CLON_FLAGS += -I./$(MAIN).s -I$(CODA)/common/include -I$(CLON)/common/include \
-				-I$(RTHOME)/include
+				-I$(IPC_HOME)/src/main
 
-LIBNAMES += $(globallib)/libclonutil.a
-LIBNAMES += $(globallib)/libepicsutil.a
+#epics
+#CLON_FLAGS += -I$(EPICS_BASE)/include
+#ifeq ("$(OSTYPE)","SunOS")
+#  CFLAGS = -g -DSunOS -DOSTYPE="SunOS" -DSunOS_sun4u
+#  CLON_FLAGS += -I$(EPICS_BASE)/include/os/solaris
+#endif
+#ifeq ("$(OSTYPE)","Linux")
+#  CLON_FLAGS += -I$(EPICS_BASE)/include -I$(EPICS_BASE)/include/os/Linux -I$(EPICS_BASE)/src/catools
+#endif
+#epics
 
-### 32-bit !!!
-ifeq ("$(OSTYPE)","Linux")
-  LIBNAMES += $(CODA)/Linux_i686/lib/libet.a
-  LIBNAMES += $(CODA)/Linux_i686/lib/libevio.a
-  LIBNAMES += $(CODA)/Linux_i686/lib/libmysql4.1.20.a
-  LIBNAMES += -L$(RTHOME)/lib/i86_linux -lrtipc -lrtipcl -lrtutil -lrtcxxipc50
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+  CLON_FLAGS += -I/usr/local/include/apr-1
 else
-  LIBNAMES += $(CODA_LIB)/libet.a
-  LIBNAMES += $(CODA_LIB)/libevio.a
-  LIBNAMES += $(CODA_LIB)/libmysql4.1.20.a
-  LIBNAMES += -L$(RTHOME)/lib/$(OSTYPE_MACHINE) -lrtipc -lrtipcl -lrtutil -lrtcxxipc50
+  CLON_FLAGS += -I/usr/include/apr-1
 endif
 
 
 
 
-JFLAGS = -classpath $(CLON)/common/jar/clonutil.jar:$(IMPORT_JAR)/ss.jar
+#epics
+#LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libcas.a
+#LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libca.a
+#LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libgdd.a
+#LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libCom.a
+#epics
+
+
+LIBNAMES += $(CLON)/$(OSTYPE_MACHINE)/lib/libclonutil.a
+#LIBNAMES += $(CLON)/$(OSTYPE_MACHINE)/lib/libepicsutil.a
+LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
+LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libet.a
+LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libevio.a
+
+
+
+#LIBNAMES += -L$(RTHOME)/lib/i86_linux -lrtipc -lrtipcl -lrtutil -lrtcxxipc50
+
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += /usr/local/lib/libapr-1.so
+  LIBNAMES += -luuid -lrt -lcrypt -lssl -lcrypto -ldl -lz
+  LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
+else
+  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += -lapr-1
+  LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
+  LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
+endif
+
+
+
+
+
+
+#######JFLAGS = -classpath $(CLON)/common/jar/clonutil.jar:$(IMPORT_JAR)/ss.jar
 
 
 

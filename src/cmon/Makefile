@@ -38,11 +38,12 @@ endif
 CLON_FLAGS += -I./$(MAIN).s \
 			-I./sda.inc -I./sim.inc -I./recsis.inc \
 			-I$(CODA)/common/include \
+			-I$(CODA)/src/codatt/codatt.s \
 			-D_POSIX_PTHREAD_SEMANTICS
 
-LIBNAMES += $(CODA_LIB)/libbosio.a
+#LIBNAMES += $(CODA_LIB)/libbosio.a
 LIBNAMES += $(CODA_LIB)/libcodatt.a
-LIBNAMES += $(globallib)/libminuit.a
+#LIBNAMES += $(globallib)/libminuit.a
 
 LIBNAMES += $(X11LIBS)
 LIBNAMES += $(CERNLIBS)

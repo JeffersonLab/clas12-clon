@@ -4,10 +4,12 @@
 */
 
 
+
 #define NOFFSETS 16
 #define NWIRES 112
 
 #define DEBUG
+#define DEBUG1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,11 +25,17 @@
 
 #ifdef USE_PCAL
 #include "pclib.h"
-static uint8_t iview[3] = {84,77,77}; /* the number of strips in different views */
+static uint8_t iview[3] = {USTRIPS,VSTRIPS,WSTRIPS}; /* the number of strips in different views */
+static int l2v[3] = {0,2,1}; /* layer to view */
 #else
 #include "eclib.h"
 static uint8_t iview[3] = {NSTRIP,NSTRIP,NSTRIP}; /* the number of strips in different views */
+static int l2v[3] = {0,1,2}; /* layer to view */
 #endif
+
+
+
+
 
 #define ABS(x) ((x) < 0 ? -(x) : (x))
 
@@ -168,16 +176,19 @@ static double xdiff, ydiff, xdelta[3], xx1, xx2, yy1, yy2;
 static double viewx0[3], viewy0[3], viewx1[3], viewy1[3], viewangle[3], viewcosa[3], viewsina[3];
 static double dxy = 5.0;
 
-/*ECAL*/
+/*adc data*/
 static ECStrip strip[2][3][NSTRIP];
 static ECPeak peak[3][NPEAK];
 static uint8_t nhits;
-static ECHit hit[NHIT];
+static ECHit hitdraw[NHIT];
+/*adc data*/
 
+/*trig data*/
 static int npeaks_trig[NLAYER]; 
 static TrigECPeak peaks_trig[NLAYER][NPEAKMAX];
 static int nhits_trig[2];
-static TrigECHit hits_trig[2][NHITMAX];
+static TrigECHit hits_trig[2][NHIT];
+/*trig data*/
 
 typedef struct drawobject *DrawObjectPtr;
 typedef struct drawobject
@@ -194,6 +205,13 @@ static int ndobj = 0;
 DrawObject dobj[NDOBJ];
 
 
+/* PCAL geometry */
+#ifdef USE_PCAL
+#define ANGLE1 62.889
+#define ANGLE2 54.222
+#endif
+
+
 void
 place_pmt(int view, double x0pmt, double y0pmt, double h1, double h2, double angle, double xdelta,
           double x[5], double y[5], int level)
@@ -203,8 +221,8 @@ place_pmt(int view, double x0pmt, double y0pmt, double h1, double h2, double ang
 
 #ifdef USE_PCAL
   /* 0 degree - vertical up, negative - rotate right, positive - rotate left */
-  if(view==0)      angle = -(90.0+62.9)*M_PI/180.0;
-  else if(view==1) angle = -(90.0-54.2)*M_PI/180.0;
+  if(view==0)      angle = -(90.0+ANGLE1)*M_PI/180.0;
+  else if(view==1) angle = -(90.0-ANGLE2)*M_PI/180.0;
   else if(view==2) angle = 90*M_PI/180.0;
 #else
   angle = angle - 150.0*M_PI/180.0;
@@ -242,9 +260,10 @@ place_line(int view, double x0pmt, double y0pmt, double angle, double xdelta, do
   int ii;
   double xx[2], yy[2], cosa, sina;
 
+
 #ifdef USE_PCAL
-  if(view==0)      angle = (180.0-(90.0+62.9))*M_PI/180.0;
-  else if(view==1) angle = (180.0-(90.0-54.2))*M_PI/180.0;
+  if(view==0)      angle = (180.0-(90.0+ANGLE1))*M_PI/180.0;
+  else if(view==1) angle = (180.0-(90.0-ANGLE2))*M_PI/180.0;
   else if(view==2) angle = (180.+90)*M_PI/180.0;
 #else
   angle = angle + 30.0*M_PI/180.0;
@@ -270,7 +289,7 @@ place_line(int view, double x0pmt, double y0pmt, double angle, double xdelta, do
 
 
 int
-draw_ecstrips(TCanvas *fCanvas, double energy[NHIT+1][3][NSTRIP], int maxen)
+draw_ecstrips(TCanvas *fCanvas, double energy[NHIT+1][3][NSTRIP], int maxhits)
 {
 #if 1
   int ii, jj, kk, view, color;
@@ -284,26 +303,34 @@ draw_ecstrips(TCanvas *fCanvas, double energy[NHIT+1][3][NSTRIP], int maxen)
   char txt[128];
 #endif
 
-  /*
-  printf("draw_ecstrips reached\n");fflush(stdout);
-return(0);
-  */
+
+#ifdef DEBUG
+  printf("draw_ecstrips reached\n\n");fflush(stdout);
+  for(ii=0; ii<maxhits; ii++) for(jj=0; jj<3; jj++) for(kk=0; kk<NSTRIP; kk++) printf("draw_ecstrips: energy[%2d][%2d][%2d]=%f\n",ii,jj,kk,energy[ii][jj][kk]);
+  printf("\n");
+#endif
 
 #if 1
-  /* found max energy */
-  emax = 0.;
-
   /* find maximum energy */
-  for(kk=0; kk<maxen; kk++) for(jj=0; jj<3; jj++) for(ii=0; ii<NSTRIP; ii++) if(emax < energy[kk][jj][ii]) emax = energy[kk][jj][ii];
+  emax = 0.;
+  for(kk=0; kk<maxhits; kk++) for(jj=0; jj<3; jj++) for(ii=0; ii<NSTRIP; ii++) if(emax < energy[kk][jj][ii]) emax = energy[kk][jj][ii];
+#ifdef DEBUG
+  printf("draw_ecstrips: emax=%f\n",emax);
+#endif
+
+  /* if all strips are zero, set emax for drawing purpose */
+  if(emax < 0.00000001) emax = 1.0;
+
 #endif
 
 #if 1
   /* normalize energy (divide 'ydiff' as needed!) */
-  for(kk=0; kk<maxen; kk++) for(jj=0; jj<3; jj++) for(ii=0; ii<NSTRIP; ii++) energy[kk][jj][ii] = ( energy[kk][jj][ii] * (ydiff/5.) )/ emax;
+  for(kk=0; kk<maxhits; kk++) for(jj=0; jj<3; jj++) for(ii=0; ii<NSTRIP; ii++) energy[kk][jj][ii] = ( energy[kk][jj][ii] * (ydiff/5.) )/ emax;
 #endif
 
   if(fCanvas>0)
   {
+
 
 #if 1
 
@@ -312,7 +339,7 @@ return(0);
       color = 1;
 
 
-      for(ii=0; ii<iview[view]/*NSTRIP*/; ii++)
+      for(ii=0; ii<iview[view]; ii++)
 	  {
 
         x0pmt[view][ii] = xx1 + xdelta[view]/2. + xdelta[view]*ii;
@@ -341,7 +368,7 @@ return(0);
 
 
 		/* draw corrected energies */
-        for(kk=0; kk<maxen-1; kk++)
+		for(kk=0; kk<(maxhits-1); kk++)
 		{
           place_pmt(view,x0,y0,0.0/*endraw*/,energy[kk+1][view][ii],viewangle[view],xdelta[view],x[ii],y[ii],kk+1);
           ISPLCI(color+1+kk);
@@ -367,6 +394,7 @@ return(0);
 
   }
 
+  return(0);
 }
 
 
@@ -391,7 +419,7 @@ draw_init()
   /*
 
                           x
-                         x62.9deg
+                         x62.9deg=ANGLE1
                         x
                        x
                       x   |
@@ -405,7 +433,7 @@ draw_init()
               x           |
              x            | 
             x             |
-           x54.2deg       |              62.9deg
+           x54.2deg=ANGLE2|              62.9deg=ANGLE1
     beam  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     here      len1=cm      432.7cm
 
@@ -421,7 +449,7 @@ draw_init()
   xx2 = xmax - dxy; /*not used*/
   yy2 = ymax - dxy; /*not used*/
 
-  h = 432.7*sin(54.2*M_PI/180.0);
+  h = 432.7*sin(ANGLE2*M_PI/180.0);
   len1 = sqrt( pow(432.7,2.) - pow(h,2.) );
 
   xdiff = 432.7;
@@ -455,20 +483,20 @@ draw_init()
     else if(view==1)
 	{
 	  /* rotation */
-      angle = (180. - 62.9) * M_PI / 180.0;
+      angle = (180. - ANGLE1) * M_PI / 180.0;
       cosa = cos(angle);
       sina = sin(angle);
       xdelta0 = 394.2 / (double)iview[view];
       x0 = x1; /* end of previous view */
       y0 = y1; /* end of previous view */
+	  printf("++++++++++++++ h=%f len1=%f -> %f %f\n",h,len1,x1,y1);
       x1 = dxy+len1;
       y1 = y0+h;
-	  printf("++++++++++++++ h=%f len1=%f -> %f %f\n",h,len1,x1,y1);
 	}
     else if(view==2)
 	{
 	  /* rotation */
-      angle = -(180. - 54.2) * M_PI / 180.0;
+      angle = -(180. - ANGLE2) * M_PI / 180.0;
       cosa = cos(angle);
       sina = sin(angle);
       xdelta0 = 432.7 / (double)iview[view];
@@ -528,6 +556,8 @@ draw_init()
 
 
 
+/* draw hits, clusters etc for one event */
+
 void
 ecaldrawevent(TCanvas *fCanvas)
 {
@@ -556,48 +586,101 @@ ecaldrawevent(TCanvas *fCanvas)
 
   draw_init();
 
+
+
+
+
+
   /* copy initial energies for drawing */
-  for(ii=0; ii<3; ii++) for(jj=0; jj<NSTRIP; jj++) energy[0][ii][jj] = strip[io][ii][jj].energy;
+  for(ii=0; ii<3; ii++) for(jj=0; jj<NSTRIP; jj++)
+  {
+    energy[0][ii][jj] = (double)strip[io][ii][jj].energy;
+#ifdef DEBUG
+    printf("===== [%2d][%2d][%2d] %f\n",0,ii,jj,energy[0][ii][jj]);
+#endif
+  }
 
+
+
+
+#ifdef DEBUG
   cout<<"11: nhits="<<+nhits<<endl;fflush(stdout);
-
+#endif
 
   for(kk=0; kk<nhits; kk++)
   {
     int color = kk+2;
     double x0pmt, y0pmt, x0, y0, xl[2], yl[2];
+	int ipeak[3];
 
-    printf("22\n");fflush(stdout);
-#ifdef USE_PCAL	
-    for(ii=0; ii<3; ii++) coord[ii] = (double)hit[kk].coord[ii]/(double)fview[ii];
-#else
-    for(ii=0; ii<3; ii++) coord[ii] = (double)hit[kk].coord[ii]/8.0;
+#ifdef USE_PCAL
+#ifdef DEBUG
+	cout<<"||||||||||||||||||||||||||||||||||||| fview="<<(double)fview[0]<<" "<<(double)fview[1]<<" "<<(double)fview[2]<<endl;
 #endif
-    cout<<"ecaldrawevent: hit["<<+kk<<"]: energy="<<+hit[kk].energy<<" coord="<<+coord[0]<<" "<<+coord[1]<<" "<<+coord[2]<<endl;
+    for(ii=0; ii<3; ii++) coord[ii] = (double)((uint32_t)hitdraw[kk].coord[ii])/(double)fview[ii];
+#else
+    for(ii=0; ii<3; ii++) coord[ii] = (double)hitdraw[kk].coord[ii]/8.0;
+#endif
 
-    printf("33\n");fflush(stdout);
+#ifdef DEBUG
+    cout<<"ecaldrawevent: hitdraw["<<+kk<<"]: energy="<<+hitdraw[kk].energy<<" coord="<<+coord[0]<<" "<<+coord[1]<<" "<<+coord[2]<<endl;
+#endif
 
     /* loop over 3 views calculating correction for every strip*/
     ENERGY = 0.0;
+    ipeak[0] = U4(hitdraw[kk].ind);
+    ipeak[1] = V4(hitdraw[kk].ind);
+    ipeak[2] = W4(hitdraw[kk].ind);
+
     for(jj=0; jj<3; jj++)
 	{
       int energy0, energy1, strip1, stripn; /* peak values */
 
 
-#if 0
-	  /*HAVE TO REDO, NO SUCH ELEMENTS IN STRUCTURE !!!*/
-      energy0 = peak[jj][hit[kk].peak1[jj]].energy;
-      strip1  = peak[jj][hit[kk].peak1[jj]].strip1;
-      stripn  = peak[jj][hit[kk].peak1[jj]].stripn;
-      energy1 = hit[kk].corren[jj];
-      cout<<"  ecaldrawevent: hit["<<+kk<<"] strips["<<+jj<<"]: strip1="<<+strip1<<", stripn="<<+stripn<<", energy0="<<+energy0<<", energy1="<<+energy1<<endl;
+
+
+
+
+
+	  /* correction */
+      energy0 = peak[jj][ipeak[jj]].energy;
+      strip1  = peak[jj][ipeak[jj]].strip1;
+      stripn  = peak[jj][ipeak[jj]].stripn;
+      energy1 = hitdraw[kk].enpeak[jj];
+#ifdef DEBUG
+      cout<<"  ecaldrawevent: hitdraw["<<+kk<<"] strips["<<+jj<<"]: strip1="<<+strip1<<", stripn="<<+stripn<<", energy0="<<+energy0<<", energy1="<<+energy1<<endl;
+#endif
+
 	  for(nn=0; nn<NSTRIP; nn++) corenergy[nn] = 0.0;
       for(nn=strip1; nn<strip1+stripn; nn++)
 	  {
         corenergy[nn] = (double)strip[io][jj][nn].energy * ((double)energy1) / ((double)energy0); /* for drawing */
+#ifdef DEBUG
         cout<<"    ecaldrawevent: strip["<<+jj<<"]["<<+nn<<"] energy = "<<+strip[io][jj][nn].energy<<" -> corrected strip energy = "<<+corenergy[nn]<<endl;
-	  }
 #endif
+	  }
+
+
+
+	  /* no correction 
+      strip1 = 0;
+      stripn = 36;
+      for(nn=strip1; nn<strip1+stripn; nn++)
+	  {
+        corenergy[nn] = energy[kk][jj][nn];
+	  }
+	  */
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -605,8 +688,13 @@ ecaldrawevent(TCanvas *fCanvas)
 
 #if 1
 
+      /**************/
+      /* draw lines */
+
       x0pmt = xx1 + xdelta[jj]*coord[jj];
-      cout << "++++++++++++++++++++ " << +hit[kk].coord[jj] << endl;
+#ifdef DEBUG
+      cout << "++++++++++++++++++++ " << +hitdraw[kk].coord[jj] << endl;
+#endif
       y0pmt = yy1;
 	  //printf("XY3: %f %f\n",x0pmt,y0pmt);
 
@@ -659,7 +747,7 @@ ecaldrawevent(TCanvas *fCanvas)
         double y = (A1*C2 - A2*C1)/det
 	*/
 
-#if 1
+#if 0
 
     /* draw circle here */
     DET = A[0] * B[1] - A[1] * B[0];
@@ -678,7 +766,7 @@ ecaldrawevent(TCanvas *fCanvas)
 	YY = (Y[0]+Y[1]+Y[2])/3.;
 
     circle = new TArc(XX,YY,0.1);
-	printf("OBJ circle=0x%08x\n",circle);
+	//printf("OBJ circle=0x%08x\n",circle);
     circle->SetLineColor(color);
     circle->Draw();
             dobj[ndobj].obj = circle;
@@ -692,13 +780,9 @@ ecaldrawevent(TCanvas *fCanvas)
   }
 
 
-
-  printf("44\n");fflush(stdout);
-
   /* draw */
   draw_ecstrips(fCanvas, energy, nhits+1 /* +1 ?????????*/);
-  
-  printf("55\n");fflush(stdout);
+
 
   return;
 }
@@ -707,120 +791,574 @@ ecaldrawevent(TCanvas *fCanvas)
 
 
 #ifdef USE_PCAL
+
+#define ecfadcs pcfadcs
+#define ecstrip_in  pcstrip_in
+#define ecstrip_out pcstrip_out
+#define ecpeak_in pcpeak_in
+#define echit_in pchit_in
+
 #define ecstrips pcstrips
-#define ecstrip pcstrip
-#define ecpeak pcpeak
+#define ecstripspersistence pcstripspersistence
+#define ecstripsfanout pcstripsfanout
+#define ecpeak1 pcpeak1
+#define ecpeak2 pcpeak2
+#define ecpeakzerosuppress pcpeakzerosuppress
 #define ecpeaksort pcpeaksort
 #define ecpeakcoord pcpeakcoord
+#define ecpeakfanout pcpeakfanout
 #define echit pchit
-#define ecfrac pcfrac
+#define ecenergyfanout pcenergyfanout
+#define eccoordfanout pccoordfanout
+#define ecfrac1 pcfrac1
+#define ecfrac2 pcfrac2
+#define ecfrac3 pcfrac3
 #define eccorr pccorr
+#define echitsortin pchitsortin
+#define echitsort1 pchitsort1
+#define echitsort2 pchitsort2
+#define echitsort3 pchitsort3
+#define echitsort4 pchitsort4
+#define echitsort5 pchitsort5
+#define echitsortout pchitsortout
+#define echitfanout pchitfanout
+
 #endif
 
 
-#define THRESHOLD1 ((uint16_t)1)
-#define THRESHOLD2 ((uint16_t)1)
-#define THRESHOLD3 ((uint16_t)3)
+//#define TEST_BENCH
+#ifdef TEST_BENCH
+#define DALITZ_MIN 0
+#define DALITZ_MAX 0xFFF
+#endif
+
+/*
+#define DALITZ_MIN 700
+#define DALITZ_MAX 1000
+*/
+#define DALITZ_MIN 0
+#define DALITZ_MAX 0xFFF
+
+
+/*
+TEST[0][0]=0
+TEST[0][1]=1
+TEST[0][2]=1
+TEST[0][3]=1
+TEST[0][4]=1
+TEST[0][5]=1
+TEST[0][6]=1
+TEST[0][7]=1
+TEST[1][0]=1
+TEST[1][1]=0
+TEST[1][2]=1
+TEST[1][3]=1
+TEST[1][4]=1
+TEST[1][5]=1
+TEST[1][6]=1
+TEST[1][7]=1
+TEST[2][0]=1
+TEST[2][1]=1
+TEST[2][2]=0
+TEST[2][3]=1
+TEST[2][4]=1
+TEST[2][5]=1
+TEST[2][6]=1
+TEST[2][7]=1
+TEST[3][0]=1
+TEST[3][1]=1
+TEST[3][2]=1
+TEST[3][3]=0
+TEST[3][4]=1
+TEST[3][5]=1
+TEST[3][6]=1
+TEST[3][7]=1
+TEST[4][0]=1
+TEST[4][1]=1
+TEST[4][2]=1
+TEST[4][3]=1
+TEST[4][4]=0
+TEST[4][5]=1
+TEST[4][6]=1
+TEST[4][7]=1
+TEST[5][0]=1
+TEST[5][1]=1
+TEST[5][2]=1
+TEST[5][3]=1
+TEST[5][4]=1
+TEST[5][5]=0
+TEST[5][6]=1
+TEST[5][7]=1
+TEST[6][0]=1
+TEST[6][1]=1
+TEST[6][2]=1
+TEST[6][3]=1
+TEST[6][4]=1
+TEST[6][5]=1
+TEST[6][6]=0
+TEST[6][7]=1
+TEST[7][0]=1
+TEST[7][1]=1
+TEST[7][2]=1
+TEST[7][3]=1
+TEST[7][4]=1
+TEST[7][5]=1
+TEST[7][6]=1
+TEST[7][7]=0
+RRR=0
+*/
+
+/* use it for time scan
+#define TIMESTAMP1 0
+#define TIMESTAMP2 8
+#define PULSETIME1 0
+#define PULSETIME2 8
+*/
+#define TIMESTAMP1 0
+#define TIMESTAMP2 1
+#define PULSETIME1 0
+#define PULSETIME2 1
+
+static int test[TIMESTAMP2][PULSETIME2];
+
+
+/*
+event 19: missing sim hits
+event 54: 5-th hit in sim
+event 57: missing hit in sim
+event 83: missing sim
+*/
 
 int
-ecalgetevent(int handler, TCanvas *fCanvas, int sec)
+ecalgetevent(int handler, TCanvas *fCanvas, int sec, int dtimestamp, int dpulsetime, int nextevent)
 {
   int status, nogoodevents;
   unsigned int *bufptr;
-  const unsigned short threshold[3] = {1,1,3};
+  ap_uint<16> threshold[3] = {THRESHOLD1, THRESHOLD2, THRESHOLD3};
 
-  ECStrip strip[3][NSTRIP];
+  fadc_word_t fadcs[NSLOT][8];
+  ECStrip str[3][NSTRIP];
+  ECPeak peak_tmp;
+  ECHit hit[NHIT];
 
-  int i, ii, jj, kk, io, ret;
+  hls::stream<fadc_word_t> s_fadc_words[NSLOT];
+  hls::stream<ECStrip_s> s_strip0_u[NF1], s_strip0_v[NF1], s_strip0_w[NF1];
+  hls::stream<ECStrip_s> s_strip_u[NF1], s_strip_v[NF1], s_strip_w[NF1];
+  hls::stream<ECStrip_s> s_strip1_u[NF1], s_strip1_v[NF1], s_strip1_w[NF1];
+  hls::stream<ECStrip_s> s_strip2_u[NF1], s_strip2_v[NF1], s_strip2_w[NF1];
+  hls::stream<ECPeak_s> s_peak_u, s_peak_v, s_peak_w;
+  hls::stream<ECPeak_s> s_peak1_u, s_peak1_v, s_peak1_w;
+  hls::stream<ECPeak_s> s_peak2_u, s_peak2_v, s_peak2_w;
+  hls::stream<ECStream6_s> s_pcount[NH_FIFOS];
+  hls::stream<ECStream16_s> s_energy[NH_FIFOS];
+  hls::stream<ECStream16_s> s_energy1[NH_FIFOS];
+  hls::stream<ECStream16_s> s_energy2[NH_FIFOS];
+  hls::stream<ECStream10_s> s_coord[NH_FIFOS];
+  hls::stream<ECStream10_s> s_coord1[NH_FIFOS];
+  hls::stream<ECStream10_s> s_coord2[NH_FIFOS];
+  hls::stream<ECStream16_s> s_frac[NH_FIFOS];
+  hls::stream<ECStream16_s> s_enpeak[NH_FIFOS];
+  hls::stream<hitsume_t> s_hitout1[NH_FIFOS];
+  hls::stream<hitsume_t> s_hitout2[NH_FIFOS];
+  hls::stream<ECHit> s_hits;
+  hls::stream<ECHit> s_hits1;
+  hls::stream<ECHit> s_hits2;
+
+  hls::stream<ECPeak0_s> s_peak0strip_u[NF2], s_peak0strip_v[NF2], s_peak0strip_w[NF2];
+  hls::stream<ECPeak0_s> s_peak0max_u[NF3], s_peak0max_v[NF3], s_peak0max_w[NF3];
+  hls::stream<sortz_t> z1[NF4];
+  hls::stream<sortz_t> z2[NF4];
+  hls::stream<ECPeak0_s> s_peak0_u, s_peak0_v, s_peak0_w;
+  hls::stream<ECfml_t> s_first_u, s_first_v, s_first_w;
+  hls::stream<ECfml_t> s_middle_u, s_middle_v, s_middle_w;
+  hls::stream<ECfml_t> s_last_u, s_last_v, s_last_w;
+  volatile ap_uint<1> peak_scaler_inc_u, peak_scaler_inc_v, peak_scaler_inc_w, hit_scaler_inc;
+
+  int i, ii, jj, kk, io, nret, it, ret;
 
 #ifdef DEBUG
-   printf("ecalgetevent reached\n");
+  printf("ecalgetevent reached\n");
 #endif
 
   nogoodevents = 1;
   while(nogoodevents)
   {
-    status = evRead(handler, buf, MAXBUF);
-    if(status < 0)
-    {
-      if(status==EOF)
-	  {
-        printf("end of file after %d events - exit\n",iev);
-        return(EOF);
-	  }
-      else
-	  {
-        printf("evRead error=%d after %d events - exit\n",status,iev);
-	  }
-      return(-1);
-    }
+    printf("ENTER WHILE, nextevent=%d\n",nextevent);
+    if(nextevent)
+	{
+      status = evRead(handler, buf, MAXBUF);
+      if(status < 0)
+      {
+        if(status==EOF)
+	    {
+          printf("end of file after %d events - exit\n",iev);
+          return(EOF);
+	    }
+        else
+	    {
+          printf("evRead error=%d after %d events - exit\n",status,iev);
+	    }
+        return(-1);
+      }
+      iev ++;
+      printf("\nEVENT %5d\n\n",iev);
+	}
 
-    iev ++;
     bufptr = (unsigned int *) buf;
 
 
-	
-    ectrig(bufptr, sec, npeaks_trig, peaks_trig, nhits_trig, hits_trig);
-    for(ii=0; ii<3/*NLAYER*/; ii++)
-	{
-      for(jj=0; jj<npeaks_trig[ii]; jj++)
-	  {
-        cout<<"TRIG PEAK ["<<+ii<<"]["<<+jj<<"]:  coord="<<peaks_trig[ii][jj].coord<<"   energy="<<peaks_trig[ii][jj].energy<<"   time="<<peaks_trig[ii][jj].time<<endl;
-	  }
-	}
-    for(ii=0; ii<1/*2*/; ii++)
-	{
-      for(jj=0; jj<nhits_trig[ii]; jj++)
-	  {
-        cout<<"TRIG HIT ["<<+ii<<"]["<<+jj<<"]:  coord="<<hits_trig[ii][jj].coord[0]<<" "<<hits_trig[ii][jj].coord[1]<<" "<<hits_trig[ii][jj].coord[2]<<"   energy="<<hits_trig[ii][jj].energy<<"   time="<<hits_trig[ii][jj].time<<endl;
-	  }
-	}
-	
+
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+    if(nextevent)
+    {
+      printf("CALLING ectrig\n");
+
+      ectrig(bufptr, sec, npeaks_trig, peaks_trig, nhits_trig, hits_trig);
+
+      for(ii=0; ii<3; ii++)
+      {
+        for(jj=0; jj<npeaks_trig[ii]; jj++)
+	    {
+          cout<<"TRIG PEAK ["<<+ii<<"]["<<+jj<<"]:  coord="<<peaks_trig[ii][jj].coord<<"   energy="<<peaks_trig[ii][jj].energy<<"   time="<<peaks_trig[ii][jj].time<<endl;
+	    }
+      }
+      ii=0;
+      {
+        for(jj=0; jj<nhits_trig[ii]; jj++)
+	    {
+          cout<<"TRIG HIT ["<<+jj<<"]: coord="<<hits_trig[ii][jj].coord[0]<<" "<<hits_trig[ii][jj].coord[1]<<" "<<hits_trig[ii][jj].coord[2]<<"   energy="<<hits_trig[ii][jj].energy<<"   time="<<hits_trig[ii][jj].time<<endl;
+	    }
+      }
+      cout<<endl;
+    }
+
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
 
 
-	//#ifdef USE_PCAL
-	//#else
-    /*ECAL*/
-    io = 0;
-    if(ecstrips(bufptr, threshold[0], sec, io, strip) > 0)
+
+
+
+
+    //printf("DT=%d, DP=%d\n",dtimestamp,dpulsetime);
+
+
+
+
+    io = 0;    /*ECAL*/
+
+    /* cleanup for drawing */
+    for(ii=0; ii<3; ii++)
+    {
+      for(jj=0; jj<NSTRIP; jj++)
+	  {
+        strip[io][ii][jj].energy = 0;
+	  }
+    }
+	
+    ret = ecfadcs(bufptr, threshold[0], sec, io, s_fadc_words, dtimestamp, dpulsetime);
+#ifdef TEST_BENCH
+    if(1)
+#else
+    if(ret > 0)
+#endif
     {
 
-#ifdef USE_PCAL
-      nhits = pcal(strip, hit);
-#else
-      nhits = ecal(strip, hit);
+
+	  /*SERGEY: stop following loop at it=6 where most clusters are to draw 6th one - have to redo that part !!!!!!!!!!!!!!!!!!!*/
+	  for(it=0; it<7/*MAXTIMES*/; it++)
+	{
+	  /*FPGA*/
+      ecstrips(threshold[0], s_fadc_words, s_strip0_u, s_strip0_v, s_strip0_w);
+
+      ecstripspersistence(NFRAMES, s_strip0_u, s_strip_u);
+      ecstripspersistence(NFRAMES, s_strip0_v, s_strip_v);
+      ecstripspersistence(NFRAMES, s_strip0_w, s_strip_w);
+      ecstripsfanout(s_strip_u, s_strip1_u, s_strip2_u);
+      ecstripsfanout(s_strip_v, s_strip1_v, s_strip2_v);
+      ecstripsfanout(s_strip_w, s_strip1_w, s_strip2_w);
+	  /*FPGA*/
+
+	  /* for drawing */
+      ecstrip_in(s_strip1_u, str[0]);
+      ecstrip_in(s_strip1_v, str[1]);
+      ecstrip_in(s_strip1_w, str[2]);
+      ecstrip_out(str[0], s_strip1_u);
+      ecstrip_out(str[1], s_strip1_v);
+      ecstrip_out(str[2], s_strip1_w);
+	  /* for drawing */
+
+	  /*FPGA*/
+      ecpeak1(threshold[0], STRIP_DIP_FACTOR, NSTRIPMAX, s_strip1_u, s_first_u, s_middle_u, s_last_u);
+      ecpeak2(threshold[1], s_strip2_u, s_first_u, s_middle_u, s_last_u, s_peak0strip_u);
+      ecpeakzerosuppress(s_peak0strip_u, s_peak0max_u);
+      ecpeaksort(s_peak0max_u, s_peak0_u);
+      ecpeakcoord(0, s_peak0_u, s_peak_u);
+      ecpeakfanout(s_peak_u, s_peak1_u, s_peak2_u, peak_scaler_inc_u);
+
+      ecpeak1(threshold[0], STRIP_DIP_FACTOR, NSTRIPMAX, s_strip1_v, s_first_v, s_middle_v, s_last_v);
+      ecpeak2(threshold[1], s_strip2_v, s_first_v, s_middle_v, s_last_v, s_peak0strip_v);
+      ecpeakzerosuppress(s_peak0strip_v, s_peak0max_v);
+      ecpeaksort(s_peak0max_v, s_peak0_v);
+      ecpeakcoord(1, s_peak0_v, s_peak_v);
+      ecpeakfanout(s_peak_v, s_peak1_v, s_peak2_v, peak_scaler_inc_v);
+
+      ecpeak1(threshold[0], STRIP_DIP_FACTOR, NSTRIPMAX, s_strip1_w, s_first_w, s_middle_w, s_last_w);
+      ecpeak2(threshold[1], s_strip2_w, s_first_w, s_middle_w, s_last_w, s_peak0strip_w);
+      ecpeakzerosuppress(s_peak0strip_w, s_peak0max_w);
+      ecpeaksort(s_peak0max_w, s_peak0_w);
+      ecpeakcoord(2, s_peak0_w, s_peak_w);
+      ecpeakfanout(s_peak_w, s_peak1_w, s_peak2_w, peak_scaler_inc_w);
+	  /*FPGA*/
+
+	  /* for drawing */
+      hls::stream<trig_t> trig_stream;
+	  peak_ram_t buf_ram_u[NPEAK][256];
+	  peak_ram_t buf_ram_v[NPEAK][256];
+	  peak_ram_t buf_ram_w[NPEAK][256];
+      hls::stream<eventdata_t> event_stream_u;
+      hls::stream<eventdata_t> event_stream_v;
+      hls::stream<eventdata_t> event_stream_w;
+
+      ecpeakeventfiller(0, s_peak2_u, buf_ram_u);
+      ecpeakeventwriter(0, 0, trig_stream, event_stream_u, buf_ram_u);
+      ecpeakeventreader(trig_stream, event_stream_u, peak[0]);
+
+      ecpeakeventfiller(1, s_peak2_v, buf_ram_v);
+      ecpeakeventwriter(1, 0, trig_stream, event_stream_v, buf_ram_v);
+      ecpeakeventreader(trig_stream, event_stream_v, peak[1]);
+
+      ecpeakeventfiller(2, s_peak2_w, buf_ram_w);
+      ecpeakeventwriter(2, 0, trig_stream, event_stream_w, buf_ram_w);
+      ecpeakeventreader(trig_stream, event_stream_w, peak[2]);
+
+
+#ifdef DEBUG1
+	  
+      if(peak[0][0].energy>0)
+	  {
+        printf("\nU: IT=%d\n",it);
+        for(ii=0; ii<NPEAK; ii++) cout<<"peakU["<<+ii<<"]: coord="<<+peak[0][ii].coord<<" energy="<<+peak[0][ii].energy<<endl;
+	  }
+      if(peak[1][0].energy>0)
+	  {
+        printf("\nV: IT=%d\n",it);
+        for(ii=0; ii<NPEAK; ii++) cout<<"peakV["<<+ii<<"]: coord="<<+peak[1][ii].coord<<" energy="<<+peak[1][ii].energy<<endl;
+	  }
+      if(peak[2][0].energy>0)
+	  {
+        printf("\nW: IT=%d\n",it);
+        for(ii=0; ii<NPEAK; ii++) cout<<"peakW["<<+ii<<"]: coord="<<+peak[2][ii].coord<<" energy="<<+peak[2][ii].energy<<endl;
+	  }
+	  
 #endif
+
+	  /* for drawing */
+
+
+	  /*FPGA*/
+      echit(DALITZ_MIN, DALITZ_MAX, s_peak1_u, s_peak1_v, s_peak1_w, s_pcount, s_energy, s_coord);
+      ecenergyfanout(s_energy, s_energy1, s_energy2);
+      eccoordfanout(s_coord, s_coord1, s_coord2);
+      ecfrac1(s_pcount, s_energy1, s_hitout1);
+      ecfrac2(s_hitout1, s_hitout2);
+      ecfrac3(s_hitout2, s_frac);
+      eccorr(threshold[2], s_energy2, s_coord1, s_frac, s_enpeak);
+
+      echitsortin(s_coord2, s_enpeak, z1);
+      echitsort1(z1, z2);
+      echitsort2(z2, z1);
+      echitsort3(z1, z2);
+      echitsort4(z2, z1);
+      echitsort5(z1, z2);
+      echitsortout(z2, s_hits);
+      echitfanout(s_hits, s_hits1, s_hits2, hit_scaler_inc);
+	  /*FPGA*/
+
+      /* for drawing */
+	  hit_ram_t buf_ram[NHIT][256];
+      hls::stream<eventdata_t> event_stream;
+
+      echiteventfiller(s_hits1, buf_ram); /* do not need to read that stream, but do it to avoid leftover data */
+      echiteventfiller(s_hits2, buf_ram);
+      echiteventwriter(0, trig_stream, event_stream, buf_ram);
+      echiteventreader(trig_stream, event_stream, hit);
+      /* for drawing */
+
+      nhits = 0;
+      for(ii=0; ii<NHIT; ii++) if(hit[ii].energy>0) nhits++;
+      for(ii=0; ii<nhits; ii++) cout<<"SOFT HIT: coord="<<hit[ii].coord[0]<<" "<<hit[ii].coord[1]<<" "<<hit[ii].coord[2]<<"   energy="<<hit[ii].energy<<endl;
+
+#ifdef DEBUG1
+      if( (nhits_trig[0]==1) && (hits_trig[0][0].energy>0) && (hits_trig[0][0].time == 7) && (hit[0].energy>0) )
+	  {
+        //printf("\nIT=%d\n",it);
+        int bad = 1;
+        for(ii=0; ii<nhits; ii++)
+		{
+          if( (hit[ii].coord[0] == hits_trig[0][0].coord[0]) 
+              && (hit[ii].coord[1] == hits_trig[0][0].coord[1]) 
+              && (hit[ii].coord[2] == hits_trig[0][0].coord[2])  
+              && (hit[ii].energy   == hits_trig[0][0].energy)  )
+		  {
+            bad = 0;
+            cout<<"GOOD: TRIG HIT: coord="<<hits_trig[0][0].coord[0]<<" "<<hits_trig[0][0].coord[1]<<" "<<hits_trig[0][0].coord[2]<<"   energy="<<hits_trig[0][0].energy<<endl;
+            cout<<"GOOD: SOFT HIT: coord="<<hit[ii].coord[0]<<" "<<hit[ii].coord[1]<<" "<<hit[ii].coord[2]<<"   energy="<<hit[ii].energy<<endl;
+		  }
+          else
+		  {
+            cout<<"BAD: TRIG HIT: coord="<<hits_trig[0][0].coord[0]<<" "<<hits_trig[0][0].coord[1]<<" "<<hits_trig[0][0].coord[2]<<"   energy="<<hits_trig[0][0].energy<<endl;
+            cout<<"BAD: SOFT HIT: coord="<<hit[ii].coord[0]<<" "<<hit[ii].coord[1]<<" "<<hit[ii].coord[2]<<"   energy="<<hit[ii].energy<<endl;
+		  }
+		}
+        if(bad)
+		{
+          printf("--> MARKING BAD\n");
+          test[dtimestamp][dpulsetime] = 1;
+		}
+	  }
+#endif
+
+
+      for(jj=0; jj<NSTRIP; jj++)
+	  {
+        strip[io][0][jj] = str[0][jj];
+#ifdef USE_PCAL
+        strip[io][2][jj] = str[1][jj];
+        strip[io][1][jj] = str[2][jj];
+#else
+        strip[io][1][jj] = str[1][jj];
+        strip[io][2][jj] = str[2][jj];
+#endif
+#ifdef DEBUG
+        for(ii=0; ii<3; ii++) cout<<"INDATA ["<<io<<"]["<<ii<<"]["<<jj<<"] = "<<strip[io][ii][jj].energy<<endl;
+#endif
+	  }
+
+#ifdef USE_PCAL
+      for(jj=0; jj<NPEAK; jj++)
+	  {
+        peak_tmp = peak[1][jj];
+        peak[1][jj] = peak[2][jj];
+        peak[2][jj] = peak_tmp;
+      }
+#endif
+
+      /* for drawing */
+      /***************/
+
+
+
+
+
 
 
 	  /*
 	  if(io==0) printf("INNER\n");
       else if(io==1) printf("OUTER\n");
   	  */
+
+
+	  /* CALCULATE nhits HERE !!! */
+      nhits = 0;
+      for(ii=0; ii<NHIT; ii++) if(hit[ii].energy>0) nhits ++;
+
 #ifdef DEBUG
 	  cout<<"ecalgetevent: sec=" << +sec << " nhits=" << +nhits << endl;
 #endif
-#ifdef DEBUG	  
+#ifdef DEBUG
 	  if(io==0) printf("INNER\n");
 	  else if(io==1) printf("OUTER\n");
-	  cout<<"ecl3: nhits="<<+nhits<<endl;
+#ifdef DEBUG
+	  cout<<"ecalgetevent: nhits="<<+nhits<<endl;
+#endif
+      nret = 0;
       for(ii=0; ii<nhits; ii++)
 	  {
-        cout<<"ecl3: hit["<<+ii<<"]: energy="<<+hit[ii].energy<<" coordU="<<+hit[ii].coord[0]<<" coordV="<<+hit[ii].coord[1]<<" coordW="<<+hit[ii].coord[2]<<endl;
+        if(hit[ii].energy>0) nret ++;
+#ifdef DEBUG
+        if(hit[ii].energy>0) cout<<"ecalgetevent: hit["<<+ii<<"]: energy="<<+hit[ii].energy<<" coordU="<<+hit[ii].coord[0]<<" coordV="<<+hit[ii].coord[1]<<" coordW="<<+hit[ii].coord[2]<<endl;
+#endif
+	  }
+#ifdef DEBUG
+	  cout<<"ecalgetevent: nret="<<+nret<<endl;
+#endif
+#endif
+
+      /* reorder hits keeping non-zero hits only */
+      nret=0;
+      for(ii=0; ii<nhits; ii++)
+	  {
+        if(hit[ii].energy>0)
+	    {
+          hitdraw[nret].energy    = hit[ii].energy;
+          hitdraw[nret].coord[0]  = hit[ii].coord[0];
+#ifdef USE_PCAL
+          hitdraw[nret].coord[2]  = hit[ii].coord[1];
+          hitdraw[nret].coord[1]  = hit[ii].coord[2];
+#else
+          hitdraw[nret].coord[1]  = hit[ii].coord[1];
+          hitdraw[nret].coord[2]  = hit[ii].coord[2];
+#endif
+
+#ifdef USE_PCAL
+          hitdraw[nret].ind       = ((V4(hit[ii].ind))<<4) + ((W4(hit[ii].ind))<<2) + (U4(hit[ii].ind));
+#ifdef DEBUG
+		  cout<<"++++++++++ind++++++++++++++++++ "<<hit[ii].ind<<"   "<<hitdraw[nret].ind<<endl;
+#endif
+#else
+          hitdraw[nret].ind       = hit[ii].ind;
+#endif
+
+          hitdraw[nret].enpeak[0] = hit[ii].enpeak[0];
+#ifdef USE_PCAL
+          hitdraw[nret].enpeak[2] = hit[ii].enpeak[1];
+          hitdraw[nret].enpeak[1] = hit[ii].enpeak[2];
+#else
+          hitdraw[nret].enpeak[1] = hit[ii].enpeak[1];
+          hitdraw[nret].enpeak[2] = hit[ii].enpeak[2];
+#endif
+          nret++;
+		}
+	  }
+      nhits = nret;
+#ifdef DEBUG
+	  cout<<"ecalgetevent(final): nhits="<<+nhits<<endl;
+      for(ii=0; ii<nhits; ii++)
+	  {
+        cout<<"ecalgetevent(final): hitdraw["<<+ii<<"]: energy="<<+hitdraw[ii].energy<<" coordU="<<+hitdraw[ii].coord[0]<<" coordV="<<+hitdraw[ii].coord[1]<<" coordW="<<+hitdraw[ii].coord[2];
+        cout<<" enU="<<+hitdraw[ii].enpeak[0]<<" enV="<<+hitdraw[ii].enpeak[1]<<" enW="<<+hitdraw[ii].enpeak[2];
+        cout<<" peakU="<<+(U4(hitdraw[ii].ind))<<" peakV="<<+(V4(hitdraw[ii].ind))<<" peakW="<<+(W4(hitdraw[ii].ind))<<endl;
 	  }
 #endif
+      goodevent=1;
+
+
+
+	}
+
     }
-	//#endif
+    else
+	{
+#ifdef DEBUG
+      printf("==================================================================== ecalgetevent: there is no data\n");
+#endif
+      nhits = 0;
+      goodevent = 0;
+	}
 
 
-
-    goodevent=1;
     nogoodevents=0;
 
+    printf("EXIT WHILE\n");
 
   } /*while(nogoodevents)*/
 
 #ifdef DEBUG
-  printf("ecalgetevent done, iev=%d\n",iev);
+  printf("ecalgetevent done, iev=%d, nhits=%d\n",iev,nhits);
 #endif
 
   return(nhits);
@@ -831,6 +1369,11 @@ ecalgetevent(int handler, TCanvas *fCanvas, int sec)
 
 
 
+
+/******************************/
+/* main function 'ecalview()' */
+/******************************/
+
 static int ifirst = 1;
 
 #define STRLEN 128
@@ -839,7 +1382,19 @@ static int ifirst = 1;
 int
 ecalview(int handler, TCanvas *fCanvas, int redraw)
 {
+#if 0
+#ifdef USE_PCAL
+  int sec = 1; /* 1 for sector 2  (all simulation is sector 2) */
+#else
   int sec = 0; /* 1 for sector 2  (all simulation is sector 2) */
+#endif
+#endif
+
+  /*GEMC */
+  int sec=5; /* /work/boiarino/data/vtp1_001294.evio.0 - #define USE_PCAL !!!!!!!! */
+  /*int sec=0;*/ /* /work/boiarino/data/ec_pcal_TCS_1_.evio - #undef USE_PCAL !!!!!!!! */
+
+
   TArc *circle = new TArc();
 
   int ret;
@@ -855,18 +1410,39 @@ ecalview(int handler, TCanvas *fCanvas, int redraw)
   }
 
 
+
   if(handler > 0)
   {
 readnext:
-    ret = ecalgetevent(handler, fCanvas, sec);
+
+	{
+      int nextevent = 1;
+      int rrr = 1;
+      for(int dtimestamp = TIMESTAMP1; dtimestamp<TIMESTAMP2; dtimestamp++)
+	  {
+		for(int dpulsetime = PULSETIME1; dpulsetime<PULSETIME2; dpulsetime++)
+		{
+          ret = ecalgetevent(handler, fCanvas, sec, dtimestamp, dpulsetime, nextevent);
+          nextevent = 0;
+		}
+      }
+
+      for(int dtimestamp = TIMESTAMP1; dtimestamp<TIMESTAMP2; dtimestamp++)
+      for(int dpulsetime = PULSETIME1; dpulsetime<PULSETIME2; dpulsetime++)
+      {
+        printf("TEST[%d][%d]=%d\n",dtimestamp,dpulsetime,test[dtimestamp][dpulsetime]);
+        if(test[dtimestamp][dpulsetime]==0) rrr = 0;
+      }
+      printf("RRR=%d\n\n",rrr);
+
+	}
+
     /*if(ret==0) goto readnext;*//*return(0);*/ /* no hits */
     if(ret==EOF) return(EOF);
   }
 
   if(redraw) ecaldrawevent(fCanvas);
-  printf("65\n");fflush(stdout);
   /*sleep(3);*/
-  printf("66\n");fflush(stdout);
 
 
 #ifdef DEBUG

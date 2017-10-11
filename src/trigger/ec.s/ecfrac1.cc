@@ -12,9 +12,13 @@
 #include <string.h>
 #include <math.h>
 
+
+//#define DEBUG
+
+#ifdef DEBUG
 using namespace std;
 #include <strstream>
-
+#endif
 
 #define MAX(a,b)    (a > b ? a : b)
 #define MIN(a,b)    (a < b ? a : b)
@@ -26,6 +30,7 @@ using namespace std;
 #include "../pc.s/pclib.h"
 
 #define ecfrac1 pcfrac1
+#define ecfrac1_1 pcfrac1_1
 
 #else
 
@@ -34,7 +39,6 @@ using namespace std;
 #endif
 
 
-//#define DEBUG
 
 #include <ap_fixed.h>
 
@@ -44,23 +48,17 @@ using namespace std;
 
 
 
-/* 3.23/4/2/0%/0%/~0%/5% */
+/* 3.23/4/2/0%/0%/~0%/~0% II=1*/
 
-
-
-void
-ecfrac1(fp0201S_t peakcount[3][NPEAK], ap_uint<16> energy[NHITMAX][3], hitsume_t hitouttmp1[NHITMAX])
+inline void
+ecfrac1_1(ECPeakCount peakcount[3], ap_uint<16> energy[3], hitsume_t &hitouttmp1)
 {
 #pragma HLS ARRAY_PARTITION variable=peakcount complete dim=1
-#pragma HLS ARRAY_PARTITION variable=peakcount complete dim=2
 #pragma HLS ARRAY_PARTITION variable=energy complete dim=1
-#pragma HLS ARRAY_PARTITION variable=energy complete dim=2
-#pragma HLS ARRAY_PARTITION variable=hitouttmp1 complete dim=1
-#pragma HLS PIPELINE
+#pragma HLS PIPELINE II=1
 
-  uint8_t i,u,v,w,ind;
-  uint16_t enU, enV, enW;
-  uint8_t Nvalid;
+  ap_uint<16> enU, enV, enW;
+  ap_uint<2> Nvalid;
   ap_uint<19> ensumE; /* contains sum of three 16-bit energies, multiplied by 2 - four extra bits */
 
 #ifdef DEBUG
@@ -69,90 +67,138 @@ ecfrac1(fp0201S_t peakcount[3][NPEAK], ap_uint<16> energy[NHITMAX][3], hitsume_t
 #endif
 
 
-  for(ind=0; ind<NHITMAX; ind++)
+  if( (energy[0]==0) || ((peakcount[0]==1)&&(peakcount[1]==1)&&(peakcount[2]==1)) )
   {
-    u = U4(ind);
-    v = V4(ind);
-    w = W4(ind);
+    hitouttmp1.sumE = 0;
+    for(int i=0; i<3; i++) hitouttmp1.peak_sumE[i] = 0;
+  }
+  else
+  {
 
-    if( (energy[ind][0]==0) || ((peakcount[0][u]==1)&&(peakcount[1][v]==1)&&(peakcount[2][w]==1)) )
-    {
 #ifdef DEBUG
-      cout<<"!!! hitin[peakU="<<+u<<"][peakV="<<+v<<"][peakW="<<+w<<"] empty" << endl;
+    cout<<" energies="<<energy[0]<<" "<<energy[1]<<" "<<energy[2];
+    cout<<" peakcount="<<peakcount[0]<<" "<<peakcount[1]<<" "<<peakcount[2] << endl;
 #endif
-      hitouttmp1[ind].sumE = 0;
-      for(i=0; i<3; i++) hitouttmp1[ind].peak_sumE[i] = 0;
+
+
+    /* for current hit, get energies for unique peaks only */
+    enU = (peakcount[0]==1) ? energy[0] : (ap_uint<16>)0;
+    enV = (peakcount[1]==1) ? energy[1] : (ap_uint<16>)0;
+    enW = (peakcount[2]==1) ? energy[2] : (ap_uint<16>)0;
+
+
+
+
+
+    /* normalize and get 'UNIQUE energy sum' ensumE */
+    Nvalid=0;
+    if(enU>0) Nvalid++;
+    if(enV>0) Nvalid++;
+    if(enW>0) Nvalid++;
+    ensumE = enU + enV + enW;
+    if(Nvalid == 1) ensumE = ensumE<<1; /* multiply it by 2, instead of dividing next by 2, will divide one to another later so what important is ratio (?!) */
+    /*else if(Nvalid == 2) ensumE = ensumE/2;*/
+    /*else if(Nvalid == 3) {printf("3.0 should never be here !!!\n"); exit(0);}*/
+
+
+	/* if it was any UNIQUEs, fill output array(s) */
+    if(ensumE>0)
+    {
+
+      /* attach 'UNIQUE energy sum' ensumE to the hit to be used in stage 3 of this function (DELIMOE) */
+      hitouttmp1.sumE = ensumE;
+
+
+      /* insert 'UNIQUE energy sum' ensumE into hitouttmp1[] only for NOT UNIQUE peaks participating in this hit */
+      /* so we are summing/normalizing energies from unique peaks, and placing it into NOT-unique peak for following processing */
+	  hitouttmp1.peak_sumE[0] = (enU==0) ? ensumE : (ap_uint<19>)0;
+	  hitouttmp1.peak_sumE[1] = (enV==0) ? ensumE : (ap_uint<19>)0;
+	  hitouttmp1.peak_sumE[2] = (enW==0) ? ensumE : (ap_uint<19>)0;
+
+
+
+#ifdef DEBUG
+      cout<<"   !!! enU="<<enU<<" enV="<<enV<<" enW="<<enW<<" -> Nvalid="<<+Nvalid<<" -> hitouttmp1.sumE="<<hitouttmp1.sumE<<endl;
+      cout<<endl;
+#endif
+
     }
     else
 	{
+      hitouttmp1.sumE = 0;
+      for(int i=0; i<3; i++) hitouttmp1.peak_sumE[i] = 0;
+	}
+
+  }
 
 #ifdef DEBUG
-      cout<<"!!! hitin[peakU="<<+u<<"][peakV="<<+v<<"][peakW="<<+w<<"]";
-      cout<<" energies="<<energy[ind][0]<<" "<<energy[ind][1]<<" "<<energy[ind][2];
-      cout<<" peakcount="<<peakcount[0][u]<<" "<<peakcount[1][v]<<" "<<peakcount[2][w] << endl;
+  cout <<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!ecfrac1!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<< endl;
+  cout <<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!ecfrac1!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<< endl;
+#endif
+
+  return;
+}
+
+
+
+
+
+
+/* 5.0/8/4/0%/0%/(10119)1%/(8959)2% II=4 */
+
+void
+ecfrac1(hls::stream<ECStream6_s> s_pcount[NH_FIFOS], hls::stream<ECStream16_s> s_energy1[NH_FIFOS], hls::stream<hitsume_t> s_hitout1[NH_FIFOS])
+{
+#pragma HLS INTERFACE axis register both port=s_hitout1
+#pragma HLS DATA_PACK variable=s_hitout1
+#pragma HLS INTERFACE axis register both port=s_energy1
+#pragma HLS DATA_PACK variable=s_energy1
+#pragma HLS DATA_PACK variable=s_pcount
+#pragma HLS INTERFACE axis register both port=s_pcount
+#pragma HLS ARRAY_PARTITION variable=s_pcount complete dim=1
+#pragma HLS ARRAY_PARTITION variable=s_energy1 complete dim=1
+#pragma HLS ARRAY_PARTITION variable=s_hitout1 complete dim=1
+#pragma HLS PIPELINE II=4
+
+  ECPeakCount peakcount[3];
+#pragma HLS ARRAY_PARTITION variable=peakcount complete dim=1
+  ECStream6_s pc_fifo;
+
+  ap_uint<16> energy[3];
+#pragma HLS ARRAY_PARTITION variable=energy complete dim=1
+  ECStream16_s en_fifo;
+
+  hitsume_t hitouttmp1;
+
+#ifdef DEBUG
+  cout <<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!ecfrac1!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<< endl;
+  cout <<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!ecfrac1!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<< endl;
 #endif
 
 
-      /* for current hit, get energies for unique peaks only */
-      if(peakcount[0][u]==1) enU = energy[ind][0];
-      else                   enU = 0;
-	  if(peakcount[1][v]==1) enV = energy[ind][1];
-      else                   enV = 0;
-	  if(peakcount[2][w]==1) enW = energy[ind][2];
-      else                   enW = 0;
-
-
-
-
-
-
-      /* normalize and get 'UNIQUE energy sum' ensumE */
-      Nvalid=0;
-      if(enU>0) Nvalid++;
-      if(enV>0) Nvalid++;
-      if(enW>0) Nvalid++;
-      ensumE = enU + enV + enW;
-      if(Nvalid == 1) ensumE = ensumE<<1; /* multiply it by 2, instead of dividing next by 2, will divide one to another later so what important is ratio (?!) */
-      /*else if(Nvalid == 2) ensumE = ensumE/2;*/
-      /*else if(Nvalid == 3) {printf("3.0 should never be here !!!\n"); exit(0);}*/
-
-
-	  /* if it was any UNIQUEs, fill output array(s) */
-      if(ensumE>0)
-      {
-
-        /* attach 'UNIQUE energy sum' ensumE to the hit to be used in stage 3 of this function (DELIMOE) */
-        hitouttmp1[ind].sumE = ensumE;
-
-
-        /* insert 'UNIQUE energy sum' ensumE into hitouttmp1[] only for NOT UNIQUE peaks participating in this hit */
-        /* so we are summing/normalizing energies from unique peaks, and placing it into NOT-unique peak for following processing */
-        if(enU==0) hitouttmp1[ind].peak_sumE[0] = ensumE;
-        else       hitouttmp1[ind].peak_sumE[0] = 0;
-
-        if(enV==0) hitouttmp1[ind].peak_sumE[1] = ensumE;
-        else       hitouttmp1[ind].peak_sumE[1] = 0;
-
-        if(enW==0) hitouttmp1[ind].peak_sumE[2] = ensumE;
-        else       hitouttmp1[ind].peak_sumE[2] = 0;
-
-
-
-
-#ifdef DEBUG
-        cout<<"   !!! enU="<<enU<<" enV="<<enV<<" enW="<<enW<<" -> Nvalid="<<+Nvalid<<" -> hitouttmp1["<<+ind<<"].sumE="<<hitouttmp1[ind].sumE<<endl;
-        cout<<endl;
-#endif
-
-      }
-      else
+  for(int i=0; i<NH_FIFOS; i++)
+  {
+    for(int j=0; j<NH_READS; j++)
+    {
+      pc_fifo = s_pcount[i].read();
+      for(int k=0; k<3; k++)
 	  {
-        hitouttmp1[ind].sumE = 0;
-        for(i=0; i<3; i++) hitouttmp1[ind].peak_sumE[i] = 0;
+        peakcount[k] = pc_fifo.word6[k];
 	  }
 
-	}
+      en_fifo = s_energy1[i].read();
+      for(int k=0; k<3; k++)
+      {
+    	energy[k] = en_fifo.word16[k];
+      }
+
+      ecfrac1_1(peakcount, energy, hitouttmp1);
+
+      s_hitout1[i].write(hitouttmp1);
+    }
   }
+
+
 #ifdef DEBUG
   cout <<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!ecfrac1!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<< endl;
   cout <<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!ecfrac1!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<< endl;

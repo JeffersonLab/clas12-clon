@@ -22,12 +22,8 @@ using namespace std;
 
 #endif
 
-#define DEBUG
+//#define DEBUG
 
-
-#define NUMBER_OF_BITS				32
-#define NUMBER_OF_DECIMAL_DIGITS	6
-typedef ap_fixed<NUMBER_OF_BITS,(NUMBER_OF_BITS-NUMBER_OF_DECIMAL_DIGITS)> fp2403_t;
 
 
 #define MAX(a,b)    (a > b ? a : b)
@@ -35,63 +31,84 @@ typedef ap_fixed<NUMBER_OF_BITS,(NUMBER_OF_BITS-NUMBER_OF_DECIMAL_DIGITS)> fp240
 #define ABS(x)      ((x) < 0 ? -(x) : (x))
 
 
-/*NPEAK=3*/
-/* 3.88/40/ 1/0%/0%/1%/1% */
 
 
 
-int
-ecpeakcoord(uint8_t view, ECPeak0 peakin[NPEAK], ECPeak peakout[NPEAK])
+/* 4.87/41/ 4/0%/(8)~0%/(9896)1%/(6594)1% II=4 */
+
+void
+ecpeakcoord(ap_uint<2> view, hls::stream<ECPeak0_s> &s_peak0, hls::stream<ECPeak_s> &s_peak)
 {
-#pragma HLS PIPELINE
-#pragma HLS ARRAY_PARTITION variable=peakout complete dim=1
-#pragma HLS ARRAY_PARTITION variable=peakin complete dim=1
-  uint8_t i, j, k, strip1, nstrip, npeak, ipeak, mpeak, peak_opened;
+#pragma HLS DATA_PACK variable=s_peak
+#pragma HLS INTERFACE axis register both port=s_peak
+#pragma HLS DATA_PACK variable=s_peak0
+#pragma HLS INTERFACE axis register both port=s_peak0
+#pragma HLS INTERFACE ap_stable port=view
+#pragma HLS PIPELINE II=4
+
+  uint8_t i, j, k, strip1, nstrip, npeak, ipeak, mpeak, peak_opened, iview;
   uint16_t tmp;
   uint16_t energy;
 
+  ECPeak0 peakin;
+  ECPeak0_s fifo;
+
+  ECPeak peakout;
+  ECPeak_s fifo1;
+
+  iview = (uint8_t)view;
+
 #ifdef DEBUG
-  printf("\n\n++ ecpeakcoord ++\n");
-  printf("BEFOR:\n");
-  for(i=0; i<NPEAK; i++)
+  printf("\n\n++ ecpeakcoord ++ (iview=%d)\n",iview);
+#endif
+
+  for(int i=0; i<NPEAK; i++)
   {
-    cout<<"peakin["<<+i<<"]: energy="<<peakin[i].energy<<", energysum4coord="<<peakin[i].energysum4coord<<", first strip="<<peakin[i].strip1<<", number of strips="<<peakin[i].stripn<<endl;
-  }
+	fifo = s_peak0.read();
+
+    peakin.energy = fifo.energy;
+    peakin.energysum4coord = fifo.energysum4coord;
+    peakin.strip1 = fifo.strip1;
+    peakin.stripn = fifo.stripn;
+
+#ifdef DEBUG
+    printf("BEFOR:\n");
+    cout<<"peakin["<<+i<<"]: energy="<<peakin.energy<<", energysum4coord="<<peakin.energysum4coord<<", first strip="<<peakin.strip1<<", number of strips="<<peakin.stripn<<endl;
 #endif
 
 
-  for(i=0; i<NPEAK; i++)
-  {
-    energy = peakin[i].energy;
-    strip1 = peakin[i].strip1;
 
-    peakout[i].energy = energy;
-    peakout[i].strip1 = strip1;
-    peakout[i].stripn = peakin[i].stripn;
+    energy = peakin.energy;
+    strip1 = peakin.strip1;
+    peakout.energy = energy;
 	if(energy>0)
 	{
-#ifdef USE_PCAL
 	  /* strip1 here from 0 */
-      tmp = (uint16_t)( (fp2403_t)(peakin[i].energysum4coord * fview[view]) / (fp2403_t)energy );
-      peakout[i].coord = strip1*fview[view] - UVWADD + tmp;
-#else
-      tmp = (uint16_t)( (fp2403_t)(peakin[i].energysum4coord<<3) / (fp2403_t)energy );
-      peakout[i].coord = (strip1<<3) - 4 + tmp;
-#endif
+	  myfp_t tmp1, tmp2, tmp3;
+      tmp1 = ( ((myfp_t)peakin.energysum4coord) * fview[view]);
+      tmp2 = tmp1 / (myfp_t)energy;
+      tmp3 = ((myfp_t)strip1)*fview[view];
+	  peakout.coord = (ap_uint<NBIT_COORD>)(tmp3 - fhalf[view] + tmp2);
 	}
-  }
-
+#ifndef __SYNTHESIS__
+    peakout.strip1 = strip1;
+    peakout.stripn = peakin.stripn;
+#endif
 
 
 #ifdef DEBUG
-#ifdef USE_PCAL
-  printf("AFTER:\n");
-  for(i=0; i<NPEAK; i++)
-  {
-    cout<<"peakout["<<+i<<"]: energy="<<peakout[i].energy<<", coord="<<peakout[i].coord <<"("<<peakout[i].coord/80<<","<<peakout[i].coord/fview[view]<<")"<<", first strip="<<peakout[i].strip1<<", number of strips="<<peakout[i].stripn<<endl;
-  }
-#endif
+    printf("AFTER:\n");
+    cout<<"peakout["<<+i<<"]: energy="<<peakout.energy<<", coord="<<peakout.coord <<"("<<peakout.coord/fview[view]<<")"<<endl;
 #endif
 
-  return(0);
+    fifo1.energy = peakout.energy;
+    fifo1.coord = peakout.coord;
+#ifndef __SYNTHESIS__
+    fifo1.strip1 = peakout.strip1;
+    fifo1.stripn = peakout.stripn;
+#endif
+
+	s_peak.write(fifo1);
+  }
+
 }

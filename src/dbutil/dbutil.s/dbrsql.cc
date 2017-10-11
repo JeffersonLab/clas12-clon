@@ -36,10 +36,18 @@ using namespace std;
 static MYSQL *dbhandle = NULL;
 
 
-// static storage for Int4Ptr's
-static int int4ptr_count=-1;
-static T_INT4 counts[500][2];
+#define USE_ACTIVEMQ
 
+
+
+
+static int int4ptr_count=-1;
+
+
+#ifndef USE_ACTIVEMQ
+// static storage for Int4Ptr's
+static T_INT4 counts[500][2];
+#endif
 
 /*-------------------------------------------------------------------*/
 
@@ -86,6 +94,7 @@ sql_code sql_connect_check() {
 
 /*-------------------------------------------------------------------*/
 
+#ifndef USE_ACTIVEMQ
 
 sql_code sql_process_sql(int maxrow, T_STR sql_statement, T_IPC_MSG reply) {
   
@@ -276,6 +285,16 @@ sql_code sql_process_data(T_IPC_MSG msg,T_IPC_MSG reply) {
 }
   
 
+#endif
+
+
+
+
+
+
+
+
+
 /*-------------------------------------------------------------------*/
 
 
@@ -320,5 +339,4 @@ void reset_int4ptr_count(){
 
 
 /*-------------------------------------------------------------------*/
-
 

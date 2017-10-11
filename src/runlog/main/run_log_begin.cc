@@ -4,10 +4,10 @@
 //  collects and inserts run log begin info into database, datastream, info_server,
 //     and file
 //
-// Usage: run_log_begin -a clasprod (from rcscript)
-//        run_log_begin -a clasprod -debug (debugging)
-//        run_log_begin -a clasprod -s clasprod -debug 59908 (if recovering and debugging)
-//        run_log_begin -a clasprod -s clasprod 59908 (if recovering)
+// Usage: run_log_begin -a clasrun (from rcscript)
+//        run_log_begin -a clasrun -debug (debugging)
+//        run_log_begin -a clasrun -s clasprod -debug 59908 (if recovering and debugging)
+//        run_log_begin -a clasrun -s clasprod 59908 (if recovering)
 //
 //   still to do:
 //       tagger trigger words
@@ -17,6 +17,9 @@
 // sergey may 2009 added recovery mode
 //
 //
+
+#define USE_RCDB
+#define USE_ACTIVEMQ
 
 // for posix
 #define _POSIX_SOURCE_ 1
@@ -32,20 +35,50 @@
 
 using namespace std;
 #include <strstream>
-#include <iostream>
 #include <iomanip>
 #include <fstream>
 
+#include <string>
+#include <iostream>
 
+
+
+
+#ifdef USE_RCDB
+
+#include "RCDB/WritingConnection.h"
+
+#include "json/json.hpp"
+using json = nlohmann::json;
+
+#endif
+
+
+
+#ifdef USE_ACTIVEMQ
+
+#include "ipc_lib.h"
+#include "MessageActionControl.h"
+
+#else
+/*********************************************************/
+/*activemq: replace by ActiveMQ headers                  */
 
 // for ipc
 #include <rtworks/cxxipc.hxx>
-
 
 // online and coda stuff
 extern "C" {
 #include <clas_ipc_prototypes.h>
 }
+
+/*********************************************************/
+/*********************************************************/
+#endif
+
+
+
+
 
 #include "epicsutil.h"
 
@@ -129,8 +162,23 @@ extern "C" {
 static time_t start=time(NULL);
 
 
-// ipc connection
-TipcSrv &server=TipcSrv::Instance();
+
+#ifdef USE_ACTIVEMQ
+
+IpcServer &server = IpcServer::Instance();
+
+#else
+/*********************************************************/
+/*activemq: replace by ActiveMQ server reference, if needed */
+
+TipcSrv &server = TipcSrv::Instance();
+
+/*********************************************************/
+/*********************************************************/
+#endif
+
+
+
 
 
 //--------------------------------------------------------------------------
@@ -158,11 +206,27 @@ main(int argc,char **argv)
     collect_data();
 
     // create sql strings
-    create_sql(rlb_string);
+create_sql(rlb_string);
 
     // make entries
     if(debug==0)
     {
+
+
+#ifdef USE_ACTIVEMQ
+
+      // connect to ipc server
+	  server.init(getenv("EXPID"), NULL, NULL, (char *)"run_log_begin");
+
+      // ship to database router
+      insert_into_database(rlb_string.str());
+
+      // close ipc connection
+      server.close();
+
+#else
+      /*********************************************************/
+	  /*activemq: replace 3 following calls with ActiveMQ stuff*/
 
       // connect to server
       dbr_init(uniq_subj,application,id_string);
@@ -173,12 +237,21 @@ main(int argc,char **argv)
       // close ipc connection
       dbr_close();
 
+      /*********************************************************/
+      /*********************************************************/
+#endif
+	printf("13\n");fflush(stdout);
+	sleep(2);
+	printf("133\n");fflush(stdout);
+
     }
     else
     {
+	printf("14\n");fflush(stdout);
       // just print sql strings
       cout << "\nrlb for run " << run << " is:\n\n" << rlb_string.str() << endl << endl;
     }
+	printf("15\n");fflush(stdout);
   }
   else  // recovery mode; no ipc or file in recovery mode
   {
@@ -232,8 +305,15 @@ collect_data(void)
   strftime(startdate,25,"%Y-%m-%d %H:%M:%S",tstruct);
   
   ts_name = get_ts_name(msql_database, session);
-
-  printf("run_log_begin: ts_name >%s<\n",ts_name);
+  if(ts_name==NULL)
+  {
+	printf("collect_data: get_ts_name returns %d - cannot get info from TS\n",ts_name);
+    return;
+  }
+  else
+  {
+    printf("run_log_begin: ts_name >%s<\n",ts_name);
+  }
 
   /* get TS data */
   ret = tcpClientCmd((char*)ts_name,(char*)"tiUploadAllPrint",(char*)line);
@@ -316,8 +396,112 @@ get_epics_data()
 
 
 
+
+
 /* create sql request */
 
+#ifdef USE_RCDB
+void
+create_sql(strstream &rlb)
+{
+  using namespace std;
+
+  int i;
+  char tablename[256];
+  const char *comma = ",", *prime = "'";
+
+
+
+
+    int32_t event_count = 12345;
+    float events_rate = 98765.32;
+    int32_t temperature = 78;
+    float beam_energy = 7.095;
+    float test = 1234567890.123;
+    float beam_current = 10.;
+    float torus_scale = 0.75;
+    float solenoid_scale = 0.6;
+    string daq_trigger = "trigger_file_name";
+    float target_position = 0.4;
+    string daq_comment = "this run is junk";
+    struct tm run_start_time;
+    struct tm run_end_time;
+    bool is_valid_run_end = 0;
+    int32_t status = 0;
+
+    run_start_time.tm_year = 2016 - 1900;
+    run_start_time.tm_mon = 1;
+    run_start_time.tm_mday = 4;
+    run_start_time.tm_hour = 02;
+    run_start_time.tm_min = 30;
+    run_start_time.tm_sec = 38;
+    run_start_time.tm_isdst = 0;
+
+
+    run_end_time.tm_year = 2016 - 1900;
+    run_end_time.tm_mon = 1;
+    run_end_time.tm_mday = 4;
+    run_end_time.tm_hour = 04;
+    run_end_time.tm_min = 25;
+    run_end_time.tm_sec = 10;
+    run_end_time.tm_isdst = 0;
+
+    std::vector<int> c_vector{1, 2, 3, 4};
+
+
+
+
+run=999; /*TEMPORARY*/
+
+    json j0 = {
+	        {"name","run_log"},
+            {"run_number", run},
+            {"event_count", event_count},
+            {"events_rate", events_rate},
+            {"temperature", temperature},
+            {"beam_energy", beam_energy},
+            {"test", test},
+            {"beam_current", beam_current},
+            {"torus_scale", torus_scale},
+            {"solenoid_scale", solenoid_scale},
+            {"daq_trigger", daq_trigger},
+            {"target_position", target_position},
+            {"daq_comment", daq_comment},
+            {"run_start_time", StringUtils::GetFormattedTime(run_start_time)},
+            {"run_end_time", StringUtils::GetFormattedTime(run_end_time)},
+            {"is_valid_run_end", is_valid_run_end},
+            {"status", status}
+        };
+
+    json j1 = {
+	        {"name","json_cnd"},
+            {"event_count", event_count},
+            {"events_rate", events_rate},
+            {"temperature", temperature},
+            {"beam_energy", beam_energy},
+            {"daq_trigger", daq_trigger},
+            {"test",        test},
+            {"list",        {1, 0, true}},
+            {"object",      {{"currency", "USD"}, {"value", 42.99}}},
+            {"c_vector", c_vector},
+            {"start_time", StringUtils::GetFormattedTime(run_start_time)}
+        };
+
+	json j3;
+    j3.push_back(j0);
+    j3.push_back(j1);
+
+    cout<<endl<<j3.dump()<<endl<<endl;
+
+
+
+	rlb << j3.dump() << ends;
+	//rlb<<"bla"<<ends;
+
+
+  return;
+}
+#else
 void
 create_sql(strstream &rlb)
 {
@@ -365,7 +549,7 @@ create_sql(strstream &rlb)
 
   return;
 }
-
+#endif
 
   
 
@@ -378,6 +562,11 @@ insert_into_database(const char *entry)
   {
     printf("run_log_begin: QUERY >%s<\n",entry);
 
+#ifdef USE_ACTIVEMQ
+
+    server << clrm << "json" << (char *)entry << endm;
+
+#else
     // disable gmd timeout
     T_OPTION opt = TutOptionLookup((T_STR)"Server_Delivery_Timeout");
     TutOptionSetNum(opt,0.0);
@@ -393,7 +582,9 @@ insert_into_database(const char *entry)
     server.Send(dbr);
     server.Flush();
     dbr_check((double) gmd_time);
+#endif
   }
+  printf("19\n");fflush(stdout);
 
   return;
 }

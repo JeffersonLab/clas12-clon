@@ -32,23 +32,53 @@ endif
 # customize definitions
 #-----------------------
 
+#RCDB
+CLON_FLAGS += -std=c++11 -DRCDB_MYSQL -I/usr/include/mysql -I$(RCDB_HOME)/cpp/include
+
+
 CLON_FLAGS += -I$(CODA)/common/include -I$(CLON)/common/include \
-				-I$(RTHOME)/include
+				-I$(RTHOME)/include \
+				-I$(IPC_HOME)/src/main -I$(CLON)/src/ipc/ipc.s
+
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+  CLON_FLAGS += -I/usr/local/include/apr-1
+else
+  CLON_FLAGS += -I/usr/include/apr-1
+endif
+
 
 LIBNAMES = $(globallib)/libepicsutil.a
 LIBNAMES += $(globallib)/libclonutil.a
 LIBNAMES += $(globallib)/libipc.a
 
 
-LIBNAMES += $(CODA)/Linux_i686/lib/libmysql4.1.20.a
+##LIBNAMES += $(CODA)/Linux_i686/lib/libmysql4.1.20.a
+LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
 
 
 
 # EPICS libraries
-LIBNAMES += $(EPICS_BASE)/lib/linux-x86/libca.a
-LIBNAMES += $(EPICS_BASE)/lib/linux-x86/libCom.a
+##LIBNAMES += $(EPICS_BASE)/lib/linux-x86/libca.a
+##LIBNAMES += $(EPICS_BASE)/lib/linux-x86/libCom.a
+LIBNAMES += $(EPICS_BASE)/lib/linux-x86_64/libca.a
+LIBNAMES += $(EPICS_BASE)/lib/linux-x86_64/libCom.a
 
-LIBNAMES += -L$(RTHOME)/lib/$(OSTYPE_MACHINE) -lrtipc -lrtipcl -lrtutil -lrtcxxipc50
+
+###LIBNAMES += -L$(RTHOME)/lib/$(OSTYPE_MACHINE) -lrtipc -lrtipcl -lrtutil -lrtcxxipc50
+
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += /usr/local/lib/libapr-1.so
+  LIBNAMES += -luuid -lrt -lcrypt -lssl -lcrypto -ldl -lz
+  LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
+else
+  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += -lapr-1
+  LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
+  LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
+endif
+
+
 
 #############################LIBNAMES += -lmysqlclient
 LIBNAMES += -lresolv

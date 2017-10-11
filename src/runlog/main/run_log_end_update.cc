@@ -26,13 +26,7 @@ using namespace std;
 
 
 // for ipc
-#include <rtworks/cxxipc.hxx>
-
-
-// online and coda stuff
-extern "C"{
-#include <clas_ipc_prototypes.h>
-}
+#include "ipc_lib.h"
 
 
 // flags to inhibit event recording, etc.
@@ -75,7 +69,7 @@ static time_t start=time(NULL);
 
 
 // ref to server (connection created later)
-TipcSrv &server=TipcSrv::Instance();
+IpcServer &server = IpcServer::Instance();
 
 
 
@@ -98,10 +92,11 @@ main(int argc,char **argv)
   {
     if(no_dbr==0)
     {
-      T_OPTION opt=TutOptionLookup("Server_Delivery_Timeout");
-      TutOptionSetNum(opt,0.0);
+      //T_OPTION opt=TutOptionLookup("Server_Delivery_Timeout");
+      //TutOptionSetNum(opt,0.0);
     }
-    dbr_init(uniq_dgrp,application,id_string);
+    //dbr_init(uniq_dgrp,application,id_string);
+    server.init(getenv("EXPID"), NULL, NULL, (char *)"run_log_end_update");
   }
 
   // recovery mode
@@ -116,8 +111,9 @@ main(int argc,char **argv)
   // allow gmd to acknowledge receipt and close connection
   if(debug==0)
   {
-    if(no_dbr==0) dbr_check((double) gmd_time);
-    dbr_close();
+    //if(no_dbr==0) dbr_check((double) gmd_time);
+    //dbr_close();
+    server.close();
   }
   
 
@@ -368,6 +364,10 @@ insert_into_database(char *sql)
   // dbr message
   if(no_dbr==0)
   {
+
+    server << clrm << sql << endm;
+
+	/*
     TipcMsg dbr = TipcMsg((T_STR)"dbr_request");
     dbr.Dest(dest);
     dbr.Sender(uniq_dgrp);
@@ -378,10 +378,11 @@ insert_into_database(char *sql)
     dbr << (T_INT4) 1 << sql;
     server.Send(dbr);
     printf("dbr message sent\n");
+	*/
   }
 
   // flush messages
-  server.Flush();
+  /*server.Flush();*/
 
   return;
 }

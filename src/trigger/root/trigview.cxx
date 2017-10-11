@@ -31,7 +31,7 @@
 
 
 
-//#define USE_PCAL
+#define USE_PCAL
 #define FULLSIZE 800.
 
 #include "ecalview.c"
@@ -497,12 +497,6 @@ main(int argc, char **argv)
 
   if(batch)
   {
-	/*
-    float sxy = 0.015;
-    float x0 = 2.5;
-    float y0 = 2.5;
-    float fT0 = 75.;
-	*/
     for(iev=0; iev<3500; iev++)
     {
       if(!(iev%10000)) printf("%d events processed\n",iev);

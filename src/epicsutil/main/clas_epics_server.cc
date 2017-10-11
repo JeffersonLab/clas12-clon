@@ -12,27 +12,20 @@
 #define __EXTENSIONS__
 
 
+#define USE_ACTIVEMQ
+
+
 // for ca 
 #include <casdef.h>
 #include <fdManager.h>
 #include <gdd.h>
 
-
-// epics server class defs
-#include <epics_server.h>
+void setDebug(int val);
 
 
-//  epics channel names, etc.
-#include <clas_epics_server.h>
-
-
-// for smartsockets
-#include <rtworks/cxxipc.hxx>
-
-
-// CLAS ipc
-#include <clas_ipc_prototypes.h>
-#include "epicsutil.h"
+#include "ipc_lib.h"
+#include "MessageActionControl.h"
+#include "MessageActionEPICS.h"
 
 
 // misc
@@ -48,6 +41,16 @@ using namespace std;
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+
+
+
+char *pvNames[MAX_PVS];
+aitEnum pvTypes[MAX_PVS];
+int pvSizes[MAX_PVS];
+
+//class myPV;
+static int npvs = 0;
+static myPV *pPV[MAX_PVS];
 
 
 // misc variables
@@ -69,11 +72,6 @@ static char filename[256];
 static char line[1024];
 
 
-//  user-defined channel names, units, etc and array of pv's
-class myPV;
-static int npvs                     = 0;
-static myPV *pPV[MAX_PVS];
-
 
 // other prototypes
 void decode_command_line(int argc, char **argv);
@@ -81,25 +79,17 @@ void read_archive();
 void read_pv_info(ifstream &i, int *a, int len);
 int find_tag_line(ifstream &file, const char *tag, char buffer[], int buflen);
 int get_next_line(ifstream &file, char buffer[], int buflen);
+
 extern "C" {
-void *ipc_thread(void *param);
+  //void *ipc_thread(void *param);
 void *archive_thread(void *param);
 void quit_callback(int sig);
-void status_poll_callback(T_IPC_MSG msg);
-int insert_msg(const char *name, const char *facility, const char *process, const char *msgclass, 
-	       int severity, const char *status, int code, const char *text);
+  //void status_poll_callback(T_IPC_MSG msg);
 }
 
 
 // ref to IPC server (connection created later)
-TipcSrv &server=TipcSrv::Instance();
-
-
-
-
-
-
-
+IpcServer &server = IpcServer::Instance();
 
 //--------------------------------------------------------------------------
 //--------------------------------------------------------------------------
@@ -166,102 +156,12 @@ public:
 };
 
 
-
-//---------------------------------------------------------------------------
-
-static void
-epics_msg_callback(T_IPC_CONN conn, T_IPC_CONN_PROCESS_CB_DATA data, T_CB_ARG arg)
-{
-  int status, ii;
-  T_STR sender, host, user;
-  T_INT4 time;
-  T_STR caname, catype;
-  T_INT4 nelem;
-  T_CHAR d_char[MAX_ELEM];
-  T_UCHAR d_uchar[MAX_ELEM];
-  T_INT2  d_short[MAX_ELEM];
-  T_INT2  d_ushort[MAX_ELEM];
-  T_INT4  d_int[MAX_ELEM];
-  T_INT4  d_uint[MAX_ELEM];
-  T_REAL4 d_float[MAX_ELEM];
-  T_REAL8 d_double[MAX_ELEM];
-  T_STR   d_string[MAX_ELEM];
-
-  if(debug) printf("\n\nepics_msg_callback reached\n");
-
-  TipcMsg msg(data->msg);
-
-  msg.Current(0);
-  if(debug) printf("numfields=%d\n",msg.NumFields());
-  if(debug) printf("destination >%s<\n",msg.Dest());
-  if(debug) printf("sender >%s<\n",msg.Sender());
-
-  //printf("Message:\n");
-
-  msg >> sender >> host >> user >> time;
-  if(debug) printf("  Sender >%s<\n",sender);
-  if(debug) printf("  Host >%s<\n",host);
-  if(debug) printf("  User >%s<\n",user);
-  if(debug) printf("  Unixtime >%d<\n",time);
-
-  msg >> caname >> catype >> nelem;
-
-  if(debug) printf("  caname >%s<\n",caname);
-  if(debug) printf("  catype >%s<\n",catype);
-  if(debug) printf("  nelem >%d<\n",nelem);
-  if(nelem > MAX_ELEM)
-  {
-    printf("WARN: nelem > %d, will set nelem=%d\n",MAX_ELEM,MAX_ELEM);
-    nelem = MAX_ELEM;
-  }
-
-  if(      !strcmp(catype,"char"))   for(ii=0; ii<nelem; ii++) {msg >> d_char[ii]; /*printf(" %c",d_char[ii]);*/}
-  else if( !strcmp(catype,"uchar"))  for(ii=0; ii<nelem; ii++) {msg >> d_uchar[ii]; /*printf(" %d",d_uchar[ii]);*/}
-  else if( !strcmp(catype,"short"))  for(ii=0; ii<nelem; ii++) {msg >> d_short[ii]; /*printf(" %d",d_short[ii]);*/}
-  else if( !strcmp(catype,"ushort")) for(ii=0; ii<nelem; ii++) {msg >> d_ushort[ii]; /*printf(" %d",d_ushort[ii]);*/}
-  else if( !strcmp(catype,"int"))    for(ii=0; ii<nelem; ii++) {msg >> d_int[ii]; /*printf(" %d",d_int[ii]);*/}
-  else if( !strcmp(catype,"uint"))   for(ii=0; ii<nelem; ii++) {msg >> d_uint[ii]; /*printf(" %d",d_uint[ii]);*/}
-  else if( !strcmp(catype,"float"))  for(ii=0; ii<nelem; ii++) {msg >> d_float[ii]; /*printf(" %f",d_float[ii]);*/}
-  else if( !strcmp(catype,"double")) for(ii=0; ii<nelem; ii++) {msg >> d_double[ii]; /*printf(" %f",d_double[ii]);*/}
-  else if( !strcmp(catype,"string")) for(ii=0; ii<nelem; ii++) {msg >> d_string[ii]; /*printf(" %s",d_string[ii]);*/}
-  else
-  {
-    printf("epics_msg_callback: ERROR: unknown catype >%s<\n",catype);
-    return;
-  }
-  /*printf("\n");*/
-
-
-  /* check if we know the channel name */
-  for(ii=0; ii<npvs; ii++)
-  {
-    if(!strcmp(caname,pvNames[ii]))
-    {
-      if(nelem == pvSizes[ii])
-	  {
-        if(      !strcmp(catype,"char"))   if(nelem==1) {pPV[ii]->fillPV((char)d_char[0]);}             else {pPV[ii]->fillPV((char *)d_char);}
-        else if( !strcmp(catype,"uchar"))  if(nelem==1) {pPV[ii]->fillPV((unsigned char)d_uchar[0]);}   else {pPV[ii]->fillPV((char *)d_uchar);}
-        else if( !strcmp(catype,"short"))  if(nelem==1) {pPV[ii]->fillPV((short)d_short[0]);}           else {pPV[ii]->fillPV((int *)d_short);}
-        else if( !strcmp(catype,"ushort")) if(nelem==1) {pPV[ii]->fillPV((unsigned short)d_ushort[0]);} else {pPV[ii]->fillPV((uint *)d_ushort);}
-        else if( !strcmp(catype,"int"))    if(nelem==1) {pPV[ii]->fillPV((int)d_int[0]);}               else {pPV[ii]->fillPV((int *)d_int);}
-        else if( !strcmp(catype,"uint"))   if(nelem==1) {pPV[ii]->fillPV((unsigned int)d_uint[0]);}     else {pPV[ii]->fillPV((unsigned int *)d_uint);}
-        else if( !strcmp(catype,"float"))  if(nelem==1) {pPV[ii]->fillPV((float)d_float[0]);}           else {pPV[ii]->fillPV((float *)d_float);}
-        else if( !strcmp(catype,"double")) if(nelem==1) {pPV[ii]->fillPV((double)d_double[0]);}         else {pPV[ii]->fillPV((double *)d_double);}
-        else if( !strcmp(catype,"string")) if(nelem==1) {pPV[ii]->fillPV((char *)d_string[0]);}         else {printf("No support for array of strings yet !\n");}
-	  }
-    }
-  }
-
-  return;
-}
-
-
 #define STRLEN    250       /* length of str_tmp */
 #define ROCLEN     80       /* length of ROC_name */
 
 
 //---------------------------------------------------------------------------
-
+// fills npvs, pvNames[npvs], pvTypes[npvs], pvSizes[npvs]
 int
 read_config_file()
 {
@@ -345,16 +245,8 @@ main(int argc,char **argv)
   // decode command line...
   decode_command_line(argc,argv);
 
-  // set ipc parameters and connect to ipc system
-  if(!TipcInitThreads())
-  {
-    cerr << "Unable to init IPC thread package" << endl;
-    exit(EXIT_FAILURE);
-  }
-  ipc_set_application(application);
-  ipc_set_user_status_poll_callback(status_poll_callback);
-  ipc_set_quit_callback(quit_callback);
-  status=ipc_init(unique_id,"Epics Server");
+
+  status = server.init(getenv("EXPID"), NULL, NULL, (char *)"epics_server", NULL, "*");
   if(status<0) {
     cerr << "\n?Unable to connect to server...probably duplicate unique id\n"
 	 << "   ...check for another epics_server  using ipc_info\n"
@@ -362,9 +254,20 @@ main(int argc,char **argv)
     exit(EXIT_FAILURE);
   }
 
+  // set ipc parameters and connect to ipc system
+  //if(!TipcInitThreads())
+  //{
+  //  cerr << "Unable to init IPC thread package" << endl;
+  //  exit(EXIT_FAILURE);
+  // }
+  //ipc_set_application(application);
+  //ipc_set_user_status_poll_callback(status_poll_callback);
+  //ipc_set_quit_callback(quit_callback);
+  //status = ipc_init(unique_id,"Epics Server");
   /*sergey: callback to accept epics messages from epics_msg_send */
-  server.SubjectSubscribe((T_STR)"/epics_msg",TRUE);
-  server.SubjectCbCreate((T_STR)"/epics_msg",NULL,epics_msg_callback,NULL);
+  //server.SubjectSubscribe((T_STR)"/epics_msg",TRUE);
+  //server.SubjectCbCreate((T_STR)"/epics_msg",NULL,epics_msg_callback,NULL);
+
 
   // set epics server debug flag
   setDebug(debug);
@@ -379,30 +282,35 @@ main(int argc,char **argv)
   // read pv alarm info from archive file
   read_archive();
 
+
+
   // create array of pv objects
   printf("Create %d pPV's\n",npvs);
-
   for(int i=0; i<npvs; i++)
   {
     pPV[i] = new myPV(pvNames[i],pvTypes[i],pvSizes[i]);
   }
 
+
+
   // create ca server
   myServer *cas = new myServer();
 
   // launch threads
-#ifdef SunOS
-  thr_setconcurrency(thr_getconcurrency()+4);
-#endif
+  MessageActionControl *control = new MessageActionControl((char *)"epics_server");
+  server.addActionListener(control);
 
-  pthread_create(&t2,NULL,ipc_thread,(void*)NULL);
+  MessageActionEPICS *epics = new MessageActionEPICS(npvs,pvNames,pvSizes,pPV);
+  epics->set_debug(debug);
+  server.addActionListener(epics);
+  //pthread_create(&t2,NULL,ipc_thread,(void*)NULL);
+
   pthread_create(&t3,NULL,archive_thread,(void*)NULL);
 
 
   // post startup message
   sprintf(temp,"Process startup:    clas_epics_server starting in %s",application);
   status = insert_msg("clas_epics_server","online",unique_id,"status",0,"START",0,temp);
-  
 
   // flush output to log files, etc
   fflush(NULL);
@@ -413,18 +321,22 @@ main(int argc,char **argv)
   while(done==0)
   {
     fileDescriptorManager.process((double)ca_pend_time); // need it
+    done = control->getDone();
   }
   /*******************/
   /*******************/
 
 
+
   // post shutdown message
   sprintf(temp,"Process shutdown:  clas_epics_server");
   status = insert_msg("clas_epics_server","online",unique_id,"status",0,"STOP",0,temp);
-  
-  
+
   // done...clean up
-  ipc_close();
+  server.close();
+  //ipc_close();
+
+
   exit(EXIT_SUCCESS);
 }
        
@@ -497,7 +409,6 @@ void *
 archive_thread(void *param)
 {
   int i;
-  int l = npvs;
 
   while(done==0)
   {
@@ -507,17 +418,15 @@ archive_thread(void *param)
     if(debug!=0)cout << "archiving to " << temp << endl;
     ofstream file(temp);
 
-    file << l << endl;
-    for(i=0; i<l; i++) file << 0/*pPV[i]->myAlarm*/ << " ";    file << endl;
-    for(i=0; i<l; i++) file << 0/*pPV[i]->myHIHI*/ << " ";     file << endl;
-    for(i=0; i<l; i++) file << 0/*pPV[i]->myLOLO*/ << " ";     file << endl;
-    for(i=0; i<l; i++) file << 0/*pPV[i]->myHIGH*/ << " ";     file << endl;
-    for(i=0; i<l; i++) file << 0/*pPV[i]->myLOW */ << " ";     file << endl;
-    for(i=0; i<l; i++) file << 0/*pPV[i]->myHOPR*/ << " ";     file << endl;
-    for(i=0; i<l; i++) file << 0/*pPV[i]->myLOPR*/ << " ";     file << endl;
-    for(i=0; i<l; i++) file << 0/*pPV[i]->myDRVH*/ << " ";     file << endl;
-    for(i=0; i<l; i++) file << 0/*pPV[i]->myDRVL*/ << " ";     file << endl;
-    
+    file << npvs << endl;
+    for(i=0; i<npvs; i++)
+	{
+      //file<<pPV[i]->myAlarm<<" "<<pPV[i]->myHIHI<<" "<<pPV[i]->myLOLO<<" "<<pPV[i]->myHIGH<<" "<<pPV[i]->myLOW<<" ";
+      //file<<pPV[i]->myHOPR<<" "<<pPV[i]->myLOPR<<" "<<pPV[i]->myDRVH<<" "<<pPV[i]->myDRVL<<" ";
+
+      file << endl;    
+	}
+
     file.close();
   }  
 
@@ -527,6 +436,7 @@ archive_thread(void *param)
 
 //--------------------------------------------------------------------------
 
+#ifndef USE_ACTIVEMQ
 
 //  receives online info from other programs and dispatches
 //  to appropriate callbacks
@@ -556,6 +466,7 @@ status_poll_callback(T_IPC_MSG msg)
   return;
 }
 
+#endif
 
 //-------------------------------------------------------------------
 

@@ -11,6 +11,15 @@
  to CA-based; catools/camonitor.c was used as an prototype, some parts of it were
  copied and modified */
 
+/*******************************************************/
+// Lydia Lorenti, August 2017
+//
+// Added commands that use ActiveMQ implementation to replace SmartSockets code.
+/*******************************************************/
+
+
+#define USE_ACTIVEMQ
+
 #include <stdio.h>
 #include <epicsStdlib.h>
 #include <string.h>
@@ -50,14 +59,8 @@ static int nConn = 0;                                     /* Number of connected
 #include <time.h>
 #include <pthread.h>
 
-
-// for smartsockets
-#include <rtworks/cxxipc.hxx>
-
-
-// CLAS ipc
-#include <clas_ipc_prototypes.h>
-
+#include "ipc_lib.h"
+#include "MessageActionEPICS.h"
 
 // misc
 using namespace std;
@@ -72,12 +75,6 @@ using namespace std;
 
 
 // holds epics channel names, etc.
-struct epics_struct
-{
-  char *name;
-  char *chan;
-  char *get;
-};
 static epics_struct epics[MAX_EPICS];
 static epics_struct scalers[MAX_EPICS];
 static epics_struct gammas[MAX_EPICS];
@@ -155,18 +152,19 @@ void *scaler_thread(void *param);
 void *gamma_thread(void *param);
 int find_tag_line(ifstream &file, const char *tag, char buffer[], int buflen);
 int get_next_line(ifstream &file, char buffer[], int buflen);
+
 extern "C" {
-void *ipc_thread(void *param);
-void quit_callback(int sig);
-void status_poll_callback(T_IPC_MSG msg);
-//int get_run_number(const char *msql_database, const char *session);
-int insert_msg(const char *name, const char *facility, const char *process, const char *msgclass, 
-	       int severity, const char *status, int code, const char *text);
+  /*void *ipc_thread(void *param);*/
+  void quit_callback(int sig);
+  /*void status_poll_callback(T_IPC_MSG msg);*/
+  //int get_run_number(const char *msql_database, const char *session);
+  /*int insert_msg(const char *name, const char *facility, const char *process, const char *msgclass, 
+	       int severity, const char *status, int code, const char *text);*/
 }
 
 
 // ref to IPC server (connection created later)
-TipcSrv &server=TipcSrv::Instance();
+IpcServer &server = IpcServer::Instance();
 
 //--------------------------------------------------------------------------
 
@@ -186,6 +184,7 @@ main(int argc,char **argv)
   // synch with stdio
   ios::sync_with_stdio();
 
+
   // decode command line...
   decode_command_line(argc,argv);
 
@@ -197,21 +196,24 @@ main(int argc,char **argv)
   sprintf(dest,"evt_bosbank/%s",session);
 
 
-  // set ipc parameters and connect to ipc system
-  if(!TipcInitThreads()) {
-    cerr << "Unable to init IPC thread package" << endl;
-    exit(EXIT_FAILURE);
-  }
-  ipc_set_application(application);
-  ipc_set_user_status_poll_callback(status_poll_callback);
-  ipc_set_quit_callback(quit_callback);
-  status = ipc_init(unique_id,"Epics monitor");
+  status = server.init(getenv("EXPID"), NULL, NULL, "epics_monitor", NULL, "*");
   if(status<0) {
     cerr << "\n?Unable to connect to server...probably duplicate unique id\n"
 	 << "   ...check for another epics_monitor  using ipc_info\n"
 	 << "   ...only one connection allowed!" << endl << endl;
     exit(EXIT_FAILURE);
   }
+
+
+  // set ipc parameters and connect to ipc system
+  //if(!TipcInitThreads()) {
+  //  cerr << "Unable to init IPC thread package" << endl;
+  //  exit(EXIT_FAILURE);
+  //}
+  //ipc_set_application(application);
+  //ipc_set_user_status_poll_callback(status_poll_callback);
+  //ipc_set_quit_callback(quit_callback);
+
 
   /* EPICS stuff */
 
@@ -241,15 +243,16 @@ main(int argc,char **argv)
 
 
   // launch thread(s)
-#ifdef SunOS
-  thr_setconcurrency(thr_getconcurrency()+4);
-#endif
-  pthread_create(&t1,NULL,ipc_thread,(void*)NULL);
+
+
+  MessageActionEPICS *epics = new MessageActionEPICS();
+  server.addActionListener(epics);
+  //pthread_create(&t1,NULL,ipc_thread,(void*)NULL);
 
 
   // post startup message
   temp2 << "Process startup:    epics_monitor starting in " << application << ends;
-  status = insert_msg("epics_monitor","online",unique_id,"status",0,"START",0,temp2.str());
+  /*status = insert_msg("epics_monitor","online",unique_id,"status",0,"START",0,temp2.str());*/
   
 
   // flush output to log files, etc
@@ -296,10 +299,6 @@ main(int argc,char **argv)
       clock_gettime(CLOCK_REALTIME,&lgamma);
     }
 
-
-
-
-
     /* Read and print data forever */
     ca_pend_event(0.05/*0*/);
   }
@@ -310,10 +309,11 @@ main(int argc,char **argv)
   // post shutdown message
   temp2.seekp(0,ios::beg);
   temp2 << "Process shutdown:  epics_monitor" << ends;
-  status = insert_msg("epics_monitor","online",unique_id,"status",0,"STOP",0,temp2.str());
+  /*status = insert_msg("epics_monitor","online",unique_id,"status",0,"STOP",0,temp2.str());*/
   
   // done...clean up
-  ipc_close();
+  server.close();
+
   exit(EXIT_SUCCESS);
 }
        
@@ -324,34 +324,60 @@ main(int argc,char **argv)
 void *
 channel_thread(void *param)
 {
-
   nepics_read++;
+  int itmp = 10;
   
-
   // ship data
   if(no_ipc==0)
   {
 /*printf("channel_thread: 1 nepics=%d\n",nepics);*/
     nev_to_ipc++;
     for(int i=0; i<nepics; i++) bosarray[i][0] = epics_val[i];
-    TipcMsg msg((T_STR)"evt_bosbank");
-    msg.Sender((T_STR)"epics_monitor");
-    msg.Dest(dest);
-    msg << (T_STR)"EPIC" << (T_INT4)0 << (T_STR)"(F,8A)" << (T_INT4)9 << (T_INT4)nepics 
-	<< (T_INT4)(nepics*9)
-	<< SetSize(nepics*9) << (T_INT4*)bosarray;
-    server.Send(msg);
-    server.Flush();
+
+	server << clrm << "EPIC" << (int32_t)0 << "(F,8A)" << (int32_t)9 << (int32_t)nepics 
+		   << (int32_t)(nepics*9);
+
+	//server << SetSize; // works if no params in class
+	server << SetSize(itmp);
+
+	//server << SetSize(nepics*9);
+    //server << (int32_t*)bosarray << endm;
+
+
+/***************************************/
+    //TipcMsg msg((T_STR)"evt_bosbank");
+    //msg.Sender((T_STR)"epics_monitor");
+    //msg.Dest(dest);
+    //msg << (T_STR)"EPIC" << (T_INT4)0 << (T_STR)"(F,8A)" << (T_INT4)9 << (T_INT4)nepics 
+	//    << (T_INT4)(nepics*9)
+	//    << SetSize(nepics*9) << (T_INT4*)bosarray;
+    //server.Send(msg);
+    //server.Flush();
+/***************************************/
+
+	
   }
   
+
+
+
+
+#if 0
   
   // ship to info_server
   if(no_info==0)
   {
-    TipcMsg message((T_STR)"info_server");
-    message.Sender((T_STR)"epics_monitor");
-    message.Dest((T_STR)"info_server/in/epics_monitor");
-    message << (T_STR)"epics_monitor";
+
+	server << clrm << "epics_monitor";
+
+/********************************************/
+    //TipcMsg message((T_STR)"info_server");
+    //message.Sender((T_STR)"epics_monitor");
+    //message.Dest((T_STR)"info_server/in/epics_monitor");
+    //message << (T_STR)"epics_monitor";
+/********************************************/
+
+
 /*printf("channel_thread: 2 nepics=%d\n",nepics);*/
     for(int i=0; i<nepics; i++)
     {
@@ -360,16 +386,33 @@ channel_thread(void *param)
       {
 	    sprintf(temp,"%s.%s",epics[i].chan,&(epics[i].get)[4]);
 /*printf("[%3d] 1 >%s<\n",i,temp);*/
-        message << (T_STR) temp << SetSize(1) << tval /*<< Check(message)*/;
+
+
+	   server << clrm << (char *)temp << SetSize(1) << tval;
+
+/*************************************************************************/
+       // message << (T_STR) temp << SetSize(1) << tval /*<< Check(message)*/;
+/*************************************************************************/
+
+
       }
       else
       {
 /*printf("[%3d] 2 >%s<\n",i,epics[i].chan);*/
-        message << (T_STR) epics[i].chan << SetSize(1) << tval /*<< Check(message)*/;
+
+	    server << clrm << (char *) epics[i].chan << SetSize(1) << tval;
+/*************************************************************************/
+        //message << (T_STR) epics[i].chan << SetSize(1) << tval /*<< Check(message)*/;
+/*************************************************************************/
       }
     }
-    server.Send(message);
-    server.Flush();
+
+	server << endm;
+/*************************/
+    //server.Send(message);
+    //server.Flush();
+/*************************/
+
   }
   
 
@@ -418,6 +461,8 @@ channel_thread(void *param)
     cout << endl;
   }
   
+#endif /*if 0*/
+
   return((void*)0);
 }
 
@@ -454,6 +499,7 @@ scaler_thread(void *param)
 //--------------------------------------------------------------------------
 
 
+
 void *
 gamma_thread(void *param)
 {
@@ -464,14 +510,21 @@ gamma_thread(void *param)
   {
     nev_to_ipc++;
     for(int i=0; i<ngamma; i++) gammaarray[i][0] = gamma_val[i];
-    TipcMsg msg((T_STR)"evt_bosbank");
-    msg.Sender((T_STR)"gamma_monitor"); /* ??? should we use 'epics_monitor' */
-    msg.Dest(dest);
-    msg << (T_STR)"EPIC" << (T_INT4)1 << (T_STR)"(F,8A)" << (T_INT4)9 << (T_INT4)ngamma
-	<< (T_INT4)(ngamma*9)
-	<< SetSize(ngamma*9) << (T_INT4*)gammaarray;
-    server.Send(msg);
-    server.Flush();
+
+	server << clrm << "EPIC" << (int32_t)1 << "(F,8A)" << (int32_t)9 << (int32_t)ngamma
+	       << (int32_t)(ngamma*9)
+	       << SetSize(ngamma*9) << (int32_t*)gammaarray << endm;
+/***************************************************************/
+    //TipcMsg msg((T_STR)"evt_bosbank");
+    //msg.Sender((T_STR)"gamma_monitor"); /* ??? should we use 'epics_monitor' */
+    //msg.Dest(dest);
+    //msg << (T_STR)"EPIC" << (T_INT4)1 << (T_STR)"(F,8A)" << (T_INT4)9 << (T_INT4)ngamma
+	//<< (T_INT4)(ngamma*9)
+	//<< SetSize(ngamma*9) << (T_INT4*)gammaarray;
+    //server.Send(msg);
+    //server.Flush();
+/***************************************************************/
+
   }
   
   // dump to file
@@ -534,14 +587,20 @@ unpack_scaler_data(const char* bank, const int nrecord,
     if(no_ipc==0)
     {
       nev_to_ipc++;
-      TipcMsg msg((T_STR)"evt_bosbank");
-      msg.Sender((T_STR)"epics_monitor");
-      msg.Dest(dest);
-      msg << (T_STR)bank << (T_INT4)nrecord << (T_STR)"(F)" << (T_INT4)1 
-	  << (T_INT4)nscaler << (T_INT4)nscaler
-	  << SetSize(nscaler) << (T_INT4*)scalers;
-      server.Send(msg);
-      server.Flush();
+
+	  server << clrm << (char *)bank << (int32_t)nrecord << "(F)" << (int32_t)1 
+	         << (int32_t)nscaler << (int32_t)nscaler
+	         << SetSize(nscaler) << (int32_t*)scalers << endm;
+/*********************************************/
+      //TipcMsg msg((T_STR)"evt_bosbank");
+      //msg.Sender((T_STR)"epics_monitor");
+      //msg.Dest(dest);
+      //msg << (T_STR)bank << (T_INT4)nrecord << (T_STR)"(F)" << (T_INT4)1 
+	  //<< (T_INT4)nscaler << (T_INT4)nscaler
+	  //<< SetSize(nscaler) << (T_INT4*)scalers;
+      //server.Send(msg);
+      //server.Flush();
+/*********************************************/
     }
     
     
@@ -595,6 +654,8 @@ unpack_scaler_data(const char* bank, const int nrecord,
 
   return;
 }
+
+
 
 
 //--------------------------------------------------------------------------
@@ -1169,6 +1230,7 @@ init_epics()
 /**************** UTILITY functions (no epics calls) ****************/
 /********************************************************************/
 
+/*
 //--------------------------------------------------------------------------
 void
 status_poll_callback(T_IPC_MSG msg)
@@ -1206,14 +1268,13 @@ status_poll_callback(T_IPC_MSG msg)
   TipcMsgAppendStr(msg,(char*)"");
   TipcMsgAppendStr(msg,(char*)"");
 
-  /* ??? need same for gamma ??? */
   for(int i=0; i<nepics; i++) {
     TipcMsgAppendStr(msg,(char*)epics[i].name);
     TipcMsgAppendReal4(msg,epics_val[i]);
   }
 
   return;
-}
+}*/
 
 //-------------------------------------------------------------------
 void
@@ -1226,20 +1287,19 @@ quit_callback(int sig)
 
 //--------------------------------------------------------------------------
 
-
+/*
 //  receives online info from other programs and dispatches to appropriate callbacks
 void *
 ipc_thread(void *param)
 {
   while(done==0)
   {
-    /*printf("ipc_thread is running ..\n");*/
     server.MainLoop((double)ipc_pend_time);
   }
   printf("ipc_thread exited\n");
 
   return((void*)NULL);
-}
+}*/
 
 
 //-------------------------------------------------------------------
@@ -1331,4 +1391,3 @@ decode_command_line(int argc, char**argv)
 
   
 //----------------------------------------------------------------
-

@@ -1,9 +1,5 @@
-//
-//  ipc_msg
-//
-//  Sends out arbitrary Smartsockets message
-//
-//  ejw, 22-jun-99
+
+/*  ipc_msg.cc - sends out arbitrary message */
 
 
 #define _POSIX_SOURCE 1
@@ -12,21 +8,18 @@
 #include <stdio.h>
 #include <time.h>
 
-#include <rtworks/cxxipc.hxx>
-
-//#include <fstream.h>
-
 using namespace std;
 #include <fstream>
 #include <strstream>
 #include <iostream>
 #include <iomanip>
 
+#include "ipc_lib.h"
 
 char *project  	= (char*)"clastest";
 char *msgtype 	= NULL;
 char *dest    	= NULL;
-char *sender  	= NULL;
+//char *sender  	= NULL;
 char *uniq_name = NULL;
 int gmd       	= 0;
 int debug     	= 0;
@@ -37,17 +30,18 @@ char buffer[1024];
 void decode_command_line(int argc, char **argv);
 extern "C" {
   void init_msg_types(void);
-  void ipc_output_dummy(T_STR str, va_list arg);
+  void ipc_output_dummy(char *str, va_list arg);
 }
 
 
 //------------------------------------------------------------------------
 
+IpcServer &server = IpcServer::Instance();
 
 int
 main(int argc, char **argv)
 {
-  int i,j,len;
+  int i, j, len;
 
   // synch with c i/o
   ios::sync_with_stdio();
@@ -57,15 +51,20 @@ main(int argc, char **argv)
   decode_command_line(argc,argv);
 
 
+  server.init(getenv("EXPID"), NULL, NULL, "ipc_msg");
+
+
+  /*
   // check args
-  if(dest==NULL){TutWarning((T_STR)"?no destination\n\n"); exit(EXIT_FAILURE);}
-  if(msgtype==NULL){TutWarning((T_STR)"?no msgtype\n\n"); exit(EXIT_FAILURE);}
-  if(sender==NULL)sender=(char*)"ipc_msg";
-  if((gmd>0)&&(uniq_name==NULL)){TutWarning((T_STR)"?no unique name for gmd\n\n"); exit(EXIT_FAILURE);}
+  if(dest==NULL) {printf((char *)"?no destination\n\n"); exit(EXIT_FAILURE);}
+  if(msgtype==NULL) {printf((char *)"?no msgtype\n\n"); exit(EXIT_FAILURE);}
+  if(sender==NULL) sender=(char*)"ipc_msg";
+  if((gmd>0)&&(uniq_name==NULL)){printf((char *)"?no unique name for gmd\n\n"); exit(EXIT_FAILURE);}
+  */
 
-
+  /*
   // inhibit output
-  if(debug==0)TutSetOutputFunc(ipc_output_dummy);
+  if(debug==0) TutSetOutputFunc(ipc_output_dummy);
 
 
   // set projext
@@ -201,6 +200,15 @@ main(int argc, char **argv)
   
   // close connection
   server.Destroy(T_IPC_SRV_CONN_NONE);
+  */
+
+
+  server << clrm << "control" << "quit" << endm;
+
+
+  server.close();
+
+  exit(0);
 }
 
 
@@ -210,7 +218,7 @@ main(int argc, char **argv)
 void
 decode_command_line(int argc, char **argv)
 {
-  const char *help    = "\nusage:\n\n   ipc_msg [-a project] [-u uniq_name] [-sender sender]\n"
+  const char *help = "\nusage:\n\n   ipc_msg [-a project] [-u uniq_name] [-sender sender]\n"
     "           [-dest dest] [-type msgtype] [-gmd time] [-debug]\n"
     "           [-i4 int4] [-r4 real4] [-r8 real8] [-str \"string\"] [-file filename]\n"
     "           [-i4a len i4_array[len]] [-r4a len r4_array[len]] [-r8 len real8[len]]\n";
@@ -218,52 +226,64 @@ decode_command_line(int argc, char **argv)
     
   int i=1;
 
+  /*
+  if(argc<4) printf("%s", help),exit(EXIT_SUCCESS);
+  */
 
-  if(argc<4)TutOut((T_STR)"%s", help),exit(EXIT_SUCCESS);
-
-
-  while(i<argc) {
-    if(strncasecmp(argv[i],"-h",2)==0) {
-      TutOut((T_STR)"%s", help);
+  while(i<argc)
+  {
+    if(strncasecmp(argv[i],"-h",2)==0)
+    {
+      printf("%s", help);
       exit(EXIT_SUCCESS);
     }
-    else if (strncasecmp(argv[i],"-debug",6)==0) {
+    else if (strncasecmp(argv[i],"-debug",6)==0)
+    {
       debug=1;
       i=i+1;
     }
+	/*
     else if (strncasecmp(argv[i],"-sender",7)==0) {
       sender=strdup(argv[i+1]);
       i=i+2;
     }
-    else if (strncasecmp(argv[i],"-dest",5)==0) {
+	*/
+    else if (strncasecmp(argv[i],"-dest",5)==0)
+    {
       dest=strdup(argv[i+1]);
       i=i+2;
     }
-    else if (strncasecmp(argv[i],"-type",5)==0) {
+    else if (strncasecmp(argv[i],"-type",5)==0)
+    {
       msgtype=strdup(argv[i+1]);
       i=i+2;
     }
-    else if (strncasecmp(argv[i],"-gmd",4)==0) {
+    else if (strncasecmp(argv[i],"-gmd",4)==0)
+    {
       gmd=atoi(argv[i+1]);
       i=i+2;
     }
-    else if (strncasecmp(argv[i],"-a",2)==0) {
+    else if (strncasecmp(argv[i],"-a",2)==0)
+    {
       project=strdup(argv[i+1]);
       i=i+2;
     }
-    else if (strncasecmp(argv[i],"-u",2)==0) {
+    else if (strncasecmp(argv[i],"-u",2)==0)
+    {
       uniq_name=strdup(argv[i+1]);
       i=i+2;
     }
-    else if (strncasecmp(argv[i],"-",1)==0) {
+    else if (strncasecmp(argv[i],"-",1)==0)
+    {
       ind=i;
       return;
     }
-    else {
-      TutOut((T_STR)"%s", help);
+    else
+    {
+      printf("%s", help);
       exit(EXIT_FAILURE);
     }
-  }
+ }
 
   return;
 }

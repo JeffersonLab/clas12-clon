@@ -7,12 +7,11 @@
 
 #include <gddApps.h>
 #include <gddAppFuncTable.h>
+#include <casdef.h>
 
 
 #define NDIM 100
 #define STRLEN 256
-
-void setDebug(int val);
 
 
 //-------------------------------------------------------------------------
@@ -22,11 +21,13 @@ class myPV : public casPV {
 
 
 private:
+
   static int ft_is_initialized;
   static gddAppFuncTable<myPV> ft;
   
   
 public:
+
   char *myName;
   aitEnum myType;
   int myDimension;

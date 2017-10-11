@@ -1,6 +1,7 @@
 #ifndef _ECLIB_
 
 #include <ap_int.h>
+/*#include <ap_fixed.h>*/
 #include <hls_stream.h>
 
 #ifdef	__cplusplus
@@ -20,32 +21,24 @@ extern "C" {
 /* some control defines */
 /************************/
 
+#define NSLOT      7
+#define MAXTIMES   8 /*8 for data, 1 for GEMC*/   /* maximum number of the time slices */
+#define NTICKS     8    /* the number of ticks in one timing slice */
+#define TIME2TICKS 4000 /* conversion factor from FADC250 integral time to 4ns ticks */
 
-
-#define NSTRIP0   36
 #define NSTRIP    36
 #define NPEAKMAX  (NSTRIP/2)
 #define NLAYER    6
 #define NSECTOR   6
 #define NPEAK     4
 #define NHITMAX   (NPEAK*NPEAK*NPEAK) /* array size if index is calculated as 'u+(v<<2)+(w<<4)' */
-#define NHIT      NHITMAX
+#define NHIT      4
 
 
-#define ECPEAK0_ENERGY_MASK 0xFFFF
-#define ECPEAK0_STRIP1_MASK 0x3F
-#define ECPEAK0_STRIPN_MASK 0x3F
-#define ECPEAK0_ENESUM_MASK 0xFFFFFF
-
-#define ECPEAK0_ENERGY_BITS 16
-#define ECPEAK0_STRIP1_BITS 6
-#define ECPEAK0_STRIPN_BITS 6
-#define ECPEAK0_ENESUM_BITS 24
-
-#define ECPEAK0_BITS (ECPEAK0_ENERGY_BITS+ECPEAK0_STRIP1_BITS+ECPEAK0_STRIPN_BITS+ECPEAK0_ENESUM_BITS)
 
 
 #include "ectypes.h"
+
 
 
 #ifdef DEBUG

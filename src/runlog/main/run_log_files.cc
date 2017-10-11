@@ -37,7 +37,7 @@
 
 
 // smartsockets
-#include <rtworks/cxxipc.hxx>
+#include "ipc_lib.h"
 
 
 // system stuff
@@ -88,7 +88,7 @@ int dbr_close(void);
 }
 
 // ref to server (connection created later)
-TipcSrv &server=TipcSrv::Instance();
+IpcServer &server = IpcServer::Instance();
 
 
 //----------------------------------------------------------------------
@@ -98,7 +98,7 @@ int
 main(int argc, char **argv)
 {
 
-  T_OPTION opt;
+  //T_OPTION opt;
   int status;
   char fsession[50];
 
@@ -120,19 +120,23 @@ main(int argc, char **argv)
   clon_parms = getenv("CLON_PARMS");
 
   // disable GMD timeout
-  opt=TutOptionLookup((T_STR)"Server_Delivery_Timeout");
-  if(!TutOptionSetNum(opt,0.0)){cerr << "?unable to set GMD timeout" << endl;}
+  //opt=TutOptionLookup((T_STR)"Server_Delivery_Timeout");
+  //if(!TutOptionSetNum(opt,0.0)){cerr << "?unable to set GMD timeout" << endl;}
 
 
   // init ipc
-  if(debug==0)dbr_init(uniq_dgrp,application,"run log files");
+  if(debug==0)
+  {
+	//dbr_init(uniq_dgrp,application,"run log files");
+    server.init(getenv("EXPID"), NULL, NULL, (char *)"run_log_files");
 
+  }
 
   // normal mode...process 1 file for the current run
   if(filep==0)
   {
     // get most recent run number from database
-    run=get_run_number(msql_database,session);
+    run = get_run_number(msql_database,session);
 
     // form filename and open file for reading
     strstream filename;
@@ -243,7 +247,7 @@ main(int argc, char **argv)
 
       // process file and close
       cout << "processing file " << argv[i] << ", run number " << run << endl;
-      status=process_file(file,run,fsession);
+      status = process_file(file,run,fsession);
       file.close();
 
 
@@ -261,12 +265,15 @@ main(int argc, char **argv)
 
 
   // wait for GMD acknowledgements
-  if(debug==0) dbr_check((float)timeout);
+  //if(debug==0) dbr_check((float)timeout);
 
 
   // close connection
-  if(debug==0)dbr_close();
-  
+  if(debug==0)
+  {
+    //dbr_close();
+    server.close();
+  }
 
   // done
   exit(EXIT_SUCCESS);
@@ -282,7 +289,7 @@ process_file(ifstream &file, int run, const char *session)
   int sendmsg=0;
   int nlong, nevent, nerror;
   char loc[80], fname[80];
-  TipcMsg *info;
+  //TipcMsg *info;
 
   // search for FILES tag...start at beginning if not there (NOTE: old files don't have the tag)
   if(find_tag_line(file,"*FILES*",line,sizeof(line))!=0)
@@ -298,10 +305,13 @@ process_file(ifstream &file, int run, const char *session)
   // just send 1 info_server message
   if((debug==0)&&(no_info==0))
   {
+    server << clrm << (char *)"run_log_files" << (int32_t)run << (char *)session;
+	/*
     info = new TipcMsg((T_STR)"info_server");
     info->Sender(uniq_dgrp);
     info->Dest((T_STR)"info_server/in/run_log_files");
     *info << (T_STR)"run_log_files" << (T_INT4) run << (T_STR)session;
+	*/
   }
 
   // loop over all entries, send dbr message for each
@@ -311,7 +321,11 @@ process_file(ifstream &file, int run, const char *session)
     if(line[0]!='/')
     {
       cout << "?illegal line in rlf run " << run << endl;
-      if((debug==0)&&(no_info==0)) delete info;
+      if((debug==0)&&(no_info==0))
+	  {
+        //delete info;
+        server << clrm;
+	  }
       return(0);
     }
 
@@ -328,7 +342,7 @@ process_file(ifstream &file, int run, const char *session)
 	      << quote << fname << quote << comma
 	      << nlong/1024 << comma 
 	      << nevent << comma 
-	      << nerror << (T_STR)")" << ends;
+	      << nerror << (char *)")" << ends;
   
     // send ipc messages
     // NOTE: send many dbr messages, but only 1 info_server message
@@ -336,6 +350,9 @@ process_file(ifstream &file, int run, const char *session)
     {
       if(no_dbr==0)
       {
+        //server << sqlstring.str(); /* sergey: we are in the middle of sending 'info'*/
+
+		/*
 	    TipcMsg dbr((T_STR)"dbr_request");
 	    dbr.Sender(uniq_dgrp);
 	    dbr.Dest(dest);
@@ -343,11 +360,13 @@ process_file(ifstream &file, int run, const char *session)
 	    dbr.UserProp(0);
 	    dbr << (T_INT4) 1 << sqlstring.str();
 	    server.Send(dbr);
+		*/
       }
       
       if(no_info==0)
       {
-	    *info << loc << fname << (T_INT4) nlong/1024 << (T_INT4) nevent << (T_INT4) nerror;
+	    //*info << loc << fname << (T_INT4) nlong/1024 << (T_INT4) nevent << (T_INT4) nerror;
+        server << loc << fname << (int32_t) nlong/1024 << (int32_t) nevent << (int32_t) nerror;
       }
     }
     else // debug mode - just print
@@ -363,10 +382,15 @@ process_file(ifstream &file, int run, const char *session)
   {
     if(no_info==0)
     {
-      if(sendmsg==1)server.Send(*info);
-      delete info;
+      if(sendmsg==1)
+	  {
+        //server.Send(*info);
+        server << endm;
+	  }
+      //delete info;
+      server << clrm;
     }
-    server.Flush();
+    //server.Flush();
   }
   
   return(1);
@@ -438,7 +462,7 @@ decode_command_line(int argc, char **argv)
       i=i+2;
     }
     else if (strncasecmp(argv[i],"-",1)==0) {
-      TutWarning((T_STR)"Unknown command line arg: %s\n\n",argv[i]);
+      printf((char *)"Unknown command line arg: %s\n\n",argv[i]);
       i=i+1;
     }
   }

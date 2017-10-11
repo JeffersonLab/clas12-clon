@@ -68,39 +68,63 @@ typedef enum {
 
 /* dbrouter prototypes...not called in dbrsql */
 #ifdef __cplusplus
+void process_backlog(void);
+void dbrouter_done(void);
+void decode_command_line(int argc, char **argv);
+void count_sqltype(char *sqlstring);
+#endif
+
+
+
+#ifndef USE_ACTIVEMQ
+
+/* dbrouter prototypes...not called in dbrsql */
+#ifdef __cplusplus
 void receive_database_request(
 			      T_IPC_CONN                 conn,
 			      T_IPC_CONN_DEFAULT_CB_DATA data,
 			      T_CB_ARG                   arg);
-void process_backlog(void);
 dbr_code process_message(T_IPC_MSG msg);
 void check_status(int status, T_IPC_MSG msg);
-void decode_command_line(int argc, char **argv);
-void count_sqltype(char *sqlstring);
-void dbrouter_done(void);
 #endif
+
+#endif /*USE_ACTIVEMQ*/
+
+
+
+
 
 
 /* dbrsql prototypes, called in dbrouter */
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 void quit_callback(int sig);
-void status_poll_data(T_IPC_MSG msg);
 sql_code sql_connect(char *dbhost, char *dbuser, char *dbname);
 sql_code sql_connect_check(void);
-sql_code sql_process_sql(int maxrow, T_STR statement, T_IPC_MSG reply);
 sql_code sql_prepare_sqlda_sql(void);
 sql_code sql_clear_sqlda(void);
-sql_code sql_process_data(T_IPC_MSG msg,T_IPC_MSG reply);
-void sql_add_header_to_message(T_IPC_MSG reply, MYSQL_RES *res);
-void sql_add_row_to_message(T_IPC_MSG reply, MYSQL_RES *res, MYSQL_ROW row);
 void sql_commit(void);
 void sql_rollback(void);
 sql_code sql_disconnect(void);
+
+#ifndef USE_ACTIVEMQ
+void status_poll_data(T_IPC_MSG msg);
+sql_code sql_process_sql(int maxrow, T_STR statement, T_IPC_MSG reply);
+sql_code sql_process_data(T_IPC_MSG msg,T_IPC_MSG reply);
+void sql_add_header_to_message(T_IPC_MSG reply, MYSQL_RES *res);
+void sql_add_row_to_message(T_IPC_MSG reply, MYSQL_RES *res, MYSQL_ROW row);
+sql_code sql_process_rcdb(int maxrow, T_STR statement, T_IPC_MSG reply); /* sergey: rcdb */
+#endif /*USE_ACTIVEMQ*/
+
 #ifdef __cplusplus
 }
 #endif
+
+
+
+
 
 
 
@@ -112,7 +136,7 @@ void coutprintf(const char *fmt, ...);
 void cerrprintf(const char *fmt, ...);
 void logprintf(const char *fmt, ...);
 void errprintf(const char *fmt, ...);
-void msgerrprint(T_STR *fmt, ...);
+void msgerrprint(const char *fmt, ...);
 int Exit_Error (const char *MsgErr);
 #ifdef __cplusplus
 }

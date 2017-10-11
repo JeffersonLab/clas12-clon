@@ -1,7 +1,7 @@
 #define USE_PCAL
 #include "../ec.s/ecpeaksort.cc"
 
-/* 2.66/84/1/0%/0%/17%/46% - sorting network */
+/* 4.62/62/4/0%/0%/(19330)2%/(22046)6% II=4 */
 
-/* 3.36/241/1/0%/0%/3%/25% - pipeline, all complete */
-/* 3.36/241/4/0%/0%/3%/17% - pipeline II=4, all complete */
+
+

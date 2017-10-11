@@ -15,6 +15,8 @@ using namespace std;
 
 #include "../pc.s/pclib.h"
 #define ecpeaksort pcpeaksort
+#define ecpeaksort_2words pcpeaksort_2words
+#define ecpeaksort_2slices pcpeaksort_2slices
 
 #else
 
@@ -26,58 +28,122 @@ using namespace std;
 //#define DEBUG
 
 
-#define MAX(a,b)    (a > b ? a : b)
-#define MIN(a,b)    (a < b ? a : b)
-#define ABS(x)      ((x) < 0 ? -(x) : (x))
 
-/*
-#define PEAKMAX(a,b)    (a##.energy > b##.energy ? a : b)
-#define PEAKMIN(a,b)    (a##.energy < b##.energy ? a : b)
-*/
+
+/* 2.31/0/1/0/0/0/120 II=1, z complete */
+void
+ecpeaksort_2words(ap_uint<ECPEAK0_BITS> z[2])
+{
+#pragma HLS INLINE
+#pragma HLS ARRAY_PARTITION variable=z complete dim=1
+#pragma HLS PIPELINE
+
+  ap_uint<ECPEAK0_ENERGY_BITS> test1, test2;
+  ap_uint<ECPEAK0_BITS> tmp1, tmp2;
+
+  test1 = z[0](ECPEAK0_ENERGY-1, 0);
+  test2 = z[1](ECPEAK0_ENERGY-1, 0);
+  tmp1 = ((test1 > test2) ? z[0] : z[1]);
+  tmp2 = ((test1 < test2) ? z[0] : z[1]);
+  z[0] = tmp1;
+  z[1] = tmp2;
+}
+
+
+
+/* 4.62/0/1/0/0/   0/4200 II=1, z complete */
+void
+ecpeaksort_2slices(ap_uint<ECPEAK0_BITS> z[NPEAKMAX])
+{
+#pragma HLS ARRAY_PARTITION variable=z complete dim=1
+#pragma HLS PIPELINE
+
+  ap_uint<ECPEAK0_BITS> zz[2];
+
+  for(int i=0; i<NPEAKMAX-1; i=i+2)
+  {
+	zz[0] = z[i];
+    zz[1] = z[i+1];
+ 	ecpeaksort_2words(zz);
+ 	z[i] = zz[0];
+    z[i+1] = zz[1];
+  }
+
+  for(int i=1; i<NPEAKMAX-1; i=i+2)
+  {
+	zz[0] = z[i];
+	zz[1] = z[i+1];
+	ecpeaksort_2words(zz);
+ 	z[i] = zz[0];
+    z[i+1] = zz[1];
+  }
+
+}
+
+#define SORTING(I1,I2) \
+  { \
+    ap_uint<ECPEAK0_BITS> zz[2]; \
+    for(int i=I1; i<=I2; i=i+2) \
+    { \
+      zz[0] = z[i]; \
+      zz[1] = z[i+1]; \
+      ecpeaksort_2words(zz); \
+      z[i] = zz[0]; \
+      z[i+1] = zz[1]; \
+    } \
+  }
+
 
 /*xc7vx550tffg1158-1*/
 
 
+/* 2.62/27/4/0%/0%/(5195)~0%/(4719)1% II=4 */
 
-int
-ecpeaksort(ECPeak0 peakin[NSTRIP], ECPeak0 peakout[NPEAK])
+void
+ecpeaksort(hls::stream<ECPeak0_s> s_peak0max[NF3], hls::stream<ECPeak0_s> &s_peak0)
 {
-#pragma HLS PIPELINE II=1
+#pragma HLS DATA_PACK variable=s_peak0
+#pragma HLS INTERFACE axis register both port=s_peak0
+#pragma HLS DATA_PACK variable=s_peak0max
+#pragma HLS INTERFACE axis register both port=s_peak0max
+#pragma HLS ARRAY_PARTITION variable=s_peak0max complete dim=1
+#pragma HLS PIPELINE II=4
+
+  int i, stage;
+
+  ECPeak0 peakin[NPEAKMAX];
 #pragma HLS ARRAY_PARTITION variable=peakin complete dim=1
+  ECPeak0 peakout[NPEAK];
 #pragma HLS ARRAY_PARTITION variable=peakout complete dim=1
 
-  ap_uint<8> i, j, k, stage;
-  ap_uint<2> ii, jj;
-
-  ap_uint<ECPEAK0_ENERGY_BITS> test1, test2;
-
-  //ECPeak0 tmp1, tmp2, z[NSTRIP];
-  //ap_uint<52> tmp1, tmp2;
-  //ap_uint<52> z[NSTRIP];
-  ap_uint<ECPEAK0_BITS> tmp1, tmp2;
-  ap_uint<ECPEAK0_BITS> z[NSTRIP];
-#pragma HLS ARRAY_RESHAPE variable=z complete dim=1
+  ap_uint<ECPEAK0_BITS> z[NPEAKMAX];
+#pragma HLS ARRAY_PARTITION variable=z complete dim=1
 
 
-#if 0
+  ECPeak0_s fifo[NF3*NH_READS];
+#pragma HLS ARRAY_PARTITION variable=fifo complete dim=1
 
-  ECPeak0 peakswap, peaktmp, peak0[NSTRIP];
-#pragma HLS ARRAY_PARTITION variable=peak0 complete dim=1
+  for(int i=0; i<NF3; i++)
+  {
+    for(int j=0; j<NH_READS; j++)
+    {
+	  fifo[i*NH_READS+j] = s_peak0max[i].read();
+    }
+  }
 
-  ap_uint<16> enswap, enn, en[NSTRIP], en0[NPEAK], en1[NSTRIP];
-#pragma HLS ARRAY_PARTITION variable=en complete dim=1
-
-  ap_uint<8> indswap, ind[NSTRIP];
-#pragma HLS ARRAY_PARTITION variable=ind complete dim=1
-
-#endif
-
+  for(int i=0; i<NPEAKMAX; i++)
+  {
+    peakin[i].energy = fifo[i].energy;
+    peakin[i].energysum4coord = fifo[i].energysum4coord;
+    peakin[i].strip1 = fifo[i].strip1;
+    peakin[i].stripn = fifo[i].stripn;
+  }
 
 
 #ifdef DEBUG
   printf("\n\n++ ecpeaksort ++\n");
   printf("BEFOR:\n");
-  for(i=0; i<NSTRIP; i++)
+  for(i=0; i<NPEAKMAX; i++)
   {
     cout<<"peakin["<<i<<"]: energy="<<peakin[i].energy<<", energysum4coord="<<peakin[i].energysum4coord<<", first strip="<<peakin[i].strip1<<", number of strips="<<peakin[i].stripn<<endl;
   }
@@ -85,178 +151,179 @@ ecpeaksort(ECPeak0 peakin[NSTRIP], ECPeak0 peakout[NPEAK])
 
 
 
+#if 0
+  /******************************************************/
+  /* selecting - something is wrong, need to be fixed ! */
+  /* 3.36/ 97/1/0/0/9574/31583 (1%/9%) II=1 */
+  /* 3.36/ 97/2/0/0/14781/24710(2%/7%) II=2 */
+  /* 3.36/ 97/8/0/0/9114/23344(1%/6%) II=8 */
+
+  /* selecting structure array */
+  {
+    ap_uint<16> enn, en0[NPEAK];
+    ECPeak0 peaktmp;
+
+    for(i=0; i<NPEAK; i++)
+    {
+      peakout[i] = peakin[i];
+      en0[i] = peakin[i].energy;
+    }
+
+    for(i=NPEAK; i<NPEAKMAX; i++)
+    {
+        peaktmp = peakin[i];
+        enn = peakin[i].energy;
+        if((en0[0]<=en0[1])&&(en0[0]<=en0[2])&&(en0[0]<=en0[3]) && (en0[0] < enn)) {en0[0] = enn; peakout[0] = peaktmp;}
+        else if((en0[1]<=en0[0])&&(en0[1]<=en0[2])&&(en0[1]<=en0[3]) && (en0[1] < enn)) {en0[1] = enn; peakout[1] = peaktmp;}
+        else if((en0[2]<=en0[0])&&(en0[2]<=en0[1])&&(en0[2]<=en0[3]) && (en0[2] < enn)) {en0[2] = enn; peakout[2] = peaktmp;}
+        else if((en0[3]<=en0[0])&&(en0[3]<=en0[1])&&(en0[3]<=en0[2]) && (en0[3] < enn)) {en0[3] = enn; peakout[3] = peaktmp;}
+    }
+  }
+  /* end of selecting                                   */
+  /******************************************************/
+#endif
 
 
 
-
-/* 3.36/26/1/0%/0%/2%/7% */
 #if 1
-  /* sorting network */
+  /*********************/
+  /* 'sorting network' */
 
-  /* copy input data locally */
-  //for(i=0; i<NSTRIP; i++) z[i] = peakin[i];
-  for(i=0; i<NSTRIP; i++)
+  /* 2.31/35/1/0/0/68076/75600(9%/21%) II=1 */
+  /* 3.02/36/2/0/0/35013/38747(5%/11%) II=2 */
+  /* 3.95/36/8/0/0/11677/18438(1%/5%) II=8 */
+
+  /* copy input data from input array of structures to local array */
+  for(i=0; i<NPEAKMAX; i++)
   {
-	z[i] = ((peakin[i].energy&ECPEAK0_ENERGY_MASK)<<(ECPEAK0_ENESUM_BITS+ECPEAK0_STRIPN_BITS+ECPEAK0_STRIP1_BITS)) |
-		   ((peakin[i].strip1&ECPEAK0_STRIP1_MASK)<<(ECPEAK0_ENESUM_BITS+ECPEAK0_STRIPN_BITS)) |
-		   ((peakin[i].stripn&ECPEAK0_STRIPN_MASK)<<ECPEAK0_ENESUM_BITS) |
-			(peakin[i].energysum4coord&ECPEAK0_ENESUM_MASK);
-
-	//z[i] = (peakin[i].energy, peakin[i].strip1, peakin[i].stripn, peakin[i].energysum4coord);
-    //z[i](15,0) = peakin[i].energy
-
-	//z[i] = ((peakin[i].energy&0xFFFF)<<(24+6+6)) | ((peakin[i].strip1&0x3F)<<(24+6)) | ((peakin[i].stripn&0x3F)<<24) | (peakin[i].energysum4coord&0xFFFFFF);
-    //cout<<"ZZ "<<peakin[i].energy<<" "<<peakin[i].energysum4coord<<" -> "<<z[i]<<endl;
+	z[i] = (peakin[i].energysum4coord, peakin[i].stripn, peakin[i].strip1, peakin[i].energy);
   }
 
-  /* sorting network loop */
-  for(stage=1; stage<=NSTRIP; stage++)
+ /* 'sorting network' loop */
+
+/*
+  for(stage=0; stage<(NPEAKMAX/2); stage++)
   {
-    if((stage%2)==1) k=0;
-    if((stage%2)==0) k=1;
+	ecpeaksort_2slices(z);
+  }
+*/
 
-    for(i=k; i<NSTRIP-1; i=i+2)
-    {
-      //tmp1 = (z[i].energy > z[i+1].energy ? z[i] : z[i+1]);
-      //tmp2 = (z[i].energy < z[i+1].energy ? z[i] : z[i+1]);
 
-      //tmp1 = (z[i] > z[i+1] ? z[i] : z[i+1]);
-      //tmp2 = (z[i] < z[i+1] ? z[i] : z[i+1]);
 
-      test1 = (z[i]>>(ECPEAK0_ENESUM_BITS+ECPEAK0_STRIPN_BITS+ECPEAK0_STRIP1_BITS)) & ECPEAK0_ENERGY_MASK;
-      test2 = (z[i+1]>>(ECPEAK0_ENESUM_BITS+ECPEAK0_STRIPN_BITS+ECPEAK0_STRIP1_BITS)) & ECPEAK0_ENERGY_MASK;
-      tmp1 = ((test1 > test2) ? z[i] : z[i+1]);
-      tmp2 = ((test1 < test2) ? z[i] : z[i+1]);
+#ifdef USE_PCAL // NPEAKMAX=42
 
-      z[i  ] = tmp1;
-      z[i+1] = tmp2;
-    }
-  } /* end of sorting network loop */
+  SORTING(0,40);
+  SORTING(1,39);
+  SORTING(0,40);
+  SORTING(1,39);
 
-  //peakout[i].energy = z[i](15,0) /* bits from 15 to 0 */
+  SORTING(0,38);
+  SORTING(1,37);
 
+  SORTING(0,36);
+  SORTING(1,35);
+
+  SORTING(0,34);
+  SORTING(1,33);
+
+  SORTING(0,32);
+  SORTING(1,31);
+
+  SORTING(0,30);
+  SORTING(1,29);
+
+  SORTING(0,28);
+  SORTING(1,27);
+
+  SORTING(0,26);
+  SORTING(1,25);
+
+  SORTING(0,24);
+  SORTING(1,23);
+
+  SORTING(0,22);
+  SORTING(1,21);
+
+  SORTING(0,20);
+  SORTING(1,19);
+
+  SORTING(0,18);
+  SORTING(1,17);
+
+  SORTING(0,16);
+  SORTING(1,15);
+
+  SORTING(0,14);
+  SORTING(1,13);
+
+  SORTING(0,12);
+  SORTING(1,11);
+
+  SORTING(0,10);
+  SORTING(1,9);
+
+  SORTING(0,8);
+  SORTING(1,7);
+
+  SORTING(0,6);
+  SORTING(1,5);
+
+  SORTING(0,4);
+  SORTING(1,3);
+
+  SORTING(0,2);
+  SORTING(1,1);
+
+#else // NPEAKMAX=18
+
+ 
+//#ifndef __SYNTHESIS__ /* sergey: TEMPORARY !!! */
+
+  SORTING(0,16);
+  SORTING(1,15);
+  SORTING(0,16);
+  SORTING(1,15);
+
+  SORTING(0,14);
+  SORTING(1,13);
+
+  SORTING(0,12);
+  SORTING(1,11);
+
+  SORTING(0,10);
+  SORTING(1,9);
+
+  SORTING(0,8);
+  SORTING(1,7);
+
+  SORTING(0,6);
+  SORTING(1,5);
+
+  SORTING(0,4);
+  SORTING(1,3);
+
+  SORTING(0,2);
+  SORTING(1,1);
+
+//#endif /* #ifndef __SYNTHESIS__ */
+
+#endif
+
+
+
+  /* end of 'sorting network' loop */
+
+  /* extract data from sorted array to output array of structures */
   for(i=0; i<NPEAK; i++)
   {
-	 //peakout[i] = z[i];
-	 peakout[i].energy          = (z[i]>>(ECPEAK0_ENESUM_BITS+ECPEAK0_STRIPN_BITS+ECPEAK0_STRIP1_BITS)) & ECPEAK0_ENERGY_MASK;
-	 peakout[i].strip1          = (z[i]>>(ECPEAK0_ENESUM_BITS+ECPEAK0_STRIPN_BITS)) & ECPEAK0_STRIP1_MASK;
-	 peakout[i].stripn          = (z[i]>>ECPEAK0_ENESUM_BITS) & ECPEAK0_STRIPN_MASK;
-	 peakout[i].energysum4coord = z[i] & ECPEAK0_ENESUM_MASK;
+	 peakout[i].energy          = z[i](ECPEAK0_ENERGY-1, 0);
+	 peakout[i].strip1          = z[i](ECPEAK0_STRIP1-1, ECPEAK0_ENERGY);
+	 peakout[i].stripn          = z[i](ECPEAK0_STRIPN-1, ECPEAK0_STRIP1);
+	 peakout[i].energysum4coord = z[i](ECPEAK0_ENESUM-1, ECPEAK0_STRIPN);
   }
 
-#endif
-
-
-
-
-
-
-
-
-/* 3.36/97/1/0%/0%/1%/8% - pipeline, all complete */
-/* 3.36/97/4/0%/0%/1%/6% - pipeline II=4, all complete */
-#if 0
-  for(i=0; i<NPEAK; i++)
-  {
-#pragma HLS UNROLL
-    peakout[i] = peakin[i];
-    en0[i] = peakin[i].energy;
-  }
-
-  for(i=NPEAK; i<NSTRIP; i++)
-  {
-	peaktmp = peakin[i];
-	enn = peakin[i].energy;
-	if     ((en0[0]<=en0[1])&&(en0[0]<=en0[2])&&(en0[0]<=en0[3]) && (en0[0] < enn)) {en0[0] = enn; peakout[0] = peaktmp;}
-	else if((en0[1]<=en0[0])&&(en0[1]<=en0[2])&&(en0[1]<=en0[3]) && (en0[1] < enn)) {en0[1] = enn; peakout[1] = peaktmp;}
-	else if((en0[2]<=en0[0])&&(en0[2]<=en0[1])&&(en0[2]<=en0[3]) && (en0[2] < enn)) {en0[2] = enn; peakout[2] = peaktmp;}
-	else if((en0[3]<=en0[0])&&(en0[3]<=en0[1])&&(en0[3]<=en0[2]) && (en0[3] < enn)) {en0[3] = enn; peakout[3] = peaktmp;}
-  }
-
-#endif
-
-
-
-
-/* 3.46/97/98/0%/0%/~0%/~0% - no pipeline, all complete */
-/* 3.39/65/66/0%/0%/~0%/~0% - no pipeline, all complete, peaktmp in the beginning of the loop */
-/* 3.39/143/33/0%/0%/4%/9% - pipeline, all complete, peaktmp in the beginning of the loop */
-#if 0
-  for(i=0; i<NPEAK; i++)
-  {
-#pragma HLS UNROLL
-    peakout[i] = peakin[i];
-    en0[i] = peakin[i].energy;
-  }
-
-  for(i=NPEAK; i<NSTRIP; i++)
-  {
-	peaktmp = peakin[i];
-	if     ((en0[0]<=en0[1])&&(en0[0]<=en0[2])&&(en0[0]<=en0[3])) jj=0;
-	else if((en0[1]<=en0[0])&&(en0[1]<=en0[2])&&(en0[1]<=en0[3])) jj=1;
-	else if((en0[2]<=en0[0])&&(en0[2]<=en0[1])&&(en0[2]<=en0[3])) jj=2;
-	else if((en0[3]<=en0[0])&&(en0[3]<=en0[1])&&(en0[3]<=en0[2])) jj=3;
-	if(peakout[jj].energy < peaktmp.energy)
-    {
-	  peakout[jj] = peaktmp;
-      en0[jj] = peaktmp.energy;
-    }
-  }
-#endif
-
-
-
-/* 3.36/72/72/0%/0%/3%/8% - pipeline, complete peakout */
-/* 3.36/69/ 1/0%/0%/4%/13% - pipeline, complete peakin and peakout */
-#if 0
-  for(i=0; i<NSTRIP; i++)
-  {
-    en[i]    = peakin[i].energy;
-    ind[i]   = i;
-  }
-
-  /*bubble*/
-  for(i=1; i<NSTRIP; i++)
-  {
-    for(j=0; j<(NSTRIP-i); j++)
-    {
-      if (en[j] < en[j+1])
-      {
-        enswap = en[j];
-        en[j]    = en[j+1];
-        en[j+1]  = enswap;
-
-        indswap  = ind[j];
-        ind[j]   = ind[j+1];
-        ind[j+1] = indswap;
-      }
-    }
-  }
-
-  ecpeaksort_label0:for(i=0; i<NPEAK; i++) peakout[i] = peakin[ind[i]];
-#endif
-
-
-
-/* 2.39/71/18/0%/0%/11%/23% - bubble sort: pipeline, params not complete */
-/* 2.31/68/1/0%/0%/11%/24% - bubble sort: pipeline, params complete */
-#if 0
-  /* bubble sort */
-  for(i=0; i<NSTRIP; i++) peak0[i] = peakin[i];
-
-  for(i=1; i<NSTRIP; i++)
-  {
-    for(j=0; j<(NSTRIP-i); j++)
-    {
-      if (peak0[j].energy < peak0[j+1].energy)
-      {
-        peakswap = peak0[j];
-        peak0[j]    = peak0[j+1];
-        peak0[j+1]  = peakswap;
-      }
-    }
-  }
-  for(i=0; i<NPEAK; i++) peakout[i] = peak0[i];
+  /* end of 'sorting network' */
+  /****************************/
 #endif
 
 
@@ -270,5 +337,24 @@ ecpeaksort(ECPeak0 peakin[NSTRIP], ECPeak0 peakout[NPEAK])
   }
 #endif
 
-  return(0);
+
+  ECPeak0_s fifo1[NPEAK];
+#pragma HLS ARRAY_PARTITION variable=fifo1 complete dim=1
+
+
+  for(int i=0; i<NPEAK; i++)
+  {
+    fifo1[i].energy = peakout[i].energy;
+    fifo1[i].energysum4coord = peakout[i].energysum4coord;
+    fifo1[i].strip1 = peakout[i].strip1;
+    fifo1[i].stripn = peakout[i].stripn;
+  }
+
+
+  for(int j=0; j<NPEAK; j++)
+  {
+	s_peak0.write(fifo1[j]);
+  }
+
 }
+

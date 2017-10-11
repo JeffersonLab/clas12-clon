@@ -31,11 +31,11 @@ JFLAGS = -classpath $(IMPORT_JAR)/ss.jar
 
 
 # 32bit !!!
-ifeq ("$(OSTYPE)","Linux")
-  LIBNAMES += $(CODA)/Linux_i686/lib/libmysql4.1.20.a
-else
+#ifeq ("$(OSTYPE)","Linux")
+#  LIBNAMES += $(CODA)/Linux_i686/lib/libmysql4.1.20.a
+#else
   LIBNAMES += $(CODA_LIB)/libmysql4.1.20.a
-endif
+#endif
 
 #for old solaris only ???
 LIBNAMES += -lresolv

@@ -53,8 +53,14 @@ aj, 6-18-96
 
 #define __EXTENSIONS__
 
-// SmartSockets include file
-#include <rtworks/cxxipc.hxx>
+#include "ipc_lib.h"
+
+// put here all available listeners
+#define LISTEN_ONLY
+#include "MessageActionControl.h"
+#include "MessageActionEVIO2ET.h"
+#include "MessageActionJSON.h"
+#include "MessageActionEPICS.h"
 
 // C++ include files
 
@@ -64,6 +70,8 @@ using namespace std;
 #include <iostream>
 #include <iomanip>
 
+
+static int debug = 1;
 
 //Enumeration of type of poll request to server
 enum Calls{AppN, CliN, DtgN, CliDtg, DtgCli, DtgI};
@@ -88,12 +96,13 @@ void GetLicense();
 void SetAppl();
 void ProcessCom(); 
 void ProcessMsg();
-void PrintMsg(T_STR *data1, T_STR *data2);
+void PrintMsg(char *data1, char *data2);
 void ProcessSerMsg ();
 void ProcessSerCom ();
 void ProcessDtgMsg(); 
 void ProcessCliMsg();
 
+/*
 //Globals
 TipcMt mt();
 TipcMsg msg;
@@ -101,36 +110,51 @@ TipcMsg msg2;
 TipcMon mon;
 TipcMonServer server_mon (T_IPC_MON_ALL);
 TipcMonClient mon_client (client), mon_client2 (client);
-
+*/
 
 
 
 // main:  Takes up to six arguments
-//********************************************************************
-int main (int argc, char **argv)  {
-
+//
+int
+main (int argc, char **argv)
+{
 
   // synch with c i/o
   ios::sync_with_stdio();
 
+  //ComLine(argc, argv);
 
-  ComLine(argc, argv);
+  //if (strcmp (app,"$") != 0) SetAppl();
 
-  GetLicense();
+  //mon.IdentStr("ipc_info monitor");
 
-  if (strcmp (app,"$") != 0)
-    SetAppl();
-  mon.IdentStr("ipc_info monitor");
+  // Connect to server
+  IpcServer &server = IpcServer::Instance();
+  server.init(getenv("EXPID"), NULL, NULL, (char *)"ipc_info", NULL, "*");
 
-// Connect to server
-  TipcSrv& server = TipcSrv::InstanceCreate (T_IPC_SRV_CONN_FULL);
+  MessageActionControl *control = new MessageActionControl("ipc_info", debug);
+  MessageActionEPICS *epics = new MessageActionEPICS(debug);
+  MessageActionEVIO2ET *evio2et = new MessageActionEVIO2ET(debug);
+  MessageActionJSON *json = new MessageActionJSON(debug);
 
-  if ((SerAll == true)||(SerInfo == true))
-    ProcessSerCom();     // Processes server option if invoked
-  else 
-    ProcessCom();        // Process application options
+  server.addActionListener(control);
+  //server.addActionListener(epics);
+  //server.addActionListener(evio2et);
+  //server.addActionListener(json);
 
-// Receive poll msg from server
+  while(1) sleep(1);
+
+
+
+  //if ((SerAll == true)||(SerInfo == true))
+  //  ProcessSerCom();     // Processes server option if invoked
+  //else 
+  //  ProcessCom();        // Process application options
+
+
+  /*
+  // Receive poll msg from server
   server.Flush();
   msg = server.Next(10.0);
   if (!msg)  {
@@ -154,89 +178,118 @@ int main (int argc, char **argv)  {
 
   cout << endl << endl << "=====================================================================" << endl;
 
-//Process msg received from server
+  //Process msg received from server
   if ((SerAll == true) || (SerInfo == true))
     ProcessSerMsg ();
   else
     ProcessMsg ();
 
   cout << endl << "=====================================================================" << endl;
+  */
 
  
-// Destroy and clean up
-  msg.Destroy();
-  msg2.Destroy();
-  server.Destroy(T_IPC_SRV_CONN_NONE);
+  // Destroy and clean up
+  //msg.Destroy();
+  //msg2.Destroy();
+  //server.Destroy(T_IPC_SRV_CONN_NONE);
+  server.close();
 
-}  // main
-//********************************************************************
+  exit(0);
+}
+
 
 
 // ComLine:  Determines program execution given specified arguements
 //********************************************************************
-void ComLine (int argc, char **argv)  {  
-  if (argc>7) {
+void
+ComLine (int argc, char **argv)
+{
+  if (argc>7)
+  {
     cout << help << endl;
     exit (0);
   }
-  if (argc > 1)  {
+
+  if (argc > 1)
+  {
     int i = 1;
-    while (i < argc)  {
-      if (strncasecmp (argv[i], "-h", 2) == 0)  {
+    while (i < argc)
+    {
+      if (strncasecmp (argv[i], "-h", 2) == 0)
+      {
         cout << help << endl;
         exit (0);
       }
-      if (strncasecmp (argv[i], "-", 1) != 0)  {
+
+      if (strncasecmp (argv[i], "-", 1) != 0)
+      {
         cerr << "Unknown command line arg: " << argv[i] << endl;
         cerr << help << endl;
         exit(1);
       }
-      else if (strncasecmp (argv[i], "-s", 2) == 0)  {
+      else if (strncasecmp (argv[i], "-s", 2) == 0)
+      {
         SerAll = true;
         i ++;
       }
-      else if (strncasecmp (argv[i], "-i", 2) == 0) {
+      else if (strncasecmp (argv[i], "-i", 2) == 0)
+      {
         SerInfo = true;
         i ++;
       }
-      else if (argc>=(i+1)) {
-	if (strncasecmp (argv[i], "-a", 2) == 0)  {
-	  if((i+2)<=argc){
-	    app = strdup (argv[i+1]);
-	    i = i + 2;
-	  } else {
-	    app="$";
-	    i = i + 1;
-	  }
-	}
-	else if (strncasecmp (argv[i], "-c", 2) == 0)  {
-	  if((i+2)<=argc) {
-	    client = strdup (argv[i+1]);
-	    i = i + 2;
-	  } else {
-	    client="$";
-	    i = i + 1;
-	  }
-	}
-	else if (strncasecmp (argv[i], "-d", 2) == 0)  {
-	  if((i+2)<=argc){
-	    dg = strdup (argv[i+1]);
-	    i = i + 2;
-	  } else {
-	    dg="$";
-	    i = i + 1;
-	  }
-	}
-	else if (i == 1)  {
-	  cerr << "Unknown command line arg: " << argv[i] << endl;
-	  cerr << help << endl;
-	  exit(1);
-	}
+      else if (argc>=(i+1))
+      {
+	    if (strncasecmp (argv[i], "-a", 2) == 0)
+        {
+	      if((i+2)<=argc)
+          {
+	        app = strdup (argv[i+1]);
+	        i = i + 2;
+	      }
+          else
+          {
+	        app="$";
+	        i = i + 1;
+	      }
+	    }
+	    else if (strncasecmp (argv[i], "-c", 2) == 0)
+        {
+	      if((i+2)<=argc)
+          {
+	        client = strdup (argv[i+1]);
+	        i = i + 2;
+	      }
+          else
+          {
+	        client="$";
+	        i = i + 1;
+	      }
+	    }
+	    else if (strncasecmp (argv[i], "-d", 2) == 0)
+        {
+	      if((i+2)<=argc)
+          {
+	        dg = strdup (argv[i+1]);
+	        i = i + 2;
+	      }
+          else
+          {
+	        dg="$";
+	        i = i + 1;
+	      }
+	    }
+	    else if (i == 1)
+        {
+	      cerr << "Unknown command line arg: " << argv[i] << endl;
+	      cerr << help << endl;
+	      exit(1);
+	    }
       }
-      else {
-	cerr << "Unknown command line arg: " << argv[i] << endl;
-	cerr << help << endl;
-	exit(1);
+      else
+      {
+	    cerr << "Unknown command line arg: " << argv[i] << endl;
+	    cerr << help << endl;
+	    exit(1);
       }
     }
   }
@@ -245,37 +298,19 @@ void ComLine (int argc, char **argv)  {
 
 
 
-//********************************************************************
-void GetLicense()  {
-#ifdef SunOS
-  strstream s;
-  s << getenv("RTHOME") << "/standard/license.cm" << ends;
-  if(!TutCommandParseFile(s.str())){
-    cerr << "Unable to read in license.cm " << endl; 
-    exit(1);
-  }
-#else
-  strstream s;
-  s << getenv("RTHOME") << "/standard/license.cm" << ends;
-  if(!TutCommandParseFile(s.str())){
-    cerr << "Unable to read in license.cm " << endl; 
-    exit(1);
-  }
-#endif
-
-}
-//********************************************************************
-
-
+#if 0
 
 //SetAppl:  Set current application or set to default if not specified.
 //********************************************************************
-void SetAppl()  {
-    T_OPTION opt = TutOptionLookup ("Application");
-    if (!TutOptionSetEnum (opt, app))  {
-      cout << "Unable to set application \n";
-      exit (1);
-    }
+void
+SetAppl()
+{
+  T_OPTION opt = TutOptionLookup ("Application");
+  if (!TutOptionSetEnum (opt, app))
+  {
+    cout << "Unable to set application \n";
+    exit (1);
+  }
 }
 //********************************************************************
 
@@ -544,20 +579,26 @@ void ProcessMsg()  {
 
 // PrintMsg:  Printing subroutine 
 //********************************************************************
-void PrintMsg(T_STR *data1, T_STR *data2)  {  
-  T_INT4 data_size;
+void
+PrintMsg(char *data1, char *data2)
+{  
+  int32_t data_size;
 
-  _getsize(msg,&data_size);
+  _getsize(msg, &data_size);
   cout << endl;
-  for (int i = 0; i < data_size; i++) {  
+  for (int i = 0; i < data_size; i++)
+  {  
     cout << "	(" << setfill(' ') << setw(2) << i+1 << ")  " <<  data1 [i] << " "; 
     if ((MsgCall == CliN) || (SerAll == true))
+	{
       cout << setfill('-') << setw(40-strlen(data1[i])) << "> " << data2[i];
+	}
     cout << endl;
   }      
 }
 //********************************************************************
 
+#endif
 
 
 

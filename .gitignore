@@ -18,5 +18,12 @@ common/
 *_hide
 *.jar
 *.class
-src/trigger_Aug_2_2016
-src/trigger_Nov_2_2016
+src/trigger_20_jul_2017
+src/trigger_3_oct_2017
+src/cmroot.tar
+src/ipc_old
+src/trigger/vivado
+src/cmon
+src/cmroot
+src/trigger/root
+src/trigger/root_dc

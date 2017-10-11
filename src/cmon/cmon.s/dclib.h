@@ -1,6 +1,7 @@
 #ifndef _DCLIB_
 
 
+
 #include "uthbook.h"
 
 
@@ -201,7 +202,6 @@ typedef struct trevent
   UThistf *histf; /* histograms */
 
 
-
   int     ntr_out;
   float   ev_out[ntrmx][36];
 
@@ -221,6 +221,8 @@ typedef struct trevent
 
 void cminit_();
 void cminit();
+
+void cminit_geom(float dc_wpmid[npl_dc][192][3],float dc_wdir[npl_dc][192][3],float dc_wlen[npl_dc][192][2]);
 
 void cmloop_(int *iw,int *ifevb,int *inter,int *Nevents,int *iret);
 void cmloop(int *iw,int ifevb,int inter,int Nevents,int *iret);

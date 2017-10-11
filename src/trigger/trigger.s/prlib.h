@@ -157,7 +157,6 @@ typedef struct prtrack
 
 void prinit(char *filename, int lanal1, int lanal2, int lanal5);
 int  prlib(int *iw, PRTRACK *track);
-int  eclib(unsigned int *iw, const float threshold[3], int *ntrk, PRTRACK *trk);
 int  prbos(int *iw, int *ntrk, PRTRACK *trk);
 
 void l3config(char *);

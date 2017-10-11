@@ -12,7 +12,7 @@ MAIN = trigger
 # generic Makefile
 #------------------
 include $(CLON)/src/Makefile.include
-include $(CODA)/src/Makefile.arch
+###########include $(CODA)/src/Makefile.arch
 
 
 
@@ -24,13 +24,18 @@ CFLAGS = -g
 CXXFLAGS = -g
 
 CLON_FLAGS += -I./$(MAIN).s \
-			-I./ec.s -I./pc.s -I./dc.s -I./http.s \
+			-I./ec.s -I./pc.s -I./dc.s -I./htcc.s -I./ft.s \
 			-I$(CODA)/common/include \
 			-I$(ROOTSYS)/include \
-			-D_POSIX_PTHREAD_SEMANTICS \
-			-I/apps/Xilinx/Vivado_HLS/2013.2/include
+			-D_POSIX_PTHREAD_SEMANTICS
 
-#			-I/apps/Xilinx/Vivado_HLS/2015.4/include
+##CLON_FLAGS += -DDEBUG
+
+ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+  CLON_FLAGS += -I/apps/Xilinx/Vivado_HLS/2015.4/include
+else
+  CLON_FLAGS += -I/apps/Xilinx/Vivado_HLS/2013.2/include
+endif
 
 #ccdb
 CLON_FLAGS += -I$(CCDB_HOME)/include \

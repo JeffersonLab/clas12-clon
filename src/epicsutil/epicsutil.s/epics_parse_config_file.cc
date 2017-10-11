@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <pthread.h>
 
@@ -11,12 +12,12 @@
 #define _POSIX_SOURCE_ 1
 #define __EXTENSIONS__
 
+/*
 // for smartsockets
 #include <rtworks/cxxipc.hxx>
-
-
 // CLAS ipc
 #include <clas_ipc_prototypes.h>
+*/
 
 /*#include "clonutil.h"*/
 #include "epicsutil.h"

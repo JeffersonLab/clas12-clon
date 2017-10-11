@@ -4,7 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-static char *filename = "DCdictionary.txt";
+/*static char *filename = "DCdictionary.txt";*/
+static char *filename = "DCdictionaryCosmics.txt";
 
 /*
 
@@ -40,12 +41,35 @@ road6compare(const void *segm1, const void *segm2)
     if(p1[k]<p2[k]) return(-1);
   }
   */
-  /* sort from sl5 to sl0 */
+
+  /* sort from sl5 to sl0
   for(k=5; k>=0; k--)
   {
     if(p1[k]>p2[k]) return(1);
     if(p1[k]<p2[k]) return(-1);
   }
+  */
+
+  k=5;
+  if(p1[k]>p2[k]) return(1);
+  if(p1[k]<p2[k]) return(-1);
+  k=3;
+  if(p1[k]>p2[k]) return(1);
+  if(p1[k]<p2[k]) return(-1);
+  k=1;
+  if(p1[k]>p2[k]) return(1);
+  if(p1[k]<p2[k]) return(-1);
+  k=4;
+  if(p1[k]>p2[k]) return(1);
+  if(p1[k]<p2[k]) return(-1);
+  k=2;
+  if(p1[k]>p2[k]) return(1);
+  if(p1[k]<p2[k]) return(-1);
+  k=0;
+  if(p1[k]>p2[k]) return(1);
+  if(p1[k]<p2[k]) return(-1);
+
+
   return(0);
 }
 
@@ -58,12 +82,13 @@ main()
   char fname[256], frname[256];
   char buf[1000];
   int iw[6];
-  float mom,tet,phi;
+  float mom,tet,phi,f1;
   int dif[6][6], min[6][6], max[6][6];
+  int sldif[6], slmin[6], slmax[6];
   int nbits[6], shift[6];
   int addr[6];
   unsigned int address;
-  int nlines, nroads, exist;
+  int nlines, nroads, exist, ret;
 
   sprintf(fname,"%s/ssp/%s",getenv("CLON_PARMS"),filename);
 
@@ -74,6 +99,12 @@ main()
       min[ii][jj] = 200;
       max[ii][jj] = -200;
     }
+  }
+
+  for(jj=0; jj<6; jj++)
+  {
+    slmin[jj] = 200;
+    slmax[jj] = -200;
   }
 
   /* process file doing ... */
@@ -91,7 +122,7 @@ main()
   nroads = 0;
   while (fgets(buf,256,fd) != NULL)
   {
-    sscanf(buf,"%f %f %f %d %d %d %d %d %d",&mom,&tet,&phi,&iw[0],&iw[1],&iw[2],&iw[3],&iw[4],&iw[5]);
+    ret = sscanf(buf,"%f %f %f %f %d %d %d %d %d %d",&mom,&tet,&phi,&f1,&iw[0],&iw[1],&iw[2],&iw[3],&iw[4],&iw[5]);
     for(ii=0; ii<6; ii++) iw[ii]--; /* start wire number from 0 */
 	/*
     printf("mom=%4.1f tet=%4.1f phi=%4.1f -> iw = %2d %2d %2d %2d %2d %2d\n",
@@ -110,11 +141,21 @@ main()
       }
     }
 
+if(iw[5]==56)
     if(exist==0)
 	{
       for(ii=0; ii<6; ii++) roads[nroads][ii] = iw[ii];
       nroads ++;
       /*printf("new, nroads=%d\n",nroads);*/
+
+
+      for(ii=0; ii<6; ii++)
+	  {
+        if(slmin[ii]>iw[ii]) slmin[ii]=iw[ii];
+        if(slmax[ii]<iw[ii]) slmax[ii]=iw[ii];
+	  }
+      
+
 	}
 
 
@@ -134,7 +175,12 @@ main()
 
 
 
-
+  printf("slmin, slmax, diff:\n");
+  for(ii=5; ii>=0; ii--)
+  {
+    sldif[ii] = slmax[ii]-slmin[ii]+1;
+    printf("[%d] %4d %4d %4d\n",ii,slmin[ii],slmax[ii],sldif[ii]);
+  }
 
 
   /* sort nroads */
@@ -161,7 +207,19 @@ main()
   {
     printf("\nWill write road finder file >%s<\n",frname);
 
-    fprintf(frd,"#define NROADS %d\n",nroads);
+    fprintf(frd,"#define NROADS %d\n\n",nroads);
+    fprintf(frd,"#define MIN_SL5 %d\n",slmin[5]);
+    fprintf(frd,"#define MIN_SL4 %d\n",slmin[4]);
+    fprintf(frd,"#define MIN_SL3 %d\n",slmin[3]);
+    fprintf(frd,"#define MIN_SL2 %d\n",slmin[2]);
+    fprintf(frd,"#define MIN_SL1 %d\n",slmin[1]);
+    fprintf(frd,"#define MIN_SL0 %d\n\n",slmin[0]);
+    fprintf(frd,"#define NBIT_SL5 %d\n",sldif[5]);
+    fprintf(frd,"#define NBIT_SL4 %d\n",sldif[4]);
+    fprintf(frd,"#define NBIT_SL3 %d\n",sldif[3]);
+    fprintf(frd,"#define NBIT_SL2 %d\n",sldif[2]);
+    fprintf(frd,"#define NBIT_SL1 %d\n",sldif[1]);
+    fprintf(frd,"#define NBIT_SL0 %d\n\n",sldif[0]);
     fprintf(frd,"#define ROADS_SEARCH \\\n");
  
 	/*output to [112] single bit array */
@@ -171,18 +229,25 @@ main()
       if(iprev!=roads[ii][5])
       {
         iprev = roads[ii][5];
-        fprintf(frd,"  res[%3d]  = ",roads[ii][5]);
+
+if(roads[ii][5]==56)        fprintf(frd,"  sum = ");
 	  }
       else
 	  {
-        fprintf(frd,"  res[%3d] |= ",roads[ii][5]);
+if(roads[ii][5]==56)        fprintf(frd,"  sum = ");
 	  }
-      fprintf(frd," sl[5](%3d,%3d)&sl[4](%3d,%3d)&sl[3](%3d,%3d)&sl[2](%3d,%3d)&sl[1](%3d,%3d)&sl[0](%3d,%3d)",
-           roads[ii][5],roads[ii][5],roads[ii][4],roads[ii][4],roads[ii][3],roads[ii][3],
-		   roads[ii][2],roads[ii][2],roads[ii][1],roads[ii][1],roads[ii][0],roads[ii][0]);
+if(roads[ii][5]==56)
+{
+      fprintf(frd,"sl5+sl3(%3d,%3d)+sl1(%3d,%3d)+sl4(%3d,%3d)+sl2(%3d,%3d)+sl0(%3d,%3d)",
+           roads[ii][3]-slmin[3],roads[ii][3]-slmin[3],
+           roads[ii][1]-slmin[1],roads[ii][1]-slmin[1],
+		   roads[ii][4]-slmin[4],roads[ii][4]-slmin[4],
+           roads[ii][2]-slmin[2],roads[ii][2]-slmin[2],
+           roads[ii][0]-slmin[0],roads[ii][0]-slmin[0]);
 
-      if(ii==(nroads-1)) fprintf(frd,";\n");
-      else               fprintf(frd,"; \\\n");
+      if(ii==(nroads-1)) fprintf(frd,"; if(sum>=sl_threshold) res = 1;\n");
+      else               fprintf(frd,"; if(sum>=sl_threshold) res = 1; \\\n");
+}
     }
 
     fclose(frd);
@@ -245,7 +310,7 @@ main()
   nlines=0;
   while (fgets(buf,256,fd) != NULL)
   {
-    sscanf(buf,"%f %f %f %d %d %d %d %d %d",&mom,&tet,&phi,&iw[0],&iw[1],&iw[2],&iw[3],&iw[4],&iw[5]);
+    sscanf(buf,"%f %f %f %f %d %d %d %d %d %d",&mom,&tet,&phi,&f1,&iw[0],&iw[1],&iw[2],&iw[3],&iw[4],&iw[5]);
     for(ii=0; ii<6; ii++) iw[ii]--; /* start wire number from 0 */
 	/*
     printf("mom=%4.1f tet=%4.1f phi=%4.1f -> iw = %2d %2d %2d %2d %2d %2d\n",

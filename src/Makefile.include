@@ -149,6 +149,11 @@ ifeq ("$(OSTYPE_MACHINE)","SunOS_sun4u")
 endif
 
 
+##################################################################################################
+# for 32bit compilation on 64bit machine, uncomment all -m32; for 64bit - comment out all of them
+##################################################################################################
+
+
 #=============
 #=== Linux ===
 #=============
@@ -160,18 +165,12 @@ ifeq ("$(OSTYPE)","Linux")
     CFLAGS = -g
 #    FFLAGS = -O2
 #    CFLAGS = -O2
-ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-    FFLAGS = -g -m32
-    CFLAGS = -g -m32
-endif
 
 #sergey: compile everything as 32bit until smarsockets replaced with something ...
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-    FFLAGS += -m32
-    CFLAGS += -m32
+#    FFLAGS += -m32
+#    CFLAGS += -m32
 endif
-
-
 
     FC = g77
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
@@ -179,18 +178,24 @@ ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
 	FFLAGS += -fPIC
 endif
 
-    FFLAGS += -fno-automatic -finit-local-zero \
-			-ffixed-line-length-none -fno-second-underscore -DLinux
+    FFLAGS += -fno-automatic -finit-local-zero -ffixed-line-length-none -fno-second-underscore -DLinux
+
+
 #CC = gcc -rdynamic
     CC = gcc
-
-    CPP = gcc -E
-
-#was on RHEL4:    CFLAGS += -fPIC -DLinux -DLINUX -fwritable-strings
-    CFLAGS += -fPIC -DLinux -DLINUX
-
     CXX = g++
 
+ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
+    CC = /apps/gcc/4.9.4/bin/gcc
+    CXX = /apps/gcc/4.9.4/bin/g++
+endif
+ifeq ("$(OSTYPE_PLATFORM)","Linux_i686")
+    CC = /apps/gcc/4.9.4/bin/gcc
+    CXX = /apps/gcc/4.9.4/bin/g++
+endif
+
+    CPP = $(CC) -E
+    CFLAGS += -fPIC -DLinux -DLINUX
     CXXFLAGS = $(CFLAGS)
 
 #LD = $(FC)
@@ -198,15 +203,15 @@ endif
     LD = ld
     LDCXX = $(CXX)
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-    LD += -m32
-    LDCXX += -m32
+#    LD += -m32
+#    LDCXX += -m32
 endif
 
 # sergey april 2015
 #LDCC = $(CC)
 LDCC = $(CXX)
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-    LDCC += -m32
+#    LDCC += -m32
 endif
 
     LDFC = $(FC)
@@ -220,7 +225,7 @@ endif
 #SHLD = g++ -Wl,-soname,libBosio.so -shared -g
     SHLD = g++ -shared -g
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-    SHLD += -m32
+#    SHLD += -m32
 endif
 
     AR = ar
@@ -240,20 +245,39 @@ endif
     CLON_FLAGS = 
 # library directories and libraries
     X11LIBDIRS = /usr/X11R6/lib
-##############ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-##############    X11LIBDIRS = /usr/X11R6/lib64
-##############endif
-    X11LIBS = -lXpm -lXm -lX11 -lXt -lXext
 
+
+
+
+# comment following out if -m32 is used
+ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
+    X11LIBDIRS = /usr/X11R6/lib64
+endif
+
+
+
+
+    X11LIBS = -lXpm -lXm -lX11 -lXt -lXext
     SYSLIBDIRS = /usr/lib
-##############ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-##############    SYSLIBDIRS = /usr/lib64
-##############endif
+
+
+
+
+# comment following out if -m32 is used
+#ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
+    SYSLIBDIRS = /usr/lib64
+#endif
+
+
+
+
+
+
+
 #???    SYSLIBS = -lpthread -lnsl -lrt -lresolv -lc
     SYSLIBS = -ldl -lm
 
     F77LIBDIRS = /usr/lib
-##    F77LIBS = -lg2c
 
 endif
 
