@@ -21,11 +21,6 @@ extern "C" {
 /* some control defines */
 /************************/
 
-#define NSLOT      7
-#define MAXTIMES   8 /*8 for data, 1 for GEMC*/   /* maximum number of the time slices */
-#define NTICKS     8    /* the number of ticks in one timing slice */
-#define TIME2TICKS 4000 /* conversion factor from FADC250 integral time to 4ns ticks */
-
 #define NSTRIP    36
 #define NPEAKMAX  (NSTRIP/2)
 #define NLAYER    6

@@ -4,6 +4,9 @@
 #include "MessageAction.h"
 
 #include "uthbook.h"
+#ifdef USE_ROOT
+#include "CMHbook.h"
+#endif
 
 class MessageActionHist : public MessageAction {
 
@@ -14,36 +17,51 @@ class MessageActionHist : public MessageAction {
     int formatid;
 
     int debug;
+    int done;
+    int status;
+    int statistics;
+    std::string myname;
+    int len;
+	std::string title;
 
     int packed;
     Hist hist;
 
-      uint32_t in;
-	  uint8_t bt;
-      float fl;
-      double db;
-	  std::string str;
-      char ch[10];
-
-      int ilen, flen, dlen;
-      int32_t idata[10];
-      float   fdata[10];
-      double  ddata[10];
-
+#ifdef USE_ROOT
+    CMHbook *hbook;
+#endif
 
   public:
+
     MessageActionHist(){}
 
-    MessageActionHist(int debug_)
+
+#ifdef USE_ROOT
+    MessageActionHist(std::string myname_, int debug_ = 0, CMHbook *hbook_ = NULL)
     {
+      myname = myname_;
+      done = 0;
+      status = 0;
+      statistics = 0;
+      debug = debug_;
+      hbook = hbook_;
+    }
+#else
+    MessageActionHist(std::string myname_, int debug_ = 0)
+    {
+      myname = myname_;
+      done = 0;
+      status = 0;
+      statistics = 0;
       debug = debug_;
     }
+#endif
 
     ~MessageActionHist(){}
 
     int check(std::string fmt)
     {
-	  printf("check: fmt >%s<\n",fmt.c_str());
+	  printf("check: testing fmt >%s<\n",fmt.c_str());
       for(int i=0; i<NFORMATS; i++)
 	  {
         std::string f = formats[i];
@@ -63,63 +81,30 @@ class MessageActionHist : public MessageAction {
     {
       int ind = 0;
 
-      recv >> packed >> hist.entries >> hist.nwtitle;
+      recv >> packed >> hist.id >> hist.entries >> hist.ntitle >> title;
+      hist.title = strdup(title.c_str());
 
+	  std::cout<<"ntitle="<<hist.ntitle<<" title="<<hist.title<<std::endl;
 
+      recv >> hist.nbinx >> hist.xmin >> hist.xmax >> hist.xunderflow >> hist.xoverflow >> hist.nbiny;
 
-
-
-      recv >> in >> bt >> fl >> db >> str >> ch;
-	  std::cout<<std::endl<<"DECODEMESSAGE "<<in<<" "<<+bt<<" "<<fl<<" "<<db<<" '"<<str.c_str()<<"' '"<<ch<<"' "<<std::endl<<std::endl;
-
-
-
-	  
-	  try {
-
-        ilen=0;
-        while(ilen!=-1)
+      printf("nbinx=%d nbiny=%d\n",hist.nbinx,hist.nbiny);
+      if(hist.nbiny==0)
+	  {
+        hist.buf = (float *) calloc(hist.nbinx,sizeof(float));
+        if(hist.buf==NULL)
         {
-          recv >> idata >> GetSize(&ilen);
-          std::cout<< "ilen= "<<ilen<<std::endl;
-          for(int i=0; i<ilen; i++) std::cout << "=--------- idata["<<i<<"]="<<idata[i]<< std::endl;
-        }
-
-        ilen=0;
-        while(ilen!=-1)
-        {
-          recv >> idata >> GetSize(&ilen);
-          std::cout<< "ilen= "<<ilen<<std::endl;
-          for(int i=0; i<ilen; i++) std::cout << "=--------- idata["<<i<<"]="<<idata[i]<< std::endl;
-        }
-
-        flen=0;
-        while(flen!=-1)
-        {
-          recv >> fdata >> GetSize(&flen);
-          std::cout<< "flen= "<<flen<<std::endl;
-          for(int i=0; i<flen; i++) std::cout << "=--------- fdata["<<i<<"]="<<fdata[i]<< std::endl;
-       }
-
-        dlen=0;
-        while(dlen!=-1)
-        {
-          recv >> ddata >> GetSize(&dlen);
-          std::cout<< "dlen= "<<dlen<<std::endl;
-          for(int i=0; i<dlen; i++) std::cout << "=--------- ddata["<<i<<"]="<<ddata[i]<< std::endl;
-        }
-		
+          printf("ERROR in calloc()\n");
+		}
+		else
+		{
+          for(int ibinx=0; ibinx<hist.nbinx; ibinx++)
+          {
+            recv >> hist.buf[ibinx];
+            printf("[%d] --> %f\n",ibinx,hist.buf[ibinx]);
+	      }
+		}
 	  }
-      catch (const MessageEOFException& ex) {
-		printf("\nEnd Of Message reached !!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
-	  }
-      catch (const std::exception& ex) {
-        printf("EXCEPTION %s\n", ex.what());
-        //return;
-        //throw;
-	  }
-	  
-
 
 	  printf("\n\n\n\n");
     }
@@ -128,7 +113,16 @@ class MessageActionHist : public MessageAction {
     void process()
     {
       //std::cout << "MessageActionHist: process Hist message" << std::endl;      
+
+
+#ifdef USE_ROOT
+      hbook->CMhist2root(hist);
+#endif
+
     }
+
+
+
 };
 
 #endif

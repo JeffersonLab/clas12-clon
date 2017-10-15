@@ -266,7 +266,7 @@ static int W = -1;
 
 /* reads one timing slice */
 void
-ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_word_t> s_fadc_words[NSLOT], hls::stream<ECStrip_s> s_strip_u[NF1], hls::stream<ECStrip_s> s_strip_v[NF1], hls::stream<ECStrip_s> s_strip_w[NF1])
+ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_word_t> s_fadc_words[NFADCS], hls::stream<ECStrip_s> s_strip_u[NF1], hls::stream<ECStrip_s> s_strip_v[NF1], hls::stream<ECStrip_s> s_strip_w[NF1])
 {
 #pragma HLS INTERFACE axis register both port=s_strip_w
 #pragma HLS DATA_PACK variable=s_strip_w
@@ -288,8 +288,10 @@ ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_word_t> s_fadc_words[NSLO
   ap_uint<2> layer;/*0-2*/
 #ifdef  USE_PCAL
   ap_uint<7> str; /*0-83*/
+  int nslot=12;
 #else
   ap_uint<6> str; /*0-35*/
+  int nslot=7;
 #endif
 
   fadc_word_t fadcs;
@@ -327,7 +329,7 @@ ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_word_t> s_fadc_words[NSLO
 
 
 
-  for(int isl=0; isl<NSLOT; isl++)
+  for(int isl=0; isl<nslot; isl++)
   {
     /* read one timing slice */
 	for(int j=0; j<NH_READS; j++)

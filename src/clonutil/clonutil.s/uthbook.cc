@@ -6,8 +6,13 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <strstream>
 #include <iostream>
+#include <iomanip>
 using namespace std;
+
+#include "ipc_lib.h"
+#include "MessageActionHist.h"
 
 #include "uthbook.h"
 #include "evio.h"
@@ -36,6 +41,7 @@ Hbook::hbook1(int id, char *title, int nbinx, float xmin, float xmax)
     /*printf("done.\n");*/
   }
 
+  hist[id].id = id;
   hist[id].entries = 0;
   hist[id].xunderflow = 0;
   hist[id].xoverflow = 0;
@@ -64,10 +70,8 @@ Hbook::hbook1(int id, char *title, int nbinx, float xmin, float xmax)
   hist[id].nbiny = 0; /* to recognize 1-dim from 2-dim */
 
   nch = strlen(title);
-  hist[id].nwtitle = (nch+3)/4;
-  hist[id].title = (char *) malloc(4*hist[id].nwtitle);
-  strncpy(hist[id].title,title,nch);
-  for(i=nch; i<4*hist[id].nwtitle; i++) hist[id].title[i] = ' ';
+  hist[id].ntitle = nch;
+  hist[id].title = strdup(title);
 
   hist[id].buf = (float *) calloc(hist[id].nbinx,sizeof(float));
   if(hist[id].buf==NULL) {printf("uthbook: ERROR in calloc()\n");exit(0);}
@@ -86,8 +90,8 @@ Hbook::hbook1(int id, char *title, int nbinx, float xmin, float xmax)
     hist[id].ifi2_fill = 0;
   }
 #endif
-  /*printf("uthbook1: [%d] nbinx=%d xmin=%d xmax=%d nwtitle=%d\n",
-    id,hist[id].nbinx,hist[id].xmin,hist[id].xmax,hist[id].nwtitle);*/
+  /*printf("uthbook1: [%d] nbinx=%d xmin=%d xmax=%d ntitle=%d\n",
+    id,hist[id].nbinx,hist[id].xmin,hist[id].xmax,hist[id].ntitle);*/
 
   return;
 }
@@ -114,6 +118,7 @@ Hbook::hbook2(int id, char *title, int nbinx, float xmin, float xmax, int nbiny,
     return;
   }
 
+  hist[id].id = id;
   hist[id].entries = 0;
   hist[id].xunderflow = 0;
   hist[id].xoverflow = 0;
@@ -143,10 +148,8 @@ Hbook::hbook2(int id, char *title, int nbinx, float xmin, float xmax, int nbiny,
   hist[id].ymax = ymax;
 
   nch = strlen(title);
-  hist[id].nwtitle = (nch+3)/4;
-  hist[id].title = (char *) malloc(4*hist[id].nwtitle);
-  strncpy(hist[id].title,title,nch);
-  for(i=nch; i<4*hist[id].nwtitle; i++) hist[id].title[i] = ' ';
+  hist[id].ntitle = nch;
+  hist[id].title = strdup(title);
 
   hist[id].buf2 = (float **) calloc(nbinx,sizeof(float));
   if(hist[id].buf2==NULL) {printf("uthbook: ERROR1 in calloc()\n");exit(0);}
@@ -370,7 +373,7 @@ Hbook::hgive(int id, char *title, int *nbinx, float *xmin,
     return;
   }
 
-  len = MIN(*titlelen,4*hist[id].nwtitle);
+  len = MIN(*titlelen,hist[id].ntitle);
   for(i=0; i<*titlelen; i++) title[i] = ' '; /* fill all 'title' by ' ' */
   strncpy(title,hist[id].title,len);
   *titlelen = len;
@@ -473,7 +476,7 @@ int
 Hbook::hist2evio(int id, long *bufptr)
 {
   GET_PUT_INIT;
-  int ibinx, ibiny, ind, len, ncol, nrow, nbins, packed;
+  int ibinx, ibiny, ind, len, ncol, nbins, packed;
   float *buf;
 
   /*printf("hist=0x%08x\n",hist);*/
@@ -486,21 +489,19 @@ Hbook::hist2evio(int id, long *bufptr)
 
   len = 0;
   ncol = 1;
-  nrow = hist[id].nbinx;
-  if(hist[id].nbiny > 0) nrow = nrow * hist[id].nbiny;
-  nrow += (13 + hist[id].nwtitle);
 
-  /*printf("0 %d %d %d\n",id,ncol,nrow);*/
+  /*printf("0 %d %d\n",id,ncol);*/
 
   ind = 0; /* was if( (ind = etNcreate(bufptr,"HISF",id,ncol,nrow)) > 0) - for now, put histogram bank from the beginning of bufptr[] */
   {
     b08out = (unsigned char *)&bufptr[ind];
 
     PUT32(NORMAL_F);
+	PUT32(hist[id].id);
 	PUT32(hist[id].entries);
 
-    PUT32(hist[id].nwtitle);
-    for(int i=0; i<hist[id].nwtitle*4; i++) PUT8(hist[id].title[i]);
+    PUT32(hist[id].ntitle);
+    for(int i=0; i<hist[id].ntitle; i++) PUT8(hist[id].title[i]);
 
     PUTF32(hist[id].xmin);
 	PUTF32(hist[id].xmax);
@@ -599,10 +600,11 @@ Hbook::evio2hist(int id, long *bufptr)
   b08 = (unsigned char *)&bufptr[ind];
 
   GET32(packed);
+  GET32(hist[id].id);
   GET32(hist[id].entries);
 
-  GET32(hist[id].nwtitle);
-  nch = 4*hist[id].nwtitle + 1;
+  GET32(hist[id].ntitle);
+  nch = hist[id].ntitle + 1;
   hist[id].title = (char *) malloc(nch);
   for(int i=0; i<nch-1; i++) GET8(hist[id].title[i]);
   hist[id].title[nch-1] = '\0';
@@ -658,3 +660,84 @@ Hbook::evio2hist(int id, long *bufptr)
 }
 
 
+
+
+/***************************************/
+/* send/receive histograms as messages */
+
+int
+Hbook::hist2ipc(int id, char *myname)
+{
+  int ibinx, ibiny, ind, len, ncol, nbins, packed;
+  float *buf;
+
+  printf("hist2ipc: hist=0x%08x\n",hist);
+
+  if(id <=0 || id >=NHIST)
+  {
+    printf("hist2evio: ERROR id=%d, must be from 1 to %d\n",id,NHIST);
+    return(0);
+  }
+
+  len = 0;
+  ncol = 1;
+
+  printf("hist2ipc: %d %d\n",id,ncol);
+
+  IpcServer &server = IpcServer::Instance();
+  server << clrm;
+
+  std::string str = "hist:";
+  str = str+myname;
+  server << clrm << str;
+
+  server << (int)NORMAL_F;
+  server << hist[id].id;
+  server << hist[id].entries;
+
+  server << hist[id].ntitle;
+  server << hist[id].title;
+
+  server << hist[id].nbinx;
+  server << hist[id].xmin;
+  server << hist[id].xmax;
+  server << hist[id].xunderflow;
+  server << hist[id].xoverflow;
+  server << hist[id].nbiny;
+
+  if(hist[id].nbiny == 0) /* 1-dim */
+  {
+    for(ibinx=0; ibinx<hist[id].nbinx; ibinx++)
+    {
+      server << hist[id].buf[ibinx];
+      hist[id].buf[ibinx] = 0.0;
+    }
+  }
+  else                    /* 2-dim */ /* NEED CHECK !!! */
+  {
+	server << hist[id].ymin;
+	server << hist[id].ymax;
+	server << hist[id].yunderflow;
+	server << hist[id].yoverflow;
+    server << hist[id].nbinx * hist[id].nbiny;
+    for(ibinx=0; ibinx<hist[id].nbinx; ibinx++)
+    {
+      for(ibiny=0; ibiny<hist[id].nbiny; ibiny++)
+      { 
+        server << hist[id].buf2[ibinx][ibiny];
+        hist[id].buf2[ibinx][ibiny] = 0.0;
+      }
+    }
+  }
+
+  server << endm;
+
+
+  /*printf("uth2bos: id=%d ncol=%d entries=%d\n",
+  id,ncol,hist[id].entries);*/
+  hist[id].entries = 0;
+  hist[id].xunderflow = 0.0;
+  hist[id].xoverflow = 0.0;
+
+  return(len);
+}

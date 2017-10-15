@@ -18,6 +18,7 @@ include $(CLON)/src/Makefile.include
 #-----------------------
 # customize definitions
 #-----------------------
+CLON_FLAGS += -std=c++11 -I$(RCDB_HOME)/cpp/include
 
 CLON_FLAGS += -I./$(MAIN).s -I$(EPICS_BASE)/include
 

@@ -2,6 +2,7 @@
 
 
 #define NHIST 1000
+#define NTITLE 64
 #define NBUF 10000
 #define MAXI2      65536
 #define HZERO 0.001
@@ -14,9 +15,13 @@
 #define PACKED_F   0x13
 
 
+#ifdef	__cplusplus
+extern "C" {
+#endif
 
 typedef struct hist
 {
+  int id;
   int entries;    /* total number of entries */
 
   int ifi2_book; /* set to 1 in booking if I2 permitted */
@@ -34,7 +39,7 @@ typedef struct hist
   float yunderflow;
   float yoverflow;
 
-  int nwtitle;
+  int ntitle;
   char *title;
 
   float dx;
@@ -44,28 +49,6 @@ typedef struct hist
   float **buf2;
 
 } Hist;
-
-
-
-
-/* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-double all prototypes because of unknown problem in ROOT *.h, namely
-construction
-
-#ifdef	__cplusplus
-extern "C" {
-#endif
-
-..........
-..........
-..........
-
-#ifdef	__cplusplus
-}
-#endif
-
-
-does not work !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
 
 
 class Hbook {
@@ -91,7 +74,13 @@ class Hbook {
   int hist2evio(int id, long *jw);
   int evio2hist(int id, long *jw);
 
+  int hist2ipc(int id, char *myname);
+
 };
+
+#ifdef	__cplusplus
+}
+#endif
 
 
 

@@ -21,29 +21,19 @@ using namespace std;
 #include "evioBankUtil.h"
 
 
-
-
 #ifdef USE_PCAL
-
 #include "../pc.s/pctrans.h"
 #include "../pc.s/pclib.h"
-#define ecinit pcinit
-#define ecfadcs pcfadcs
 #define ecstrips pcstrips
-#define ecl3 pcl3
 #define eclib pclib
 #define ecpeakeventreader pcpeakeventreader
 #define echiteventreader pchiteventreader
-
 #else
-
 #include "ectrans.h"
 #include "eclib.h"
-
 #endif
 
-
-//#include "prlib.h"
+#include "trigger.h"
 
 
 //#define DEBUG
@@ -56,26 +46,6 @@ using namespace std;
 #define MAX(a,b)    (a > b ? a : b)
 #define MIN(a,b)    (a < b ? a : b)
 #define ABS(x)      ((x) < 0 ? -(x) : (x))
-
-
-
-/* variables global for present file */
-
-static int runnum = 0;
-static float nba[NSECTOR][NLAYER][NSTRIP]; /* nsa+nsb (bins) */
-static float ech[NSECTOR][NLAYER][NSTRIP];
-static float t0 [NSECTOR][NLAYER][NSTRIP]; /* delays (nsec) */
-static float tch[NSECTOR][NLAYER][NSTRIP];
-
-
-static float ped[21][16]; /* pedestals */
-static float tet[21][16]; /* threshold */
-static float gain[21][16]; /* gain */
-static int nsa[21]; /* NSA */
-static int nsb[21]; /* NSB */
-
-
-
 
 
 /* some functions for simulation only */
@@ -516,748 +486,8 @@ ectrig(unsigned int *bufptr, int sec, int npeak[NLAYER], TrigECPeak peak[NLAYER]
     printf("VTP TI whatever %d\n",val);
   }
 
-
-
-
-
-
   return(ind);
 }
-
-
-
-
-/* ecinit, ecinitgeom, ecinitcalib - EC initialization */
-
-int
-ecinit(int runnum, int def_adc, int def_tdc, int def_atten)
-{
-  int i,j,k,l;
-
-#ifdef DEBUG
-  printf("eclib: def_adc=%d    def_tdc=%d\n",def_adc,def_tdc);fflush(stdout);
-#endif
-
-  for(i=0; i<NSECTOR; i++)
-  {
-    for(j=0; j<NLAYER; j++)
-    {
-      for(k=0; k<NSTRIP; k++)
-      {
-        //ped[i][j][k] = 0.0;
-        nba[i][j][k] = 0.0;
-        ech[i][j][k] = 1.0/*0.0001*/;
-        t0 [i][j][k] = 0.0;
-        tch[i][j][k] = 1.0/*0.015625*/; /* divide by 64 to get nanoseconds */
-      }
-    }
-  }
-
-  for(int slot=0; slot<21; slot++)
-  {
-    nsa[slot] = 0;
-    nsb[slot] = 0;
-	for(int chan=0; chan<16; chan++)
-	{
-      ped[slot][chan] = 0.0;
-      gain[slot][chan] = 0.0;
-      tet[slot][chan] = 0;
-	}
-  }
-
-  return(0);
-}
-
-
-
-
-/*************************************************************************************************************************/
-/*************************************************************************************************************************/
-/*************************************************************************************************************************/
-
-
-/* ecfadcs.c - loading strip info for particular sector
-
-  input:  sector - sector number
-
-  output: strip[][].energy - strip energy (MeV)
-          strip[][].time   - strip time (ns)
-*/
-
-
-
-int
-ecfadcs(unsigned int *bufptr, unsigned short threshold, int sec, int io, hls::stream<fadc_word_t> s_fadc_words[NSLOT], int dtimestamp, int dpulsetime,
-        int *iev, unsigned long long *timestamp)
-{
-  int i, j, k, ind, nhits, str, layer, error, ii, jj, nbytes, ind_data, nn, mm, isample, isam1, isam2;
-  int summing_in_progress;
-  int datasaved[1000];
-  int energy, it;
-  unsigned short strip_threshold;
-  unsigned long long itime, ptime, offset;
-  GET_PUT_INIT;
-#ifdef USE_PCAL
-  int tag[6] = {3,9,15,21,27,33}; /* tag for sectors */
-  int nslot = NSLOT;
-#else
-  int tag[6] = {1,7,13,19,25,31}; /* tag for sectors */
-  int nslot = NSLOT;
-#endif
-  int fragtag, fragnum, banktag, banknum;
-  unsigned short pulse_time, pulse_min, pulse_max, dat16;
-  unsigned int pulse_integral;
-  unsigned char *end;
-  unsigned long long time;
-  int crate,slot,trig,nchan,chan,npulses,nsamples,notvalid,edge,data,count,ncol1,nrow1;
-  int ndata0[22], data0[21][8];
-  int baseline, sum, channel;
-  char *ch, str_tmp[256];
-  int dd[16];
-  float fsum, fped, ff[16];
-  int bank_not_found = 1;
-
-  fadc_word_t fadcs[MAXTIMES][NSLOT][NH_READS];
-  int isl;
-  ap_uint<13> ee;
-  ap_uint<3>  tt;
-#ifdef USE_PCAL
-  int slot2isl[22] = {-1,-1,-1,0,1,2,3,4,5,6,7,-1,-1,8,9,10,11,-1,-1,-1,-1,-1}; /* PCAL slots: 3-10, 13-16 */
-#else
-  int slot2isl[22] = {-1,-1,-1,0,1,2,3,4,5,6,0,-1,-1,1,2,3,4,5,6,-1,-1,-1}; /* ECAL_IN slots: 3-9, ECAL_OUT slots: 10, 13-18 */
-#endif
-
-
-#ifdef DEBUG
-  printf("ecfadcs reached, sector=%d\n",sec);fflush(stdout);
-#endif
-
-
-  /* cleanup output array */
-  for(i=0; i<MAXTIMES; i++)
-  {
-	for(isl=0; isl<NSLOT; isl++)
-	{
-	  for(j=0; j<NH_READS; j++)
-	  {
-        fadcs[i][isl][j].e0 = 0;
-        fadcs[i][isl][j].t0 = 0;
-        fadcs[i][isl][j].e1 = 0;
-        fadcs[i][isl][j].t1 = 0;
-        fadcs[i][isl][j].e2 = 0;
-        fadcs[i][isl][j].t2 = 0;
-        fadcs[i][isl][j].e3 = 0;
-        fadcs[i][isl][j].t3 = 0;
-	  }
-	}
-  }
-
-
-  /********************/
-  /* pedestal and nba */
-
-  fragtag = tag[sec];
-  fragnum = -1;
-  banktag = 0xe10e;
-  banknum = tag[sec];
-  if((ind = evLinkBank(bufptr, fragtag, fragnum, banktag, banknum, &nbytes, &ind_data)) > 0)
-  {
-#ifdef DEBUG_3
-    printf("evLinkBank: ind=%d ind_data=%d\n",ind, ind_data);fflush(stdout);
-    printf("ind=%d, nbytes=%d\n",ind,nbytes);fflush(stdout);
-#endif
-    b08 = (unsigned char *) &bufptr[ind_data];
-    end = b08 + nbytes;
-#ifdef DEBUG_3
-    printf("ind=%d, nbytes=%d (from 0x%08x to 0x%08x)\n",ind,nbytes,b08,end);fflush(stdout);
-#endif
-    while(b08<end)
-	{
-      ch = (char *)b08;
-      ii=0;
-#ifdef DEBUG_3
-      printf("CH\n");fflush(stdout);
-#endif
-      while( (isalnum(ch[ii])||(ch[ii]==' ')||(ch[ii]=='_')||(ch[ii]=='.')) && (ii<500))
-      {
-#ifdef DEBUG_3
-        printf("%c",ch[ii]);fflush(stdout);
-#endif
-        ii++;
-      }
-#ifdef DEBUG_3
-      if((ch[ii]=='\0')||(ch[ii]=='\n')) printf("\n");fflush(stdout);
-#endif
-      if(!strncmp(ch,"FADC250_SLOT",12))
-      {
-        slot=atoi((char *)&ch[12]);
-#ifdef DEBUG_3
-        printf("===> slot=%d\n",slot);fflush(stdout);
-#endif
-      }
-
-      if(!strncmp(ch,"FADC250_NSB",11))
-      {
-        nsb[slot] = atoi((char *)&ch[11]) / 4;
-#ifdef DEBUG_3
-        printf("===> nsb=%d ticks\n",nsb[slot]);fflush(stdout);
-#endif
-      }
-
-      if(!strncmp(ch,"FADC250_NSA",11))
-      {
-        nsa[slot] = atoi((char *)&ch[11]) / 4;
-#ifdef DEBUG_3
-        printf("===> nsa=%d ticks\n",nsa[slot]);fflush(stdout);
-#endif
-      }
-
-      if(!strncmp(ch,"FADC250_ALLCH_PED",17))
-      {
-#ifdef DEBUG_3
-        printf("===> peds\n");fflush(stdout);
-#endif
-        sscanf (ch, "%*s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
-                &ff[0],&ff[1],&ff[2],&ff[3],&ff[4],&ff[5],&ff[6],&ff[7],
-                &ff[8],&ff[9],&ff[10],&ff[11],&ff[12],&ff[13],&ff[14],&ff[15]);
-
-        for(chan=0; chan<16; chan++)
-	    {
-          ped[slot][chan] = ff[chan];
-#ifdef DEBUG_3
-          printf("ped[%d][%d]=%f\n",slot,chan,ped[slot][chan]);fflush(stdout);
-#endif
-
-	    }
-      }
-
-      if(!strncmp(ch,"FADC250_ALLCH_GAIN",18))
-      {
-#ifdef DEBUG_3
-        printf("===> peds\n");fflush(stdout);
-#endif
-        sscanf (ch, "%*s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
-                &ff[0],&ff[1],&ff[2],&ff[3],&ff[4],&ff[5],&ff[6],&ff[7],
-                &ff[8],&ff[9],&ff[10],&ff[11],&ff[12],&ff[13],&ff[14],&ff[15]);
-
-        for(chan=0; chan<16; chan++)
-	    {
-          gain[slot][chan] = ff[chan];
-#ifdef DEBUG_3
-          printf("gain[%d][%d]=%f\n",slot,chan,gain[slot][chan]);fflush(stdout);
-#endif
-
-	    }
-      }
-
-      if(!strncmp(ch,"FADC250_ALLCH_TET",17))
-      {
-#ifdef DEBUG_3
-        printf("===> tet\n");fflush(stdout);
-#endif
-        sscanf (ch, "%*s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
-                &dd[0],&dd[1],&dd[2],&dd[3],&dd[4],&dd[5],&dd[6],&dd[7],
-                &dd[8],&dd[9],&dd[10],&dd[11],&dd[12],&dd[13],&dd[14],&dd[15]);
-
-        for(chan=0; chan<16; chan++)
-	    {
-          tet[slot][chan] = dd[chan];
-#ifdef DEBUG_3
-          printf("tet[%d][%d]=%f\n",slot,chan,tet[slot][chan]);fflush(stdout);
-#endif
-
-	    }
-      }
-
-      ii++;
-      b08 += ii;
-	}
-
-
-  }
-  else
-  {
-    /*printf("cannot find bank 0x%04x num %d (pedestal)\n",banktag, banknum);*/
-    fflush(stdout);
-  }
-
-  /* pedestal and nba */
-  /********************/
-
-
-
-
-  /*************************/
-  /* integrated pulse data */
-
-  strip_threshold = threshold;
-  nhits = 0;
-
-  fragtag = tag[sec];
-  fragnum = -1;
-  banktag = 0xe102;
-
-  if(bank_not_found)
-  {
-  for(banknum=0; banknum<40; banknum++)
-  {
-  if((ind = evLinkBank(bufptr, fragtag, fragnum, banktag, banknum, &nbytes, &ind_data)) > 0)
-  {
-#ifdef DEBUG_1
-    printf("evLinkBank: ind=%d ind_data=%d\n",ind, ind_data);fflush(stdout);
-#endif
-
-
-#ifdef DEBUG_1
-    printf("ind=%d, nbytes=%d\n",ind,nbytes);fflush(stdout);
-#endif
-    b08 = (unsigned char *) &bufptr[ind_data];
-    end = b08 + nbytes;
-#ifdef DEBUG_1
-    printf("ind=%d, nbytes=%d (from 0x%08x to 0x%08x)\n",ind,nbytes,b08,end);fflush(stdout);
-#endif
-    while(b08<end)
-    {
-#ifdef DEBUG_0
-      printf("ecfadcs: begin while: b08=0x%08x\n",b08);fflush(stdout);
-#endif
-
-
-      GET8(slot);
-      isl = slot2isl[slot];
-      GET32(trig);
-      GET64(time);
-      GET32(nchan);
-#ifdef DEBUG_0
-      printf("slot=%d, trig=%d, time=%lld nchan=%d\n",slot,trig,time,nchan);fflush(stdout);
-#endif
-      for(nn=0; nn<nchan; nn++)
-	  {
-        GET8(chan);
-        GET32(npulses);
-#ifdef DEBUG_0
-        printf("  chan=%d, npulses=%d\n",chan,npulses);fflush(stdout);
-#endif
-        for(mm=0; mm<npulses; mm++)
-	    {
-          GET16(pulse_time);
-          GET32(pulse_integral);
-          GET16(pulse_min);
-          GET16(pulse_max);
-#ifdef DEBUG_0
-          printf(" b32=0x%08x:  pulse_time=%d ns (%d ticks), pulse_integral=%d\n",b32,pulse_time,pulse_time/TIME2TICKS,pulse_integral);fflush(stdout);
-#endif
-
-#ifndef USE_PCAL
-          if((io==0&&slot<=9) || (io==1&&slot>=10)) /* INNER comes from slots 3<=slot<=9, OUTER - from slots 10<=slot<=18 */
-#endif
-		  {
-            ee = pulse_integral & 0x1FFF;
-            itime = 0/*(pulse_time/TIME2TICKS)*/; /* convert time to ticks */
-            it = itime / NTICKS;
-            tt = itime % NTICKS;
-#ifdef DEBUG_0
-		    cout<<"ecfadcs: ee="<<ee<<", itime="<<itime<<", isl="<<isl<<", it="<<it<<", tt="<<tt<<endl;
-#endif
-            if(it>=MAXTIMES)
-		    {
-              printf("ecfadcs: WARN: itime=%d too big - ignore the hit\n",itime);
-		    }
-            else
-		    {
-              int ch1 = chan/NH_READS;
-              int ch2 = chan%NH_READS;
-              if(ch2==0)
-              {
-                fadcs[it][isl][ch1].e0 = ee;
-                fadcs[it][isl][ch1].t0 = tt;
-			  }
-              else if(ch2==1)
-			  {
-                fadcs[it][isl][ch1].e1 = ee;
-                fadcs[it][isl][ch1].t1 = tt;
-			  }
-              else if(ch2==2)
-			  {
-                fadcs[it][isl][ch1].e2 = ee;
-                fadcs[it][isl][ch1].t2 = tt;
-			  }
-              else if(ch2==3)
-			  {
-                fadcs[it][isl][ch1].e3 = ee;
-                fadcs[it][isl][ch1].t3 = tt;
-			  }
-		    }
-		  }
-
-        } /*for(mm=0; mm<npulses; mm++)*/
-
-      } /*for(nn=0; nn<nchan; nn++)*/
-
-
-#ifdef DEBUG_1
-      printf("ecfadcs: end loop: b08=0x%08x\n",b08);fflush(stdout);
-#endif
-
-    }
-
-
-    /* fills output streams */
-	for(i=0; i<MAXTIMES; i++)
-	{
-	  for(isl=0; isl<NSLOT; isl++)
-	  {
-		for(j=0; j<NH_READS; j++)
-		{
-		  /*
-#ifdef DEBUG_0
-          printf("ecfadcs: writing to stream %d (i=%d j=%d)\n",isl,i,j);fflush(stdout);
-#endif
-		  */
-          s_fadc_words[isl].write(fadcs[i][isl][j]);
-		}
-	  }
-	}
-
-    bank_not_found = 0;
-    break; /* if we found bank, exit from 'banknum' loop */
-  }
-  else
-  {
-    //printf("cannot find bank 0x%04x num %d (mode 7, fragtag=%d fragnum=%d)\n",banktag,banknum,fragtag,fragnum);fflush(stdout);
-    ind = 0;
-  }
-  }
-  }
-
-  /* integrated pulse data */
-  /*************************/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  /*****************/
-  /* waveform data */
-
-  strip_threshold = threshold;
-  nhits = 0;
-
-  fragtag = tag[sec];
-  fragnum = -1;
-  banktag = 0xe101;
-
-  if(bank_not_found)
-  {
-  for(banknum=0; banknum<40; banknum++)
-  {
-  if((ind = evLinkBank(bufptr, fragtag, fragnum, banktag, banknum, &nbytes, &ind_data)) > 0)
-  {
-#ifdef DEBUG_0
-    printf("\n\nevLinkBank: ind=%d ind_data=%d\n",ind, ind_data);fflush(stdout);
-#endif
-
-
-#ifdef DEBUG_0
-    printf("ind=%d, nbytes=%d\n",ind,nbytes);fflush(stdout);
-#endif
-    b08 = (unsigned char *) &bufptr[ind_data];
-    end = b08 + nbytes;
-#ifdef DEBUG_0
-    printf("ind=%d, nbytes=%d (from 0x%08x to 0x%08x)\n",ind,nbytes,b08,end);fflush(stdout);
-#endif
-    while(b08<end)
-    {
-#ifdef DEBUG_0
-      printf("ecfadcs: begin while: b08=0x%08x\n",b08);fflush(stdout);
-#endif
-
-
-      GET8(slot);
-      isl = slot2isl[slot];
-      GET32(trig);
-      GET64(time); /* time stamp for FADCs 2 counts bigger then for VTPs */
-      time = ((time&0xFFFFFF)<<24) | ((time>>24)&0xFFFFFF); /* UNTILL FIXED IN ROL2 !!!!!!!!!!!!!!!!! */
-
-      *iev = trig;
-      *timestamp = time/*0x12345678abcd*/;
-
-      GET32(nchan);
-#ifdef DEBUG_0
-      printf("slot=%d, trig=%d, time=%lld(0x%016x) nchan=%d\n",slot,trig,time,time,nchan);fflush(stdout);
-#endif
-      for(nn=0; nn<nchan; nn++)
-	  {
-        GET8(chan);
-        GET32(nsamples);
-#ifdef DEBUG_0
-        printf("==> slot=%d, chan=%d, nsamples=%d\n",slot,chan,nsamples);fflush(stdout);
-#endif
-
-		
-        /*save data*/
-        for(mm=0; mm<nsamples; mm++)
-		{
-          GET16(dat16);
-          datasaved[mm] = dat16;
-		}
-
-#ifdef DEBUG_0
-        printf("data[sl=%2d][ch=%2d]:",slot,chan);
-        for(mm=40; mm<100/*69*/; mm++)
-		{
-          printf(" [%2d]%4d,",mm,datasaved[mm]);
-		}
-        printf("\n");
-#endif		
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        /*find threshold crossing sample; first start from mm=0, then proceed with mm=[beginning of next 'it']*/
-        mm = 1;
-
-search_for_next_pulse:
-
-        isample = -1;
-        pulse_integral = 0;
-        while(mm<nsamples)
-		{
-          if( (datasaved[mm]>(int)ped[slot][chan]+tet[slot][chan]) && (datasaved[mm-1]<=(int)ped[slot][chan]+tet[slot][chan]) )
-		  {
-            isample = mm;
-            break;
-		  }
-          mm++;
-		}
-		if(mm>=nsamples)
-		{
-#ifdef DEBUG_0
-          printf("done_with_pulse_search\n");
-#endif
-          goto done_with_pulse_search;
-		}
-
-        /*integrate*/
-        fsum = 0.0;
-        fped = 0.0;
-        if(isample>=0)
-		{
-          isam1 = MAX((isample-nsb[slot]),0);
-          isam2 = MIN((isample+nsa[slot]),nsamples);
-
-          for(int m=isam1; m<isam2; m++)
-		  {
-            fsum += (float)datasaved[m];
-            fped += ped[slot][chan];
-		  }
-
-          pulse_integral = (int)roundf(fsum-fped);
-          
-		  /*offset: 7900/4=1975*/
-          offset = 1975;
-          ptime = isample;
-
-/*MANUALLY SET SHIFT - CHANGE IF NEEDED !!!*/
-		  ptime+=2; /* correspond to the difference in timestamps between VTP and FADCs (FADC is bigger) */
-/*MANUALLY SET SHIFT - CHANGE IF NEEDED !!!*/
-
-
-offset += dtimestamp;
-ptime += dpulsetime;
-
-          itime = ((time-offset)+ptime)/8 - (time-offset)/8;
-          it = itime;
-          tt = ((time-offset)+ptime) - ((((time-offset)+ptime)/8)*8);
-
-/*TEMP for GEMC !!!
-it=0;
-tt=0;
-TEMP for GEMC !!!*/
-
-#ifdef DEBUG_0
-          int tttt;
-		  tttt = ((int)time) & 0xFFFFFF;
-		  printf("isample=%d nsa=%d nsb=%d -> isam1=%d isam2=%d -> data=%d ped=%f -> fsum=%f fped=%f -> pulse_integral=%6d (layer=%d strip=%2d) -> it=%d tt=%d time=%lld(0x%016x) (tttt=%lld(0x%08x) (%lld %lld))\n\n",
-                 isample, nsa[slot], nsb[slot], isam1, isam2, datasaved[mm], ped[slot][chan], fsum, fped, pulse_integral, adclayerecal[isl][chan]-1,adcstripecal[isl][chan]-1,it,(int)tt,time,time,
-				 tttt,tttt,tttt/8,tttt%8);
-#endif
-		}
-        else
-		{
-#ifdef DEBUG_0
-          printf("no pulse found - will do nothing for that channel\n");
-#endif
-          pulse_integral = 0;
-		}
-
-
-
-#ifndef USE_PCAL
-        if((io==0&&slot<=9) || (io==1&&slot>=10)) /* INNER comes from slots 3<=slot<=9, OUTER - from slots 10<=slot<=18 */
-#endif
-		{
-          ee = pulse_integral & 0x1FFF;
-#ifdef DEBUG_0
-		  cout<<"ecfadcs: ee="<<ee<<", itime="<<itime<<", isl="<<isl<<", it="<<it<<", tt="<<tt<<endl;
-#endif
-          if(ee<=0)
-		  {
-            ;
-#ifdef DEBUG_0
-            cout<<"ecfadcs: ee="<<ee<<" - ignore the hit"<<endl;
-#endif
-		  }
-          else if(it>=MAXTIMES)
-		  {
-            printf("ecfadcs: WARN: itime=%d too big - ignore the hit\n",itime);
-		  }
-          else
-		  {
-            int ch1 = chan/NH_READS;
-            int ch2 = chan%NH_READS;
-            if(ch2==0)
-            {
-              fadcs[it][isl][ch1].e0 = ee;
-              fadcs[it][isl][ch1].t0 = tt;
-  		    }
-            else if(ch2==1)
-			{
-              fadcs[it][isl][ch1].e1 = ee;
-              fadcs[it][isl][ch1].t1 = tt;
-		    }
-            else if(ch2==2)
-			{
-              fadcs[it][isl][ch1].e2 = ee;
-              fadcs[it][isl][ch1].t2 = tt;
-	  	    }
-            else if(ch2==3)
-			{
-              fadcs[it][isl][ch1].e3 = ee;
-              fadcs[it][isl][ch1].t3 = tt;
-		    }
-		  }
-	    }
-
-
-
-        /*mm = isample + (8-tt);*/ /* search for more pulses starting from the beginning of next 'it' */
-        mm = isample + 8; /* search for more pulses starting 8 pulses from previois crossing */
-        printf("search for next pulse starting from mm=%d\n",mm);
-		goto search_for_next_pulse;
-
-
-
-done_with_pulse_search:
-		;
-
-
-
-      } /*for(nn=0; nn<nchan; nn++)*/
-
-
-#ifdef DEBUG_0
-      printf("ecfadcs: end loop: b08=0x%08x\n",b08);fflush(stdout);
-#endif
-    }
-
-
-
-
-    /* fills output streams */
-	for(i=0; i<MAXTIMES; i++)
-	{
-	  for(isl=0; isl<NSLOT; isl++)
-	  {
-		for(j=0; j<NH_READS; j++)
-		{
-          s_fadc_words[isl].write(fadcs[i][isl][j]);
-		}
-	  }
-	}
-
-    bank_not_found = 0;
-    break; /* if we found bank, exit from 'banknum' loop */
-  }
-  else
-  {
-    /*printf("cannot find bank 0x%04x num %d (mode 1, fragtag=%d fragnum=%d)\n",banktag,banknum,fragtag,fragnum);fflush(stdout);*/
-    ind = 0;
-  }
-  }
-  }
-
-  /* waveform data */
-  /*****************/
-
-
-
-
-  return(ind);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1276,81 +506,6 @@ done_with_pulse_search:
 #define echitsort pchitsort
 #endif
 
-#define THRESHOLD1 ((uint16_t)1)
-#define THRESHOLD2 ((uint16_t)1)
-#define THRESHOLD3 ((uint16_t)3)
-
-
-
-#if 0
-
-/* search for clusters in one view (ECAL_IN, ECAL_OUT or PCAL) */
-int
-ecl3(unsigned int *bufptr, ap_uint<16> threshold[3], int io, ECHit hitshits[NHIT])
-{
-  int ii, it, ret, sec, uvw, npsble;
-  uint8_t nhits, nret;
-
-  hls::stream<fadc_word_t> s_fadc_words[NSLOT];
-  hls::stream<ECHit> s_hits;
-
-  ECHit hit[NHIT];
-
-  /*for(sec=0; sec<NSECTOR; sec++)*/
-#ifdef USE_PCAL
-  for(sec=1; sec<2; sec++)
-#else
-  for(sec=0; sec<1; sec++)
-#endif
-  {
-	cout<<"sec1="<<sec<<" threshold="<<threshold[0]<<" "<<threshold[2]<<" "<<threshold[3]<<" io="<<io<<endl;
-
-    ret = ecfadcs(bufptr, threshold[0], sec, io, s_fadc_words, 0, 0);
-	if(ret<=0) continue;
-
-    for(it=0; it<MAXTIMES; it++) /*loop over timing slices */
-	{
- 	  /*printf("ecl3: sec = %d, timing slice = %d\n",sec,it);fflush(stdout);*/
-
-      /* FPGA section */
-      ecal(threshold, s_fadc_words, s_hits);
-
-      nhits=0;
-      for(ii=0; ii<NHIT; ii++)
-	  {
-        hit[ii] = s_hits.read();
-        if(hit[ii].energy>0) nhits++;
-	  }
-      if(nhits<=0) continue; /* goto next timing slice */
-      cout<<"nhits="<<+nhits<<endl;fflush(stdout);
-
-      for(ii=0; ii<nhits; ii++) hitshits[ii] = hit[ii];
-	  if(io==0) printf("INNER\n");
-	  else if(io==1) printf("OUTER\n");
-      nret = 0;
-      for(ii=0; ii<nhits; ii++)
-	  {
-        if(hit[ii].energy>0) nret++;
-        if(hit[ii].energy>0)
-		{
-          cout<<"ecl3: hit["<<ii<<"]: energy="<<+hit[ii].energy;
-          cout<<" coordU="<<+hit[ii].coord[0]<<"("<<((uint32_t)hit[ii].coord[0])/fview[0]<<"/"<<pcal_coord_to_strip(0, ((uint32_t)hit[ii].coord[0])/fview[0] )<<")";
-          cout<<" coordV="<<+hit[ii].coord[1]<<"("<<((uint32_t)hit[ii].coord[1])/fview[1]<<"/"<<pcal_coord_to_strip(1, ((uint32_t)hit[ii].coord[1])/fview[1] )<<")";
-          cout<<" coordW="<<+hit[ii].coord[2]<<"("<<((uint32_t)hit[ii].coord[2])/fview[2]<<"/"<<pcal_coord_to_strip(2, ((uint32_t)hit[ii].coord[2])/fview[2] )<<")";
-          cout<<" ind="<<+hit[ii].ind<<" enU="<<+hit[ii].enpeak[0]<<" enV="<<+hit[ii].enpeak[1]<<" enW="<<+hit[ii].enpeak[2]<<endl;
-		}
-	  }
-	  cout<<"ecl3: nret="<<+nret<<endl;
-      /* FPGA section */
-
-	}
-
-  }
-
-  return(nret);
-}
-
-#endif
 
 
 
@@ -1368,8 +523,6 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
   unsigned long long timestamp;
 
   ap_uint<16> threshold[3] = {threshold_[0], threshold_[1], threshold_[2]};
-  //ap_uint<16> threshold[3];
-  //for(int i=0; i<3; i++) threshold[i] = threshold_[i];
 
   nframe_t    nframes = nframes_;
   ap_uint<4>  dipfactor = dipfactor_;
@@ -1377,7 +530,7 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
   ap_uint<12> dalitzmax = dalitzmax_;
   ap_uint<4>  nstripmax = nstripmax_;
 
-  hls::stream<fadc_word_t> s_fadc_words[NSLOT];
+  hls::stream<fadc_word_t> s_fadc_words[NFADCS];
   hls::stream<ECHit> s_hits;
 
   ECPeak peak[3][NPEAK];
@@ -1391,6 +544,12 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
   hls::stream<trig_t> trig_stream[4];
   hls::stream<eventdata_t> event_stream[4];
 
+#ifdef USE_PCAL
+  int detector = PCAL;
+#else
+  int detector = ECIN;
+#endif
+
   for(sec=0; sec<NSECTOR; sec++)
   {
 #ifdef USE_PCAL
@@ -1401,12 +560,16 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 	cout<<"eclib: threshold="<<threshold[0]<<" "<<threshold[1]<<" "<<threshold[2]<<endl;
 #endif
 
-    ret = ecfadcs(bufptr, threshold[0], sec, 0, s_fadc_words, 0, 0, &iev, &timestamp);
+    ret = fadcs(bufptr, threshold[0], sec, detector, s_fadc_words, 0, 0, &iev, &timestamp);
 	if(ret<=0) continue;
 
     /* trig will be incremented for every sector, because 'static addr' in ...eventfill is common for all sectors ..*/
     for(int i=0; i<4; i++) trig[i].t_stop = trig[i].t_start + MAXTIMES*8; /* set readout window MAXTIMES*32ns in 4ns ticks */
+#ifdef USE_PCAL
+    cout<<"-pclib-> t_start="<<trig[0].t_start<<" t_stop="<<trig[0].t_stop<<endl;
+#else
     cout<<"-eclib-> t_start="<<trig[0].t_start<<" t_stop="<<trig[0].t_stop<<endl;
+#endif
     for(int i=0; i<4; i++)
     {
       trig_stream[i].write(trig[i]);
@@ -1414,8 +577,11 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 
     for(it=0; it<MAXTIMES; it++) /*loop over timing slices */
 	{
+#ifdef USE_PCAL
+ 	  printf("pclib: sec = %d, timing slice = %d\n",sec,it);fflush(stdout);
+#else
  	  printf("eclib: sec = %d, timing slice = %d\n",sec,it);fflush(stdout);
-
+#endif
       /* FPGA section */
       ecal(threshold, nframes, dipfactor, dalitzmin, dalitzmax, nstripmax, s_fadc_words, s_hits, buf_ram_u, buf_ram_v, buf_ram_w, buf_ram);
       /* FPGA section */
@@ -1453,7 +619,7 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
       if(hit[ii].energy>0)
 	  {
         nhits++;
-        cout<<"eclib: hit["<<ii<<"]: energy="<<+hit[ii].energy;
+        cout<<"eclib/pcal: hit["<<ii<<"]: energy="<<+hit[ii].energy;
         cout<<" coordU="<<+hit[ii].coord[0]<<"("<<((uint32_t)hit[ii].coord[0])/fview[0]<<"/"<<pcal_coord_to_strip(0, ((uint32_t)hit[ii].coord[0])/fview[0] )<<")";
         cout<<" coordV="<<+hit[ii].coord[1]<<"("<<((uint32_t)hit[ii].coord[1])/fview[1]<<"/"<<pcal_coord_to_strip(1, ((uint32_t)hit[ii].coord[1])/fview[1] )<<")";
         cout<<" coordW="<<+hit[ii].coord[2]<<"("<<((uint32_t)hit[ii].coord[2])/fview[2]<<"/"<<pcal_coord_to_strip(2, ((uint32_t)hit[ii].coord[2])/fview[2] )<<")";

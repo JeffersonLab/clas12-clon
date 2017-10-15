@@ -11,11 +11,9 @@
 #ifdef USE_PCAL
 
 #include "../pc.s/pclib.h"
-#define ecal pcal
-#define ecal_peak pcal_peak
-#define ecal_hit pcal_hit
 #define ecstrip pcstrip
-#define ecpeak pcpeak
+#define ecpeak1 pcpeak1
+#define ecpeak2 pcpeak2
 #define ecpeaksort pcpeaksort
 #define ecpeakcoord pcpeakcoord
 #define ecpeakfanout pcpeakfanout
@@ -45,7 +43,7 @@
 
 void
 ecal(ap_uint<16> threshold[3], nframe_t nframes, ap_uint<4> dipfactor, ap_uint<12> dalitzmin, ap_uint<12> dalitzmax, ap_uint<4> nstripmax,
-     hls::stream<fadc_word_t> s_fadc_words[NSLOT], hls::stream<ECHit> &s_hits1,
+     hls::stream<fadc_word_t> s_fadc_words[NFADCS], hls::stream<ECHit> &s_hits1,
 	 peak_ram_t buf_ram_u[NPEAK][256],
 	 peak_ram_t buf_ram_v[NPEAK][256],
 	 peak_ram_t buf_ram_w[NPEAK][256],

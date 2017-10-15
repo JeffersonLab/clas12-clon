@@ -22,11 +22,6 @@ extern "C" {
 /* some control defines */
 /************************/
 
-#define NSLOT      12
-#define MAXTIMES   12/*0*/   /* maximum number of the time slices */
-#define NTICKS     8    /* the number of ticks in one timing slice */
-#define TIME2TICKS 4 /* conversion factor from FADC250 integral time to 4ns ticks */
-
 #define PSTRIP    68
 #define PSTRIPMAX 84
 #define PPEAKMAX  (PSTRIPMAX/2)
@@ -55,14 +50,11 @@ extern "C" {
 #define W4(ind)      (ind>>4)&0x3
 
 
-#define ecinit pcinit
-#define ecl3 pcl3
 #define ecal pcal
 #define ecal_peak pcal_peak
 #define ecal_hit pcal_hit
 #define ectrig pctrig
 
-#define ecfadcs pcfadcs
 #define ecstrip_in  pcstrip_in
 #define ecstrip_out pcstrip_out
 #define ecpeak_in pcpeak_in

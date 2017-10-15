@@ -56,7 +56,7 @@ ecpeakeventfiller(ap_uint<2> view, hls::stream<ECPeak_s> &s_peakin, peak_ram_t b
 #endif
 
 #ifdef DEBUG
-    cout << "-ecfill-> addr="<<addr<<endl;
+    cout << "-ecfill-> addr="<<addr<<"  energy="<<peakin.energy<<endl;
 #endif
 
     buf_ram[i][addr].energy = peakin.energy;
@@ -89,6 +89,7 @@ ecpeakeventfiller(ap_uint<2> view, hls::stream<ECPeak_s> &s_peakin, peak_ram_t b
     peakin.coord  = fifo.coord; \
     peakin.strip1 = fifo.strip1; \
     peakin.stripn = fifo.stripn; \
+    cout << "-fill-> addr="<<addr<<"  energy="<<peakin.energy<<endl; \
     buf_ram[i][addr].energy = peakin.energy; \
     buf_ram[i][addr].coord = peakin.coord; \
     buf_ram[i][addr].view = view_macro; \

@@ -39,11 +39,11 @@ string create_connection_string()
   return string("sqlite://" + clon_parms + "/clas12.sqlite");
 }
 
+
 #include "evio.h"
 #include "evioBankUtil.h"
 
 #include "trigger.h"
-
 
 static uint16_t ec_threshold[3] = {1,1,3};
 static uint16_t ec_nframes = 0;
