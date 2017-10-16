@@ -33,11 +33,14 @@ main()
   //server.init(getenv("EXPID"), NULL, NULL, "*", NULL, "*");
   server.init(NULL, NULL, NULL, "HallB_TALK", NULL, "HallB_TALK");
 
-  int iarray[5] = {6,7,8,9,0};
-  float farray[5] = {1.,2.,3.,4.,5.};
+  int iarray[5] = {6,7,8,9,13};
+  float farray[5] = {1.,2.,55.,4.,5.};
 
+
+
+  /*
   json j0 = {
-	        {"EventRate",77766}
+	        {"EventRate",54321}
   };
 
   json j1 = {
@@ -48,11 +51,32 @@ main()
             {"TestVals", farray}
   };
 
-
   json j3;
   j3.push_back(j0);
   j3.push_back(j1);
   j3.push_back(j2);
+
+  */
+
+
+  /*
+  json j0 = {
+	{"EventRate",54921},
+	{"TestScalers", iarray},
+	{"TestVals", farray}
+  };
+
+  json j3;
+  j3.push_back(j0);
+  */
+
+
+  json j3 = {
+	{"EventRate",54821},
+	{"TestScalers", iarray},
+	{"TestVals", farray}
+  };
+
 
   message << "{\"items\": " << j3.dump() << "}" <<ends;
 

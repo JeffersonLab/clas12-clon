@@ -3,11 +3,15 @@
 #include <ap_int.h>
 #include <hls_stream.h>
 
+#include "hls_fadc_sum.h"
+
 #ifdef	__cplusplus
 extern "C" {
 #endif
 
 /* ftoflib.h */
+
+#define NSECTOR 6
 
 #define NSLOT 12
 
@@ -28,14 +32,6 @@ extern "C" {
 #define NPER 8
 typedef ap_uint<3> nframe_t;
 
-
-typedef struct
-{
-  ap_uint<13>	e0;
-  ap_uint<3>	t0;
-  ap_uint<13>	e1;
-  ap_uint<3>	t1;
-} fadc_word_t;
 
 
 
@@ -86,7 +82,9 @@ typedef struct
 int ftoflib(int handler);
 void ftofhiteventreader(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, FTOFHit &hit);
 
-void ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_word_t> s_fadc_words[NSLOT], hls::stream<FTOFStrip_s> &s_strip0);
+void ftof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_2ch_t> s_fadc_words[NFADCS], hls::stream<FTOFHit> &s_hits1, hit_ram_t buf_ram[512]);
+
+void ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_2ch_t> s_fadc_words[NSLOT], hls::stream<FTOFStrip_s> &s_strip0);
 void ftofstripspersistence(nframe_t nframes, hls::stream<FTOFStrip_s> &s_stripin, hls::stream<FTOFStrip_s> &s_stripout);
 void ftofhit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> cluster_threshold, hls::stream<FTOFStrip_s> &s_strip, hls::stream<FTOFHit> &s_hit);
 void ftofhitfanout(hls::stream<FTOFHit> &s_hit, hls::stream<FTOFHit> &s_hit1, hls::stream<FTOFHit> &s_hit2, volatile ap_uint<1> &hit_scaler_inc);

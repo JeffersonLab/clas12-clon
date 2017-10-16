@@ -266,7 +266,7 @@ static int W = -1;
 
 /* reads one timing slice */
 void
-ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_word_t> s_fadc_words[NFADCS], hls::stream<ECStrip_s> s_strip_u[NF1], hls::stream<ECStrip_s> s_strip_v[NF1], hls::stream<ECStrip_s> s_strip_w[NF1])
+ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADCS], hls::stream<ECStrip_s> s_strip_u[NF1], hls::stream<ECStrip_s> s_strip_v[NF1], hls::stream<ECStrip_s> s_strip_w[NF1])
 {
 #pragma HLS INTERFACE axis register both port=s_strip_w
 #pragma HLS DATA_PACK variable=s_strip_w
@@ -294,7 +294,7 @@ ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_word_t> s_fadc_words[NFAD
   int nslot=7;
 #endif
 
-  fadc_word_t fadcs;
+  fadc_4ch_t fadcs;
 
   ap_uint<13> enU[NF1*NH_READS*2];
   ap_uint<13> enV[NF1*NH_READS*2];

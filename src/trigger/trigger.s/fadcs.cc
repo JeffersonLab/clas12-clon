@@ -31,30 +31,36 @@ using namespace std;
 #define MAX(a,b)    (a > b ? a : b)
 #define MIN(a,b)    (a < b ? a : b)
 
-static int nslots[NDET] = {7,7,7/*14*/,12,14,0,0,0,0};
+  static int nslots[NDET] = {7,7,14,12,14,3,12,0,0,11,10,15};
 static int slot2isl[NDET][22] = {
-  -1,-1,-1, 0, 1, 2, 3, 4, 5, 6,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, /* ECAL_IN slots: 3-9 */
-  -1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 0,-1,-1, 1, 2, 3, 4, 5, 6,-1,-1,-1, /* ECAL_OUT slots: 10, 13-18 */
-  -1,-1,-1, 0, 1, 2, 3, 4, 5, 6, 0,-1,-1, 1, 2, 3, 4, 5, 6,-1,-1,-1, /* ECAL slots: 3-10, 13-18 */
-  -1,-1,-1, 0, 1, 2, 3, 4, 5, 6, 7,-1,-1, 8, 9,10,11,-1,-1,-1,-1,-1, /* PCAL slots: 3-10, 13-16 */
-  -1,-1,-1, 0, 1, 2, 3, 4, 5, 6,-1,-1,-1, 7, 8, 9,10,11,12,13,-1,-1, /* DCRB slots: 3-9, 14-20 */
-  -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, /* HTCC slots: */
-  -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, /* FTOF slots: */
-  -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, /* CTOF slots: */
-  -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1  /* CND slots: */
+  -1,-1,-1, 0, 1, 2, 3, 4, 5, 6,-1, -1,-1, -1,-1,-1,-1,-1,-1,-1,-1,-1, /* ECAL_IN slots: 3-9 */
+  -1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 0, -1,-1,  1, 2, 3, 4, 5, 6,-1,-1,-1, /* ECAL_OUT slots: 10, 13-18 */
+  -1,-1,-1, 0, 1, 2, 3, 4, 5, 6, 0, -1,-1,  1, 2, 3, 4, 5, 6,-1,-1,-1, /* ECAL slots: 3-10, 13-18 */
+  -1,-1,-1, 0, 1, 2, 3, 4, 5, 6, 7, -1,-1,  8, 9,10,11,-1,-1,-1,-1,-1, /* PCAL slots: 3-10, 13-16 */
+  -1,-1,-1, 0, 1, 2, 3, 4, 5, 6,-1, -1,-1,  7, 8, 9,10,11,12,13,-1,-1, /* DCRB slots: 3-9, 14-20 */
+  -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, -1,-1,  0, 1, 2,-1,-1,-1,-1,-1,-1, /* HTCC slots: 13-15 */
+  -1,-1,-1, 0, 1, 2, 3, 4, 5, 6, 7, -1,-1,  8, 9,10,11,-1,-1,-1,-1,-1, /* FTOF slots: 3-10, 13-16 */
+  -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, -1,-1, -1,-1,-1,-1,-1,-1,-1,-1,-1, /* CTOF slots: */
+  -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, -1,-1, -1,-1,-1,-1,-1,-1,-1,-1,-1, /* CND slots: */
+  -1,-1,-1, 0, 1, 2, 3, 4, 5, 6, 7, -1,-1,  8, 9,10,-1,-1,-1,-1,-1,-1, /* FT1 slots: 3-10, 13-15 */
+  -1,-1,-1, 0, 1, 2, 3, 4, 5, 6, 7, -1,-1,  8, 9,-1,-1,-1,-1,-1,-1,-1, /* FT2 slots: 3-10, 13-14 */
+  -1,-1,-1, 0, 1, 2, 3, 4, 5, 6, 7, -1,-1,  8, 9,10,11,12,13,14,-1,-1  /* FT3 slots: 3-10, 13-19 */
 };
 
-static int nfragtags[NDET] = {6,6,6,6,18,1,6,1,1};
+static int nfragtags[NDET] = {6,6,6,6,18,1,6,1,1,1,1,1};
 static int fragtags[NDET][18] = {
    1, 7,13,19,25,31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*ECIN*/
    1, 7,13,19,25,31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*ECOUT*/
    1, 7,13,19,25,31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*ECAL*/
    3, 9,15,21,27,33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*PCAL*/
   41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58, /*DCRB*/
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*HTCC*/
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*FTOF*/
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*CTOF*/
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  /*CND*/
+  59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*HTCC*/
+   5,11,17,23,29,35, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*FTOF*/
+  59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*CTOF*/
+   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*CND*/
+  70, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /*FT1*/
+  71, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /*FT2*/
+  72, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  /*FT3*/
 };
 
 static float ped[NDET][21][16]; /* pedestals */
@@ -64,7 +70,7 @@ static int nsa[NDET][21]; /* NSA */
 static int nsb[NDET][21]; /* NSB */
 
 int
-fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::stream<fadc_word_t> s_fadc_words[NFADCS], int dtimestamp, int dpulsetime,
+fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS], int dtimestamp, int dpulsetime,
       int *iev, unsigned long long *timestamp)
 {
   int i, j, k, ind, nhits, error, ii, jj, nbytes, ind_data, nn, mm, isample, isam1, isam2;
@@ -86,7 +92,7 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
   int dd[16];
   float fsum, fped, ff[16];
   int bank_not_found = 1;
-  fadc_word_t fadcs[MAXTIMES][NFADCS][NH_READS];
+  fadc_16ch_t fadcs[MAXTIMES][NFADCS];
   int isl;
   ap_uint<13> ee;
   ap_uint<3>  tt;
@@ -104,17 +110,38 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
   {
 	for(isl=0; isl<NFADCS; isl++)
 	{
-	  for(j=0; j<NH_READS; j++)
-	  {
-        fadcs[i][isl][j].e0 = 0;
-        fadcs[i][isl][j].t0 = 0;
-        fadcs[i][isl][j].e1 = 0;
-        fadcs[i][isl][j].t1 = 0;
-        fadcs[i][isl][j].e2 = 0;
-        fadcs[i][isl][j].t2 = 0;
-        fadcs[i][isl][j].e3 = 0;
-        fadcs[i][isl][j].t3 = 0;
-	  }
+      fadcs[i][isl].e0 = 0;
+      fadcs[i][isl].t0 = 0;
+      fadcs[i][isl].e1 = 0;
+      fadcs[i][isl].t1 = 0;
+      fadcs[i][isl].e2 = 0;
+      fadcs[i][isl].t2 = 0;
+      fadcs[i][isl].e3 = 0;
+      fadcs[i][isl].t3 = 0;
+      fadcs[i][isl].e4 = 0;
+      fadcs[i][isl].t4 = 0;
+      fadcs[i][isl].e5 = 0;
+      fadcs[i][isl].t5 = 0;
+      fadcs[i][isl].e6 = 0;
+      fadcs[i][isl].t6 = 0;
+      fadcs[i][isl].e7 = 0;
+      fadcs[i][isl].t7 = 0;
+      fadcs[i][isl].e8 = 0;
+      fadcs[i][isl].t8 = 0;
+      fadcs[i][isl].e9 = 0;
+      fadcs[i][isl].t9 = 0;
+      fadcs[i][isl].e10 = 0;
+      fadcs[i][isl].t10 = 0;
+      fadcs[i][isl].e11 = 0;
+      fadcs[i][isl].t11 = 0;
+      fadcs[i][isl].e12 = 0;
+      fadcs[i][isl].t12 = 0;
+      fadcs[i][isl].e13 = 0;
+      fadcs[i][isl].t13 = 0;
+      fadcs[i][isl].e14 = 0;
+      fadcs[i][isl].t14 = 0;
+      fadcs[i][isl].e15 = 0;
+      fadcs[i][isl].t15 = 0;
 	}
   }
 
@@ -448,27 +475,85 @@ TEMP for GEMC !!!*/
 		}
         else
 		{
-          int ch1 = chan/NH_READS;
-          int ch2 = chan%NH_READS;
-          if(ch2==0)
+          if(chan==0)
           {
-            fadcs[it][isl][ch1].e0 = ee;
-            fadcs[it][isl][ch1].t0 = tt;
+            fadcs[it][isl].e0 = ee;
+            fadcs[it][isl].t0 = tt;
   		  }
-          else if(ch2==1)
+          else if(chan==1)
 		  {
-            fadcs[it][isl][ch1].e1 = ee;
-            fadcs[it][isl][ch1].t1 = tt;
+            fadcs[it][isl].e1 = ee;
+            fadcs[it][isl].t1 = tt;
 	      }
-          else if(ch2==2)
+          else if(chan==2)
 		  {
-            fadcs[it][isl][ch1].e2 = ee;
-            fadcs[it][isl][ch1].t2 = tt;
+            fadcs[it][isl].e2 = ee;
+            fadcs[it][isl].t2 = tt;
 		  }
-          else if(ch2==3)
+          else if(chan==3)
 		  {
-            fadcs[it][isl][ch1].e3 = ee;
-            fadcs[it][isl][ch1].t3 = tt;
+            fadcs[it][isl].e3 = ee;
+            fadcs[it][isl].t3 = tt;
+		  }
+          else if(chan==4)
+          {
+            fadcs[it][isl].e4 = ee;
+            fadcs[it][isl].t4 = tt;
+  		  }
+          else if(chan==5)
+		  {
+            fadcs[it][isl].e5 = ee;
+            fadcs[it][isl].t5 = tt;
+	      }
+          else if(chan==6)
+		  {
+            fadcs[it][isl].e6 = ee;
+            fadcs[it][isl].t6 = tt;
+		  }
+          else if(chan==7)
+		  {
+            fadcs[it][isl].e7 = ee;
+            fadcs[it][isl].t7 = tt;
+		  }
+          else if(chan==8)
+          {
+            fadcs[it][isl].e8 = ee;
+            fadcs[it][isl].t8 = tt;
+  		  }
+          else if(chan==9)
+		  {
+            fadcs[it][isl].e9 = ee;
+            fadcs[it][isl].t9 = tt;
+	      }
+          else if(chan==10)
+		  {
+            fadcs[it][isl].e10 = ee;
+            fadcs[it][isl].t10 = tt;
+		  }
+          else if(chan==11)
+		  {
+            fadcs[it][isl].e11 = ee;
+            fadcs[it][isl].t11 = tt;
+		  }
+          else if(chan==12)
+          {
+            fadcs[it][isl].e12 = ee;
+            fadcs[it][isl].t12 = tt;
+  		  }
+          else if(chan==13)
+		  {
+            fadcs[it][isl].e13 = ee;
+            fadcs[it][isl].t13 = tt;
+	      }
+          else if(chan==14)
+		  {
+            fadcs[it][isl].e14 = ee;
+            fadcs[it][isl].t14 = tt;
+		  }
+          else if(chan==15)
+		  {
+            fadcs[it][isl].e15 = ee;
+            fadcs[it][isl].t15 = tt;
 		  }
 	    }
 
@@ -498,20 +583,21 @@ done_with_pulse_search:
 
 
 
-    /* write into output streams (one stream per slot) */
+
+
+    /* write into output streams (one stream per slot, one write per stream) */
 	for(i=0; i<MAXTIMES; i++)
 	{
 	  for(isl=0; isl<nslot; isl++)
 	  {
-		for(j=0; j<NH_READS; j++)
-		{
-#ifdef DEBUG_0
-          cout<<"FADCS: WRITING TO STREAM ["<<i<<"]["<<isl<<"]["<<j<<"] adcs="<<fadcs[i][isl][j].e0<<" "<<fadcs[i][isl][j].e1<<" "<<fadcs[i][isl][j].e2<<" "<<fadcs[i][isl][j].e3<<endl;
-#endif
-          s_fadc_words[isl].write(fadcs[i][isl][j]);
-		}
+        s_fadc_words[isl].write(fadcs[i][isl]);
 	  }
 	}
+
+
+
+
+
 
     bank_not_found = 0;
     break; /* if we found bank, exit from 'banknum' loop */
@@ -529,4 +615,114 @@ done_with_pulse_search:
 
 
   return(ind);
+}
+
+
+
+/* following functions converts 32ns-clocked FADC data into 8ns, 4ns etc -clocked streams, in according to different detectors requirements */
+
+void
+fadcs_32ns_to_8ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_4ch_t> &s_fadc_out)
+{
+  fadc_16ch_t fadcs_in;
+  fadc_4ch_t fadcs_out;
+
+  fadcs_in = s_fadc_in.read();
+
+  fadcs_out.e0 = fadcs_in.e0;
+  fadcs_out.t0 = fadcs_in.t0;
+  fadcs_out.e1 = fadcs_in.e1;
+  fadcs_out.t1 = fadcs_in.t1;
+  fadcs_out.e2 = fadcs_in.e2;
+  fadcs_out.t2 = fadcs_in.t2;
+  fadcs_out.e3 = fadcs_in.e3;
+  fadcs_out.t3 = fadcs_in.t3;
+  s_fadc_out.write(fadcs_out);
+
+  fadcs_out.e0 = fadcs_in.e4;
+  fadcs_out.t0 = fadcs_in.t4;
+  fadcs_out.e1 = fadcs_in.e5;
+  fadcs_out.t1 = fadcs_in.t5;
+  fadcs_out.e2 = fadcs_in.e6;
+  fadcs_out.t2 = fadcs_in.t6;
+  fadcs_out.e3 = fadcs_in.e7;
+  fadcs_out.t3 = fadcs_in.t7;
+  s_fadc_out.write(fadcs_out);
+
+  fadcs_out.e0 = fadcs_in.e8;
+  fadcs_out.t0 = fadcs_in.t8;
+  fadcs_out.e1 = fadcs_in.e9;
+  fadcs_out.t1 = fadcs_in.t9;
+  fadcs_out.e2 = fadcs_in.e10;
+  fadcs_out.t2 = fadcs_in.t10;
+  fadcs_out.e3 = fadcs_in.e11;
+  fadcs_out.t3 = fadcs_in.t11;
+  s_fadc_out.write(fadcs_out);
+
+  fadcs_out.e0 = fadcs_in.e12;
+  fadcs_out.t0 = fadcs_in.t12;
+  fadcs_out.e1 = fadcs_in.e13;
+  fadcs_out.t1 = fadcs_in.t13;
+  fadcs_out.e2 = fadcs_in.e14;
+  fadcs_out.t2 = fadcs_in.t14;
+  fadcs_out.e3 = fadcs_in.e15;
+  fadcs_out.t3 = fadcs_in.t15;
+  s_fadc_out.write(fadcs_out);
+}
+
+void
+fadcs_32ns_to_4ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_2ch_t> &s_fadc_out)
+{
+  fadc_16ch_t fadcs_in;
+  fadc_2ch_t fadcs_out;
+
+  fadcs_in = s_fadc_in.read();
+
+  fadcs_out.e0 = fadcs_in.e0;
+  fadcs_out.t0 = fadcs_in.t0;
+  fadcs_out.e1 = fadcs_in.e1;
+  fadcs_out.t1 = fadcs_in.t1;
+  s_fadc_out.write(fadcs_out);
+
+  fadcs_out.e0 = fadcs_in.e2;
+  fadcs_out.t0 = fadcs_in.t2;
+  fadcs_out.e1 = fadcs_in.e3;
+  fadcs_out.t1 = fadcs_in.t3;
+  s_fadc_out.write(fadcs_out);
+
+  fadcs_out.e0 = fadcs_in.e4;
+  fadcs_out.t0 = fadcs_in.t4;
+  fadcs_out.e1 = fadcs_in.e5;
+  fadcs_out.t1 = fadcs_in.t5;
+  s_fadc_out.write(fadcs_out);
+
+  fadcs_out.e0 = fadcs_in.e6;
+  fadcs_out.t0 = fadcs_in.t6;
+  fadcs_out.e1 = fadcs_in.e7;
+  fadcs_out.t1 = fadcs_in.t7;
+  s_fadc_out.write(fadcs_out);
+
+  fadcs_out.e0 = fadcs_in.e8;
+  fadcs_out.t0 = fadcs_in.t8;
+  fadcs_out.e1 = fadcs_in.e9;
+  fadcs_out.t1 = fadcs_in.t9;
+  s_fadc_out.write(fadcs_out);
+
+  fadcs_out.e0 = fadcs_in.e10;
+  fadcs_out.t0 = fadcs_in.t10;
+  fadcs_out.e1 = fadcs_in.e11;
+  fadcs_out.t1 = fadcs_in.t11;
+  s_fadc_out.write(fadcs_out);
+
+  fadcs_out.e0 = fadcs_in.e12;
+  fadcs_out.t0 = fadcs_in.t12;
+  fadcs_out.e1 = fadcs_in.e13;
+  fadcs_out.t1 = fadcs_in.t13;
+  s_fadc_out.write(fadcs_out);
+
+  fadcs_out.e0 = fadcs_in.e14;
+  fadcs_out.t0 = fadcs_in.t14;
+  fadcs_out.e1 = fadcs_in.e15;
+  fadcs_out.t1 = fadcs_in.t15;
+  s_fadc_out.write(fadcs_out);
 }

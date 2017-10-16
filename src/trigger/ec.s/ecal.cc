@@ -43,7 +43,7 @@
 
 void
 ecal(ap_uint<16> threshold[3], nframe_t nframes, ap_uint<4> dipfactor, ap_uint<12> dalitzmin, ap_uint<12> dalitzmax, ap_uint<4> nstripmax,
-     hls::stream<fadc_word_t> s_fadc_words[NFADCS], hls::stream<ECHit> &s_hits1,
+     hls::stream<fadc_4ch_t> s_fadc_words[NFADCS], hls::stream<ECHit> &s_hits1,
 	 peak_ram_t buf_ram_u[NPEAK][256],
 	 peak_ram_t buf_ram_v[NPEAK][256],
 	 peak_ram_t buf_ram_w[NPEAK][256],

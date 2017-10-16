@@ -19,8 +19,6 @@
 #include <termios.h>
 #include <unistd.h>
 
-#include "prlib.h"
-
 #include "evio.h"
 
 #ifdef USE_PCAL
@@ -792,7 +790,6 @@ ecaldrawevent(TCanvas *fCanvas)
 
 #ifdef USE_PCAL
 
-#define ecfadcs pcfadcs
 #define ecstrip_in  pcstrip_in
 #define ecstrip_out pcstrip_out
 #define ecpeak_in pcpeak_in
@@ -920,6 +917,7 @@ RRR=0
 #define PULSETIME2 1
 
 static int test[TIMESTAMP2][PULSETIME2];
+static trig_t trig[4]; /* assumed to be cleaned up because of 'static' */
 
 
 /*
@@ -934,14 +932,18 @@ ecalgetevent(int handler, TCanvas *fCanvas, int sec, int dtimestamp, int dpulset
 {
   int status, nogoodevents;
   unsigned int *bufptr;
-  ap_uint<16> threshold[3] = {THRESHOLD1, THRESHOLD2, THRESHOLD3};
+  ap_uint<16> threshold[3] = {EC_THRESHOLD1, EC_THRESHOLD2, EC_THRESHOLD3};
 
-  fadc_word_t fadcs[NSLOT][8];
+  uint32_t bufout0[256], bufout1[256], bufout2[256], bufout3[256];
+  int nev;
+  unsigned long long timestamp;
+
+  //fadc_word_t fadcs[NFADCS][8];
   ECStrip str[3][NSTRIP];
   ECPeak peak_tmp;
   ECHit hit[NHIT];
 
-  hls::stream<fadc_word_t> s_fadc_words[NSLOT];
+  hls::stream<fadc_word_t> s_fadc_words[NFADCS];
   hls::stream<ECStrip_s> s_strip0_u[NF1], s_strip0_v[NF1], s_strip0_w[NF1];
   hls::stream<ECStrip_s> s_strip_u[NF1], s_strip_v[NF1], s_strip_w[NF1];
   hls::stream<ECStrip_s> s_strip1_u[NF1], s_strip1_v[NF1], s_strip1_w[NF1];
@@ -973,6 +975,16 @@ ecalgetevent(int handler, TCanvas *fCanvas, int sec, int dtimestamp, int dpulset
   hls::stream<ECfml_t> s_middle_u, s_middle_v, s_middle_w;
   hls::stream<ECfml_t> s_last_u, s_last_v, s_last_w;
   volatile ap_uint<1> peak_scaler_inc_u, peak_scaler_inc_v, peak_scaler_inc_w, hit_scaler_inc;
+
+  hls::stream<trig_t> trig_stream[4];
+  peak_ram_t buf_ram_u[NPEAK][256];
+  peak_ram_t buf_ram_v[NPEAK][256];
+  peak_ram_t buf_ram_w[NPEAK][256];
+  hit_ram_t buf_ram[NHIT][256];
+  hls::stream<eventdata_t> event_stream_u;
+  hls::stream<eventdata_t> event_stream_v;
+  hls::stream<eventdata_t> event_stream_w;
+  hls::stream<eventdata_t> event_stream;
 
   int i, ii, jj, kk, io, nret, it, ret;
 
@@ -1047,8 +1059,11 @@ ecalgetevent(int handler, TCanvas *fCanvas, int sec, int dtimestamp, int dpulset
 
 
 
-
+#ifdef USE_ECAL
     io = 0;    /*ECAL*/
+#else
+    io = 3;
+#endif
 
     /* cleanup for drawing */
     for(ii=0; ii<3; ii++)
@@ -1059,7 +1074,7 @@ ecalgetevent(int handler, TCanvas *fCanvas, int sec, int dtimestamp, int dpulset
 	  }
     }
 	
-    ret = ecfadcs(bufptr, threshold[0], sec, io, s_fadc_words, dtimestamp, dpulsetime);
+    ret = fadcs(bufptr, threshold[0], sec, io, s_fadc_words, dtimestamp, dpulsetime, &nev, &timestamp);
 #ifdef TEST_BENCH
     if(1)
 #else
@@ -1067,16 +1082,24 @@ ecalgetevent(int handler, TCanvas *fCanvas, int sec, int dtimestamp, int dpulset
 #endif
     {
 
+    /* trig will be incremented for every sector, because 'static addr' in ...eventfill is common for all sectors ..*/
+    for(int i=0; i<4; i++) trig[i].t_stop = trig[i].t_start + MAXTIMES*8; /* set readout window MAXTIMES*32ns in 4ns ticks */
+    for(int i=0; i<4; i++)
+    {
+      trig_stream[i].write(trig[i]);
+    }
 
-	  /*SERGEY: stop following loop at it=6 where most clusters are to draw 6th one - have to redo that part !!!!!!!!!!!!!!!!!!!*/
-	  for(it=0; it<7/*MAXTIMES*/; it++)
+
+
+	/*SERGEY: stop following loop at it=6 where most clusters are to draw 6th one - have to redo that part !!!!!!!!!!!!!!!!!!!*/
+	for(it=0; it</*7*/MAXTIMES; it++)
 	{
 	  /*FPGA*/
       ecstrips(threshold[0], s_fadc_words, s_strip0_u, s_strip0_v, s_strip0_w);
 
-      ecstripspersistence(NFRAMES, s_strip0_u, s_strip_u);
-      ecstripspersistence(NFRAMES, s_strip0_v, s_strip_v);
-      ecstripspersistence(NFRAMES, s_strip0_w, s_strip_w);
+      ecstripspersistence0(EC_NFRAMES, s_strip0_u, s_strip_u);
+      ecstripspersistence1(EC_NFRAMES, s_strip0_v, s_strip_v);
+      ecstripspersistence2(EC_NFRAMES, s_strip0_w, s_strip_w);
       ecstripsfanout(s_strip_u, s_strip1_u, s_strip2_u);
       ecstripsfanout(s_strip_v, s_strip1_v, s_strip2_v);
       ecstripsfanout(s_strip_w, s_strip1_w, s_strip2_w);
@@ -1092,21 +1115,21 @@ ecalgetevent(int handler, TCanvas *fCanvas, int sec, int dtimestamp, int dpulset
 	  /* for drawing */
 
 	  /*FPGA*/
-      ecpeak1(threshold[0], STRIP_DIP_FACTOR, NSTRIPMAX, s_strip1_u, s_first_u, s_middle_u, s_last_u);
+      ecpeak1(threshold[0], EC_STRIP_DIP_FACTOR, EC_NSTRIPMAX, s_strip1_u, s_first_u, s_middle_u, s_last_u);
       ecpeak2(threshold[1], s_strip2_u, s_first_u, s_middle_u, s_last_u, s_peak0strip_u);
       ecpeakzerosuppress(s_peak0strip_u, s_peak0max_u);
       ecpeaksort(s_peak0max_u, s_peak0_u);
       ecpeakcoord(0, s_peak0_u, s_peak_u);
       ecpeakfanout(s_peak_u, s_peak1_u, s_peak2_u, peak_scaler_inc_u);
 
-      ecpeak1(threshold[0], STRIP_DIP_FACTOR, NSTRIPMAX, s_strip1_v, s_first_v, s_middle_v, s_last_v);
+      ecpeak1(threshold[0], EC_STRIP_DIP_FACTOR, EC_NSTRIPMAX, s_strip1_v, s_first_v, s_middle_v, s_last_v);
       ecpeak2(threshold[1], s_strip2_v, s_first_v, s_middle_v, s_last_v, s_peak0strip_v);
       ecpeakzerosuppress(s_peak0strip_v, s_peak0max_v);
       ecpeaksort(s_peak0max_v, s_peak0_v);
       ecpeakcoord(1, s_peak0_v, s_peak_v);
       ecpeakfanout(s_peak_v, s_peak1_v, s_peak2_v, peak_scaler_inc_v);
 
-      ecpeak1(threshold[0], STRIP_DIP_FACTOR, NSTRIPMAX, s_strip1_w, s_first_w, s_middle_w, s_last_w);
+      ecpeak1(threshold[0], EC_STRIP_DIP_FACTOR, EC_NSTRIPMAX, s_strip1_w, s_first_w, s_middle_w, s_last_w);
       ecpeak2(threshold[1], s_strip2_w, s_first_w, s_middle_w, s_last_w, s_peak0strip_w);
       ecpeakzerosuppress(s_peak0strip_w, s_peak0max_w);
       ecpeaksort(s_peak0max_w, s_peak0_w);
@@ -1115,26 +1138,9 @@ ecalgetevent(int handler, TCanvas *fCanvas, int sec, int dtimestamp, int dpulset
 	  /*FPGA*/
 
 	  /* for drawing */
-      hls::stream<trig_t> trig_stream;
-	  peak_ram_t buf_ram_u[NPEAK][256];
-	  peak_ram_t buf_ram_v[NPEAK][256];
-	  peak_ram_t buf_ram_w[NPEAK][256];
-      hls::stream<eventdata_t> event_stream_u;
-      hls::stream<eventdata_t> event_stream_v;
-      hls::stream<eventdata_t> event_stream_w;
-
-      ecpeakeventfiller(0, s_peak2_u, buf_ram_u);
-      ecpeakeventwriter(0, 0, trig_stream, event_stream_u, buf_ram_u);
-      ecpeakeventreader(trig_stream, event_stream_u, peak[0]);
-
-      ecpeakeventfiller(1, s_peak2_v, buf_ram_v);
-      ecpeakeventwriter(1, 0, trig_stream, event_stream_v, buf_ram_v);
-      ecpeakeventreader(trig_stream, event_stream_v, peak[1]);
-
-      ecpeakeventfiller(2, s_peak2_w, buf_ram_w);
-      ecpeakeventwriter(2, 0, trig_stream, event_stream_w, buf_ram_w);
-      ecpeakeventreader(trig_stream, event_stream_w, peak[2]);
-
+      ecpeakeventfiller0(s_peak2_u, buf_ram_u);
+      ecpeakeventfiller1(s_peak2_v, buf_ram_v);
+      ecpeakeventfiller2(s_peak2_w, buf_ram_w);
 
 #ifdef DEBUG1
 	  
@@ -1160,7 +1166,7 @@ ecalgetevent(int handler, TCanvas *fCanvas, int sec, int dtimestamp, int dpulset
 
 
 	  /*FPGA*/
-      echit(DALITZ_MIN, DALITZ_MAX, s_peak1_u, s_peak1_v, s_peak1_w, s_pcount, s_energy, s_coord);
+      echit(EC_DALITZ_MIN, EC_DALITZ_MAX, s_peak1_u, s_peak1_v, s_peak1_w, s_pcount, s_energy, s_coord);
       ecenergyfanout(s_energy, s_energy1, s_energy2);
       eccoordfanout(s_coord, s_coord1, s_coord2);
       ecfrac1(s_pcount, s_energy1, s_hitout1);
@@ -1179,13 +1185,21 @@ ecalgetevent(int handler, TCanvas *fCanvas, int sec, int dtimestamp, int dpulset
 	  /*FPGA*/
 
       /* for drawing */
-	  hit_ram_t buf_ram[NHIT][256];
-      hls::stream<eventdata_t> event_stream;
-
       echiteventfiller(s_hits1, buf_ram); /* do not need to read that stream, but do it to avoid leftover data */
       echiteventfiller(s_hits2, buf_ram);
-      echiteventwriter(0, trig_stream, event_stream, buf_ram);
-      echiteventreader(trig_stream, event_stream, hit);
+
+
+      ecpeakeventwriter(0, 0, trig_stream[0], event_stream_u, buf_ram_u);
+      ecpeakeventwriter(1, 0, trig_stream[1], event_stream_v, buf_ram_v);
+      ecpeakeventwriter(2, 0, trig_stream[2], event_stream_w, buf_ram_w);
+      echiteventwriter(0, trig_stream[3], event_stream, buf_ram);
+
+      ecpeakeventreader(trig_stream[0], event_stream_u, peak[0], bufout0);
+      ecpeakeventreader(trig_stream[1], event_stream_v, peak[1], bufout1);
+      ecpeakeventreader(trig_stream[2], event_stream_w, peak[2], bufout2);
+      echiteventreader(trig_stream[3], event_stream, hit, bufout3);
+
+
       /* for drawing */
 
       nhits = 0;
@@ -1337,8 +1351,10 @@ ecalgetevent(int handler, TCanvas *fCanvas, int sec, int dtimestamp, int dpulset
       goodevent=1;
 
 
+	} /* it */
 
-	}
+    for(int i=0; i<4; i++) trig[i].t_start += MAXTIMES*8; /* in preparation for next event, step up MAXTIMES*32ns in 4ns ticks */
+
 
     }
     else
@@ -1391,8 +1407,8 @@ ecalview(int handler, TCanvas *fCanvas, int redraw)
 #endif
 
   /*GEMC */
-  int sec=5; /* /work/boiarino/data/vtp1_001294.evio.0 - #define USE_PCAL !!!!!!!! */
-  /*int sec=0;*/ /* /work/boiarino/data/ec_pcal_TCS_1_.evio - #undef USE_PCAL !!!!!!!! */
+  /*int sec=5;*/ /* /work/boiarino/data/vtp1_001294.evio.0 - #define USE_PCAL !!!!!!!! */
+  int sec=1; /* /work/boiarino/data/ec_pcal_TCS_1_.evio - #undef USE_PCAL !!!!!!!! */
 
 
   TArc *circle = new TArc();

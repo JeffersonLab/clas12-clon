@@ -24,7 +24,7 @@ using namespace std;
 
 /* reads one 32-ns timing slice */
 void
-ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_word_t> s_fadc_words[NSLOT], hls::stream<FTOFStrip_s> &s_strip0)
+ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS], hls::stream<FTOFStrip_s> &s_strip0)
 {
 #pragma HLS INTERFACE ap_stable port=strip_threshold
 #pragma HLS DATA_PACK variable=s_fadc_words
@@ -40,7 +40,7 @@ ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_word_t> s_fadc_words[NS
   ap_uint<6> str; /*0-61*/
   ap_uint<1> lr; /*0-1*/
 
-  fadc_word_t fadcs;
+  fadc_16ch_t fadcs;
 
   ap_uint<4> timetmp; /* 3 low bits for time interval (0-7), high bit to mark missing hits */
 
@@ -76,7 +76,7 @@ ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_word_t> s_fadc_words[NS
   /************************************/
   /* get FADC data for 32-ns interval */
 
-  for(int isl=0; isl<NSLOT; isl++)
+  for(int isl=0; isl<NFADCS; isl++)
   {
     /* read one timing slice */
 	for(int j=0; j<NH_READS; j++)

@@ -33,6 +33,7 @@ using namespace std;
 #include "eclib.h"
 #endif
 
+#include "hls_fadc_sum.h"
 #include "trigger.h"
 
 
@@ -509,6 +510,9 @@ ectrig(unsigned int *bufptr, int sec, int npeak[NLAYER], TrigECPeak peak[NLAYER]
 
 
 
+
+
+
 static trig_t trig[4]; /* assumed to be cleaned up because of 'static' */
 
 /* to be used by analysis software: add peaks and hits to current evio event in form of evio banks */
@@ -530,7 +534,8 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
   ap_uint<12> dalitzmax = dalitzmax_;
   ap_uint<4>  nstripmax = nstripmax_;
 
-  hls::stream<fadc_word_t> s_fadc_words[NFADCS];
+  hls::stream<fadc_16ch_t> s_fadcs[NFADCS];
+  hls::stream<fadc_4ch_t> s_fadc_words[NFADCS];
   hls::stream<ECHit> s_hits;
 
   ECPeak peak[3][NPEAK];
@@ -546,8 +551,10 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 
 #ifdef USE_PCAL
   int detector = PCAL;
+  int nslot = 12;
 #else
   int detector = ECIN;
+  int nslot = 7;
 #endif
 
   for(sec=0; sec<NSECTOR; sec++)
@@ -560,7 +567,7 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 	cout<<"eclib: threshold="<<threshold[0]<<" "<<threshold[1]<<" "<<threshold[2]<<endl;
 #endif
 
-    ret = fadcs(bufptr, threshold[0], sec, detector, s_fadc_words, 0, 0, &iev, &timestamp);
+    ret = fadcs(bufptr, threshold[0], sec, detector, s_fadcs, 0, 0, &iev, &timestamp);
 	if(ret<=0) continue;
 
     /* trig will be incremented for every sector, because 'static addr' in ...eventfill is common for all sectors ..*/
@@ -582,6 +589,10 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 #else
  	  printf("eclib: sec = %d, timing slice = %d\n",sec,it);fflush(stdout);
 #endif
+
+	  /* adjust to 8ns domain */
+      for(int i=0; i<nslot; i++) fadcs_32ns_to_8ns(s_fadcs[i], s_fadc_words[i]);
+
       /* FPGA section */
       ecal(threshold, nframes, dipfactor, dalitzmin, dalitzmax, nstripmax, s_fadc_words, s_hits, buf_ram_u, buf_ram_v, buf_ram_w, buf_ram);
       /* FPGA section */

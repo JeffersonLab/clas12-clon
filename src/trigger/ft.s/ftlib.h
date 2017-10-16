@@ -21,7 +21,7 @@ typedef struct
   ap_uint<13>	e1;
   ap_uint<3>	t1;
 
-} fadc_word_t;
+} fadc_2ch_t;
 
 typedef struct
 {

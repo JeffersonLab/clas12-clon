@@ -22,7 +22,10 @@
 #define FTOF  6
 #define CTOF  7
 #define CND   8
-#define NDET 9 /* update if adding new detector */
+#define FT1   9
+#define FT2  10
+#define FT3  11
+#define NDET 12 /* update if adding new detector */
 
 
 

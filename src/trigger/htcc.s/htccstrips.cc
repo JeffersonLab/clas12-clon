@@ -24,7 +24,7 @@ using namespace std;
 
 /* reads one timing slice */
 void
-htccstrips(ap_uint<16> strip_threshold, hls::stream<fadc_word_t> s_fadc_words[NSLOT], hls::stream<HTCCStrip_s> s_strip0[NSTREAMS1])
+htccstrips(ap_uint<16> strip_threshold, hls::stream<fadc_2ch_t> s_fadc_words[NSLOT], hls::stream<HTCCStrip_s> s_strip0[NSTREAMS1])
 {
 #pragma HLS INTERFACE ap_stable port=strip_threshold
 #pragma HLS DATA_PACK variable=s_fadc_words
@@ -39,7 +39,7 @@ htccstrips(ap_uint<16> strip_threshold, hls::stream<fadc_word_t> s_fadc_words[NS
   ap_uint<4> chan; /*0-15*/
   ap_uint<6> str; /*0-47*/
 
-  fadc_word_t fadcs;
+  fadc_2ch_t fadcs;
 
   ap_uint<13> energytmp[NSTRIP];
 #pragma HLS ARRAY_PARTITION variable=energytmp complete dim=1

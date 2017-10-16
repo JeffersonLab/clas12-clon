@@ -416,13 +416,13 @@ void echit_in(hls::stream<ECHit> &s_hits, ECHit hit[NHIT]);
 void echit_out(ECHit hit[NHIT], hls::stream<ECHit> &s_hits);
 
 void ecal(ap_uint<16> threshold[3], nframe_t nframes, ap_uint<4> dipfactor, ap_uint<12> dalitzmin, ap_uint<12> dalitzmax, ap_uint<4> nstripmax,
-          hls::stream<fadc_word_t> (s_fadc_words)[NFADCS], hls::stream<ECHit> &s_hits, peak_ram_t buf_ram_u[NPEAK][256], peak_ram_t buf_ram_v[NPEAK][256],
+          hls::stream<fadc_4ch_t> (s_fadc_words)[NFADCS], hls::stream<ECHit> &s_hits, peak_ram_t buf_ram_u[NPEAK][256], peak_ram_t buf_ram_v[NPEAK][256],
           peak_ram_t buf_ram_w[NPEAK][256], hit_ram_t buf_ram[NHIT][256]);
 void ecpeakeventreader(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, ECPeak peak[NPEAK], uint32_t *bufout);
 void echiteventreader(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, ECHit hit[NHIT], uint32_t *bufout);
 
 /*FPGA*/
-void ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_word_t> s_fadc_words[NFADCS], hls::stream<ECStrip_s> s_strip_u[NF1], hls::stream<ECStrip_s> s_strip_v[NF1], hls::stream<ECStrip_s> s_strip_w[NF1]);
+void ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADCS], hls::stream<ECStrip_s> s_strip_u[NF1], hls::stream<ECStrip_s> s_strip_v[NF1], hls::stream<ECStrip_s> s_strip_w[NF1]);
 void ecstripsfanout(hls::stream<ECStrip_s> s_strip[NF1], hls::stream<ECStrip_s> s_strip1[NF1], hls::stream<ECStrip_s> s_strip2[NF1]);
 void ecstripspersistence(nframe_t nframes, hls::stream<ECStrip_s> s_stripin[NF1], hls::stream<ECStrip_s> s_stripout[NF1]);
 void ecstripspersistence0(nframe_t nframes, hls::stream<ECStrip_s> s_stripin[NF1], hls::stream<ECStrip_s> s_stripout[NF1]);

@@ -32,7 +32,7 @@ using namespace std;
 
 
 void
-ftofstripspersistence(nframe_t nframes, hls::stream<FTOFStrip_s> &s_stripin, hls::stream<FTOFStrip_s> &s_stripout)
+ftofstripspersistence(nframe_t nframes, hls::stream<FTOFStrip_s> &s_stripin, hls::stream<FTOFStrip_s> &s_stripout, ap_uint<3> jj)
 {
 #pragma HLS INTERFACE ap_stable register port=nframes
 #pragma HLS DATA_PACK variable=s_stripin

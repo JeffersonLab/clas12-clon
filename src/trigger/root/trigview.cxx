@@ -29,9 +29,9 @@
 #include "evioBankUtil.h"
 
 
+#include "trigger.h"
 
-
-#define USE_PCAL
+//#define USE_PCAL
 #define FULLSIZE 800.
 
 #include "ecalview.c"
@@ -485,15 +485,6 @@ main(int argc, char **argv)
     return(1);
   }
   */
-
-  int runnum = 0;
-  const int option[3] = {0,0,0};
-
-#ifdef USE_PCAL
-  pcinit(runnum, option[0], option[1], option[2]);
-#else
-  ecinit(runnum, option[0], option[1], option[2]);
-#endif
 
   if(batch)
   {

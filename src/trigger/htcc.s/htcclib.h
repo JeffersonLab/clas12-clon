@@ -3,6 +3,8 @@
 #include <ap_int.h>
 #include <hls_stream.h>
 
+#include "hls_fadc_sum.h"
+
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -24,15 +26,6 @@ extern "C" {
 /* strip persistency */
 #define NPER 8
 typedef ap_uint<3> nframe_t;
-
-
-typedef struct
-{
-  ap_uint<13>	e0;
-  ap_uint<3>	t0;
-  ap_uint<13>	e1;
-  ap_uint<3>	t1;
-} fadc_word_t;
 
 typedef struct htccstrip
 {
@@ -91,9 +84,10 @@ typedef struct
 int htcclib(int handler);
 void htcchiteventreader(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, HTCCHit &hit);
 
-void htccstrips(ap_uint<16> strip_threshold, hls::stream<fadc_word_t> s_fadc_words[NSLOT], hls::stream<HTCCStrip_s> s_strip0[NSTREAMS1]);
+void htcc(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_2ch_t> s_fadc_words[NFADCS], hls::stream<HTCCHit> &s_hits1, hit_ram_t buf_ram[512]);
+
+void htccstrips(ap_uint<16> strip_threshold, hls::stream<fadc_2ch_t> s_fadc_words[NSLOT], hls::stream<HTCCStrip_s> s_strip0[NSTREAMS1]);
 void htccstripspersistence(nframe_t nframes, hls::stream<HTCCStrip_s> &s_stripin, hls::stream<HTCCStrip_s> &s_stripout, ap_uint<3> jj);
-//void htccstripspersistence(nframe_t nframes, hls::stream<HTCCStrip_s> s_stripin[NSTREAMS1], hls::stream<HTCCStrip_s> s_stripout[NSTREAMS1]);
 void htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> cluster_threshold, hls::stream<HTCCStrip_s> s_strip[NSTREAMS1], hls::stream<HTCCHit> &s_hit);
 void htcchitfanout(hls::stream<HTCCHit> &s_hit, hls::stream<HTCCHit> &s_hit1, hls::stream<HTCCHit> &s_hit2, volatile ap_uint<1> &hit_scaler_inc);
 void htcchiteventfiller(hls::stream<HTCCHit> &s_hitin, hit_ram_t buf_ram[256]);
