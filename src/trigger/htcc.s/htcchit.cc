@@ -67,7 +67,7 @@ return:
  */
 
 
-/* 1.96/46/8/0%/0%/(10270)1%/(5734)1% II=8 */
+/* 1.96/39/1/0%/0%/(15739)2%/(8352)2% II=1 */
 
 void
 htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> cluster_threshold, hls::stream<HTCCStrip_s> s_strip[NSTREAMS1], hls::stream<HTCCHit> &s_hit)

@@ -94,6 +94,10 @@ static myfp_t fhalf[3] = {UHALF,VHALF,WHALF};
 
 
 
+
+
+#define NH_READS   4   /* 8/4 hits area: the number of reads-write for streams */
+
 #define NH_FIFOS  16  /* 8/16 hits area: the number of streams */
 
 /* define strip nfifo - NSTRIP/NH_READS/2 rounded up */
@@ -418,8 +422,8 @@ void echit_out(ECHit hit[NHIT], hls::stream<ECHit> &s_hits);
 void ecal(ap_uint<16> threshold[3], nframe_t nframes, ap_uint<4> dipfactor, ap_uint<12> dalitzmin, ap_uint<12> dalitzmax, ap_uint<4> nstripmax,
           hls::stream<fadc_4ch_t> (s_fadc_words)[NFADCS], hls::stream<ECHit> &s_hits, peak_ram_t buf_ram_u[NPEAK][256], peak_ram_t buf_ram_v[NPEAK][256],
           peak_ram_t buf_ram_w[NPEAK][256], hit_ram_t buf_ram[NHIT][256]);
-void ecpeakeventreader(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, ECPeak peak[NPEAK], uint32_t *bufout);
-void echiteventreader(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, ECHit hit[NHIT], uint32_t *bufout);
+void ecpeakeventreader(hls::stream<eventdata_t> &event_stream, ECPeak peak[NPEAK], uint32_t *bufout);
+void echiteventreader(hls::stream<eventdata_t> &event_stream, ECHit hit[NHIT], uint32_t *bufout);
 
 /*FPGA*/
 void ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADCS], hls::stream<ECStrip_s> s_strip_u[NF1], hls::stream<ECStrip_s> s_strip_v[NF1], hls::stream<ECStrip_s> s_strip_w[NF1]);

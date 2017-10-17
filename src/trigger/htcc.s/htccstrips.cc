@@ -16,13 +16,14 @@ using namespace std;
 
 
 #include "htcctrans.h"
+#include "hls_fadc_sum.h"
 #include "htcclib.h"
 
 
 
-/* 1.96/16/8/0%/0%/~0%(638)/~0%(519) II=8 */
+/* 1.96/19/8/0%/0%/~0%(4131)/~2%(8396) II=8 */
 
-/* reads one timing slice */
+/* reads one timing slice, do 8 reads and 8 writes */
 void
 htccstrips(ap_uint<16> strip_threshold, hls::stream<fadc_2ch_t> s_fadc_words[NSLOT], hls::stream<HTCCStrip_s> s_strip0[NSTREAMS1])
 {
