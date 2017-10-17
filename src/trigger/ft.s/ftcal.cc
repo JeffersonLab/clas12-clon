@@ -1,13 +1,12 @@
-
 /* ftcal.cc */
 
 /* Forward Tagger Calorimeter:
 
-   0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21
-  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43
-  44  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59  60  61  62  63  64  65
-  66  67  68  69  70  71  72  73  74  75  76  77  78  79  80  81  82  83  84  85  86  87
-  88  89  90  91  92  93  94  95  96  97  98  99 100 101 102 103 104 105 106 107 108 109
+ 0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21
+ 22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43
+ 44  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59  60  61  62  63  64  65
+ 66  67  68  69  70  71  72  73  74  75  76  77  78  79  80  81  82  83  84  85  86  87
+ 88  89  90  91  92  93  94  95  96  97  98  99 100 101 102 103 104 105 106 107 108 109
  110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127 128 129 130 131
  132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149 150 151 152 153
  154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175
@@ -27,25 +26,25 @@
  462 463 464 465 466 467 468 469 470 471 472 473 474 475 476 477 478 479 480 481 482 483
 
 
-1. cluster is formed by 3x3 window in any location - NCLSTR=400 total
+ 1. cluster is formed by 3x3 window in any location - NCLSTR=400 total
 
-2. for every cluster multiplicity and energy sum are calculated
+ 2. for every cluster multiplicity and energy sum are calculated
 
-3. trigger formed if at least one cluster exceeds multiplicity OR energy thresholds
+ 3. trigger formed if at least one cluster exceeds multiplicity OR energy thresholds
 
-input:
-  threshold - individual channel energy threshold
-  mult_threshold - cluster multiplicity threshold
-  cluster_threshold - cluster energy threshold
-  d[] - input adc values
+ input:
+ threshold - individual channel energy threshold
+ mult_threshold - cluster multiplicity threshold
+ cluster_threshold - cluster energy threshold
+ d[] - input adc values
 
-output:
-  mult[] - multiplicity for every cluster
-  clusters[] - energy sum for every cluster
+ output:
+ mult[] - multiplicity for every cluster
+ clusters[] - energy sum for every cluster
 
-return:
-  1 - if at least one cluster exceeds multiplicity OR energy threshold
-  0 - otherwise
+ return:
+ 1 - if at least one cluster exceeds multiplicity OR energy threshold
+ 0 - otherwise
 
  */
 
@@ -58,133 +57,42 @@ return:
 #include <iostream>
 using namespace std;
 
-
 #include "ftlib.h"
-
 
 /*
  actual number of FADCs is 332: 172 from ft1 and 160 from ft2
-  172/8=21.5, 160/8=20
-*/
-
+ 172/8=21.5, 160/8=20
+ */
 
 #include "ft1trans.h"
 #include "ft2trans.h"
 
-
-void
-ftcal(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> cluster_threshold,
-      hls::stream<FT1Strip_s> s_strip_ft1, hls::stream<FT2Strip_s> s_strip_ft2,
-	  hls::stream<FTHit> &s_hit)
-{
-#pragma HLS INTERFACE ap_stable port=strip_threshold
-#pragma HLS INTERFACE ap_stable port=mult_threshold
-#pragma HLS INTERFACE ap_stable port=cluster_threshold
-#pragma HLS DATA_PACK variable=s_strip_ft1
-#pragma HLS INTERFACE axis register both port=s_strip_ft1
-#pragma HLS DATA_PACK variable=s_strip_ft2
-#pragma HLS INTERFACE axis register both port=s_strip_ft2
-//#pragma HLS DATA_PACK variable=s_hit
-#pragma HLS INTERFACE axis register both port=s_hit
-#pragma HLS PIPELINE II=8
-
-  int i, j, jj;
-  ap_uint<NCLSTR> maskEnergy;
-  ap_uint<NCLSTR> maskMult;
-  ap_uint<NCLSTR> mask;
-
-  ap_uint<13> d[NCHAN];
-#pragma HLS ARRAY_PARTITION variable=d complete dim=1
-  ap_uint<4> mult[NCLSTR];
-#pragma HLS ARRAY_PARTITION variable=mult complete dim=1
-  ap_uint<16> clusters[NCLSTR];
-#pragma HLS ARRAY_PARTITION variable=clusters complete dim=1
+/*This is the function that should be "as close as possible" to the one
+ * implemented by Ben on FPGA.
+ * Input data: streams of fadc hits from 3 crates
+ * (I ignore the fact that some channels are reported via fiber from ADC1 to ADC2 and viceversa,
+ * as well as that FT-Hodo are reported via fiber to ADC1 and ADC2)
+ *
+ * Input parameters:
+ *  -  SEED_THR for Calorimeter (13 bits) 		- ftcal_per.vhd
+ *  -  CALO_DT for Calorimeter hits (3 bits)	- ftcal_per.vhd
+ *  -  HODO_DT for match Calo-hodo (3 bits) 	- fcal_per.vhd
+ *  -  HIT_THR for Hodoscope (13 bits) 			- fthodo_per.vhd
+ */
+void ft(ap_uint<13> calo_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, ap_uint<13> hodo_hit_threshold,
+		hls::stream<fadc_16ch_t> s_ft1[NFADCS],hls::stream<fadc_16ch_t> s_ft2[NFADCS],hls::stream<fadc_16ch_t> s_ft3[NFADCS],
+		hls::stream<FTCluster_t> s_hit) {
 
 
-  for(i=0; i<NCHAN; i++) d[i] = 0; 
+	hls::stream<FTHODOHit_t> s_hodoHits[NFADCS];
 
-  READ_S_STRIP_FT1;
-  READ_S_STRIP_FT2;
-
-
-  /* clusters energy sums */
-  for(i=0; i<NCLSTR; i++) clusters[i] = 0;
-  for(j=0; j<20; j++)
-  {
-    for(i=0; i<20; i++)
-    {
-      jj = j*22+i;
-      ap_uint<13> center = d[jj+23];
-      if( (center > d[jj   ]) &&
-		  (center > d[jj+ 1]) &&
-		  (center > d[jj+ 2]) &&
-		  (center > d[jj+22]) &&
-		  (center > d[jj+24]) &&
-		  (center > d[jj+44]) &&
-		  (center > d[jj+45]) &&
-		  (center > d[jj+46]) )
-      {
-        clusters[jj]  = d[jj];
-        clusters[jj] += d[jj+1];
-        clusters[jj] += d[jj+2];
-        clusters[jj] += d[jj+22];
-        clusters[jj] += d[jj+23];
-        clusters[jj] += d[jj+24];
-        clusters[jj] += d[jj+44];
-        clusters[jj] += d[jj+45];
-        clusters[jj] += d[jj+46];
-      }
-      //else clusters[jj] = 0;
-    }
-  }
+	fthodoDiscriminate(hodo_hit_threshold,s_ft3,s_hodoHits);
 
 
-
-  /* clusters multiplicity */
-
-  for(i=0; i<NCLSTR; i++) mult[i]=0;
-  for(j=0; j<20; j++)
-  {
-    for(i=0; i<20; i++)
-    {
-      jj = j*22+i;
-      if(d[jj   ] > strip_threshold) mult[jj] ++;
-      if(d[jj+ 1] > strip_threshold) mult[jj] ++;
-      if(d[jj+ 2] > strip_threshold) mult[jj] ++;
-      if(d[jj+22] > strip_threshold) mult[jj] ++;
-      if(d[jj+23] > strip_threshold) mult[jj] ++;
-      if(d[jj+24] > strip_threshold) mult[jj] ++;
-      if(d[jj+44] > strip_threshold) mult[jj] ++;
-      if(d[jj+45] > strip_threshold) mult[jj] ++;
-      if(d[jj+46] > strip_threshold) mult[jj] ++;
-    }
-  }
-
- 
-
-
-  /* trigger solution */
-
-  maskEnergy = 0;
-  maskMult = 0;
-  for(j=0; j<20; j++)
-  {
-    for(i=0; i<20; i++)
-    {
-      jj = j*22+i;
-      if(clusters[jj] > cluster_threshold) maskEnergy |= (1<<jj);
-      if(mult[jj] > mult_threshold) maskMult |= (1<<jj);
-    }
-  }
-  mask = maskEnergy /*& maskMult*/;
-
-
-  FTHit fifo;
-  for(int j=0; j<NH_READS; j++)
-  {
-    fifo.mask = mask;
-    s_hit.write(fifo);
-  }
-
+	FTCluster_t fifo;
+	/*for (int j = 0; j < NH_READS; j++) {
+		fifo.mask = mask;
+		s_hit.write(fifo);
+	}*/
 
 }
