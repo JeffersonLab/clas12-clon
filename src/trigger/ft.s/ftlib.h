@@ -9,12 +9,19 @@ extern "C" {
 
 /* ftlib.h */
 
-#define NCLSTR (22*20)
-#define NCHAN (22*22)
+
+
+#define ADCFT1_ROC_ID    70
+#define ADCFT2_ROC_ID    71
+#define ADCFT3_ROC_ID    72
+
+#define FT_MIN_X         0
+#define FT_MAX_X         21
+#define FT_MIN_Y         0
+#define FT_MAX_Y     	 21
+#define FT_CRYSTAL_NUM   332
 
 #include "fttypes.h"
-
-
 
 //void
 //ftcal(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> cluster_threshold,
@@ -24,7 +31,6 @@ extern "C" {
 #ifdef  __cplusplus
 }
 #endif
-
 
 #define _FTLIB_
 #endif

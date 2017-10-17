@@ -84,9 +84,21 @@ void ft(ap_uint<13> calo_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt,
 		hls::stream<FTCluster_t> s_hit) {
 
 
-	hls::stream<FTHODOHit_t> s_hodoHits[NFADCS];
+	hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS];
+	hls::stream<FTAllHit_t> s_hits[1];
 
-	fthodoDiscriminate(hodo_hit_threshold,s_ft3,s_hodoHits);
+	/*This function takes all the hodo hits and discriminate them.
+	 * s_ft3 is read for all slots - and all channels report in s_hodoHits
+	 * See: fthodo_per.vhd
+	 */
+	ftHodoDiscriminate(hodo_hit_threshold,s_ft3,s_hodoHits);
+
+	/*This function takes all hits from all ft-cal fadcs - ft1 and ft2 -
+	 * and matches them with ftHodoHits.
+	 * See: ft_channel_mapper.vhd
+	 */
+	ftMakeHits(s_ft1,s_ft2,s_hodoHits,s_hits);
+
 
 
 	FTCluster_t fifo;

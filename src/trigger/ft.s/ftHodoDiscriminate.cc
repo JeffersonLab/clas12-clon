@@ -20,6 +20,7 @@
  * Differences wrt VHDL
  * - Ben's processes 256 channels (16*16) in fthodo_per.vhd (see FT_HODO_HIT_DATA and M_AXI_FADC_CH_TDATA)
  * - fadcs.cc code in trigger.s assumes 15 slots only and writes only these to the stream
+ * - I am streaming out with one write per slot, while Ben's has already a all slots -> single array of data routine
  */
 void fthodoDiscriminate(ap_uint<13> hodo_hit_threshold, hls::stream<fadc_16ch_t> s_ft3[NFADCS],
 		hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS]) {

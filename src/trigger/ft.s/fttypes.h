@@ -11,29 +11,19 @@
 #include "hls_fadc_sum.h"
 #include "trigger.h"
 
-
-
-
 #define FTHIT_TAG          0x4
 #define FTCLUSTER_TAG           0x5
 #define MAX_BIN_SCAN_DEPTH  32
 
-typedef struct
-{
-  ap_uint<11> t_start;
-  ap_uint<11> t_stop;
+typedef struct {
+	ap_uint<11> t_start;
+	ap_uint<11> t_stop;
 } trig_t;
 
-typedef struct
-{
-  ap_uint<32> data;
-  ap_uint<1>  end;
+typedef struct {
+	ap_uint<32> data;
+	ap_uint<1> end;
 } eventdata_t;
-
-
-
-
-
 
 /*Structures as defined in Bens' VHDL code
  * See ft_pkg.vhd file for FTHit and FTCluster
@@ -44,8 +34,7 @@ typedef struct
 typedef struct {
 	ap_uint<FTHODOHIT_TIME_BITS> time;
 	ap_uint<1> overThr;
-}FTHODOHit_t;
-
+} FTHODOHit_t;
 
 /*To be streamed*/
 typedef struct {
@@ -65,8 +54,7 @@ typedef struct {
 	FTHODOHit_t h13;
 	FTHODOHit_t h14;
 	FTHODOHit_t h15;
-}FTHODOHits_16ch_t;
-
+} FTHODOHits_16ch_t;
 
 #define FTHIT_CAL_TIME_BITS 4
 #define FTHIT_CAL_ENERGY_BITS 13
@@ -80,6 +68,13 @@ typedef struct {
 	ap_uint<FTHIT_HODO_TIME_BITS> hodo_l2_t;
 	ap_uint<1> hodo_l2_hit;
 } FTHit_t;
+
+/*To be streamed - see ft_channel_mapper.vhd*/
+typedef struct {
+	FTHit_t hits[FT_MAX_X -  FT_MIN_X+1][FT_MAX_Y -  FT_MIN_Y+1];
+} FTAllHit_t;
+
+
 
 #define FTCLUSTER_CAL_TIME_BITS 10
 #define FTCLUSTER_CAL_ENERGY_BITS 14
@@ -96,10 +91,9 @@ typedef struct {
 	ap_uint<1> h2;
 } FTCluster_t;
 
-
-
-void fthodoDiscriminate(ap_uint<13> hodo_hit_threshold,hls::stream<fadc_16ch_t> s_ft3[NFADCS],hls::stream<FTHODOHit_t> s_hodoHits[NFADCS]);
-
-
+void ftHodoDiscriminate(ap_uint<13> hodo_hit_threshold, hls::stream<fadc_16ch_t> s_ft3[NFADCS],
+		hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS]);
+void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t> s_ft2[NFADCS],
+		hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS], hls::stream<FTAllHit_t> s_hits[1]);
 
 #endif /* FTTYPES_H_ */
