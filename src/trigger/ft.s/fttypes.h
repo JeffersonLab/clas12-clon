@@ -69,12 +69,17 @@ typedef struct {
 	ap_uint<1> hodo_l2_hit;
 } FTHit_t;
 
+void copyFTHit(FTHit_t &source, FTHit_t &dest);
+
 /*To be streamed - see ft_channel_mapper.vhd*/
 typedef struct {
-	FTHit_t hits[FT_MAX_X -  FT_MIN_X+1][FT_MAX_Y -  FT_MIN_Y+1];
+	FTHit_t hits[FT_MAX_X - FT_MIN_X + 1][FT_MAX_Y - FT_MIN_Y + 1];
 } FTAllHit_t;
 
-
+/*Used in clustering code - center hit is [1][1]*/
+typedef struct {
+	FTHit_t hits[3][3];
+} FT3by3Hit_t;
 
 #define FTCLUSTER_CAL_TIME_BITS 10
 #define FTCLUSTER_CAL_ENERGY_BITS 14
@@ -91,9 +96,22 @@ typedef struct {
 	ap_uint<1> h2;
 } FTCluster_t;
 
+typedef struct {
+	FTCluster_t clusters[FT_CRYSTAL_NUM];
+	ap_uint<1> valid[FT_CRYSTAL_NUM];
+} FTAllCluster_t;
+
+
+/*This is the code that should be "as close as possible" to what is implemented on FPGA*/
+void ft(ap_uint<13> calo_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, ap_uint<13> hodo_hit_threshold,
+		hls::stream<fadc_16ch_t> s_ft1[NFADCS],hls::stream<fadc_16ch_t> s_ft2[NFADCS],hls::stream<fadc_16ch_t> s_ft3[NFADCS],
+		hls::stream<FTCluster_t> &s_hit);
+
 void ftHodoDiscriminate(ap_uint<13> hodo_hit_threshold, hls::stream<fadc_16ch_t> s_ft3[NFADCS],
 		hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS]);
 void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t> s_ft2[NFADCS],
-		hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS], hls::stream<FTAllHit_t> s_hits[1]);
+		hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS], hls::stream<FTAllHit_t> &s_hits);
+void ftMakeClusters(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, hls::stream<FTAllHit_t> &s_fthits,
+		hls::stream<FTAllCluster_t> &s_clusters);
 
 #endif /* FTTYPES_H_ */

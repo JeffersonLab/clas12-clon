@@ -22,7 +22,7 @@
  * - fadcs.cc code in trigger.s assumes 15 slots only and writes only these to the stream
  * - I am streaming out with one write per slot, while Ben's has already a all slots -> single array of data routine
  */
-void fthodoDiscriminate(ap_uint<13> hodo_hit_threshold, hls::stream<fadc_16ch_t> s_ft3[NFADCS],
+void ftHodoDiscriminate(ap_uint<13> hodo_hit_threshold, hls::stream<fadc_16ch_t> s_ft3[NFADCS],
 		hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS]) {
 	int nslot = 15;
 

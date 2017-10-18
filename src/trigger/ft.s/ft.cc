@@ -81,11 +81,12 @@ using namespace std;
  */
 void ft(ap_uint<13> calo_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, ap_uint<13> hodo_hit_threshold,
 		hls::stream<fadc_16ch_t> s_ft1[NFADCS],hls::stream<fadc_16ch_t> s_ft2[NFADCS],hls::stream<fadc_16ch_t> s_ft3[NFADCS],
-		hls::stream<FTCluster_t> s_hit) {
+		hls::stream<FTCluster_t> &s_hit) {
 
 
 	hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS];
-	hls::stream<FTAllHit_t> s_hits[1];
+	hls::stream<FTAllHit_t> s_hits;
+	hls::stream<FTAllCluster_t> s_clusters;
 
 	/*This function takes all the hodo hits and discriminate them.
 	 * s_ft3 is read for all slots - and all channels report in s_hodoHits
@@ -99,6 +100,8 @@ void ft(ap_uint<13> calo_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt,
 	 */
 	ftMakeHits(s_ft1,s_ft2,s_hodoHits,s_hits);
 
+	/*This functions makes the clusters*/
+	ftMakeClusters(calo_seed_threshold,calo_dt,hodo_dt,s_hits,s_clusters);
 
 
 	FTCluster_t fifo;
