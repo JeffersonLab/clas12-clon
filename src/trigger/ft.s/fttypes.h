@@ -11,8 +11,8 @@
 #include "hls_fadc_sum.h"
 #include "trigger.h"
 
-#define FTHIT_TAG          0x4
-#define FTCLUSTER_TAG           0x5
+
+#define FTCLUSTER_TAG      0x7 //see clonbanks.xml
 #define MAX_BIN_SCAN_DEPTH  32
 
 typedef struct {
@@ -81,7 +81,7 @@ typedef struct {
 	FTHit_t hits[3][3];
 } FT3by3Hit_t;
 
-#define FTCLUSTER_CAL_TIME_BITS 10
+#define FTCLUSTER_CAL_TIME_BITS 11
 #define FTCLUSTER_CAL_ENERGY_BITS 14
 #define FTCLUSTER_CAL_POS_BITS 5
 #define FTCLUSTER_CAL_N_BITS 4
@@ -96,16 +96,39 @@ typedef struct {
 	ap_uint<1> h2;
 } FTCluster_t;
 
+#define NBIT_COORD_EB 10 /*in event builder coordinates always 10 bits WHY?*/
+
+typedef struct
+{
+  ap_uint<FTCLUSTER_CAL_TIME_BITS>     time;
+  ap_uint<FTCLUSTER_CAL_ENERGY_BITS> energy;
+  ap_uint<NBIT_COORD_EB>     x;
+  ap_uint<NBIT_COORD_EB>     y;
+  ap_uint<FTCLUSTER_CAL_N_BITS> n;
+  ap_uint<1> h1;
+  ap_uint<1> h2;
+#ifndef __SYNTHESIS__
+/*
+ *What here?? this is for ecal
+  ap_uint<6>  ind;
+  ap_uint<16> enpeakU;
+  ap_uint<16> enpeakV;
+  ap_uint<16> enpeakW;
+*/
+#endif
+} cluster_ram_t;
+
+
+
 typedef struct {
 	FTCluster_t clusters[FT_CRYSTAL_NUM];
 	ap_uint<1> valid[FT_CRYSTAL_NUM];
 } FTAllCluster_t;
 
-
 /*This is the code that should be "as close as possible" to what is implemented on FPGA*/
 void ft(ap_uint<13> calo_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, ap_uint<13> hodo_hit_threshold,
-		hls::stream<fadc_16ch_t> s_ft1[NFADCS],hls::stream<fadc_16ch_t> s_ft2[NFADCS],hls::stream<fadc_16ch_t> s_ft3[NFADCS],
-		hls::stream<FTCluster_t> &s_hit);
+		hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t> s_ft2[NFADCS], hls::stream<fadc_16ch_t> s_ft3[NFADCS],
+		hls::stream<FTCluster_t> &s_hit,cluster_ram_t buf_ram[FT_MAX_CLUSTERS][256],ap_uint<8> nClusters[256]);
 
 void ftHodoDiscriminate(ap_uint<13> hodo_hit_threshold, hls::stream<fadc_16ch_t> s_ft3[NFADCS],
 		hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS]);
@@ -113,5 +136,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 		hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS], hls::stream<FTAllHit_t> &s_hits);
 void ftMakeClusters(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, hls::stream<FTAllHit_t> &s_fthits,
 		hls::stream<FTAllCluster_t> &s_clusters);
+void ftSelectClusters(hls::stream<FTAllCluster_t> &s_allClusters, hls::stream<FTCluster_t> &s_goodClusters);
+void ftClusterFanout(hls::stream<FTCluster_t> &s_cluster, hls::stream<FTCluster_t> &s_cluster1, hls::stream<FTCluster_t> &s_cluster2);
+
+void ftClusterEventFiller(hls::stream<FTCluster_t> &s_clusterin, cluster_ram_t buf_ram[FT_MAX_CLUSTERS][256],ap_uint<8> nClusters[256]);
+void ftClusterEventWriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream,cluster_ram_t [FT_MAX_CLUSTERS][256],ap_uint<8> nClusters[256]);
 
 #endif /* FTTYPES_H_ */
