@@ -81,11 +81,16 @@ using namespace std;
  */
 void ft(ap_uint<13> calo_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, ap_uint<13> hodo_hit_threshold,
 		hls::stream<fadc_16ch_t> s_ft1[NFADCS],hls::stream<fadc_16ch_t> s_ft2[NFADCS],hls::stream<fadc_16ch_t> s_ft3[NFADCS],
-		hls::stream<FTCluster_t> s_hit) {
+		hls::stream<FTCluster_t> &s_clustersOUT, cluster_ram_t cluster_ram[FT_MAX_CLUSTERS][256],ap_uint<8> nClusters[256]) {
 
 
 	hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS];
-	hls::stream<FTAllHit_t> s_hits[1];
+	hls::stream<FTAllHit_t> s_hits;
+	hls::stream<FTAllCluster_t> s_ALLclusters;
+
+	hls::stream<FTCluster_t> s_clusters;
+	hls::stream<FTCluster_t> s_clusters1;
+	hls::stream<FTCluster_t> s_clusters2;
 
 	/*This function takes all the hodo hits and discriminate them.
 	 * s_ft3 is read for all slots - and all channels report in s_hodoHits
@@ -99,12 +104,20 @@ void ft(ap_uint<13> calo_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt,
 	 */
 	ftMakeHits(s_ft1,s_ft2,s_hodoHits,s_hits);
 
+	/*This functions makes the clusters - ALL of them are reported*/
+	ftMakeClusters(calo_seed_threshold,calo_dt,hodo_dt,s_hits,s_ALLclusters);
+	/*This function reports to the s_clusters stream just those having valid==1*/
+	/*VERY IMPORTANT: up to here, all the read-write operations to streams were fixed in number.
+	 *Here, if I just write to the s_clusters stream the GOOD clusters, this number of operations will
+	 *be different event by event
+	 */
+	ftSelectClusters(s_ALLclusters,s_clusters);
 
+	/*Copy s_clusters to s_clustersOUT and s_clusters2*/
+	ftClusterFanout(s_clusters,s_clustersOUT,s_clusters2);
+	/*Both are full now, and the number of elements vary event by event. s_clusters is empty*/
 
-	FTCluster_t fifo;
-	/*for (int j = 0; j < NH_READS; j++) {
-		fifo.mask = mask;
-		s_hit.write(fifo);
-	}*/
-
+	/*Now load data in ram for reporting*/
+	/*Need also to save how many where found*/
+	ftClusterEventFiller(s_clusters2,cluster_ram,nClusters);
 }

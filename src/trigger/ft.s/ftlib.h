@@ -20,6 +20,9 @@ extern "C" {
 #define FT_MIN_Y         0
 #define FT_MAX_Y     	 21
 #define FT_CRYSTAL_NUM   332
+#define FT_MAX_CLUSTERS  64 //a conservative estimate of how many clusters are reported at each time slice
+
+#define FT_WORDS_PER_CLUSTER 2
 
 #include "fttypes.h"
 
