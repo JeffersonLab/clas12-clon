@@ -132,7 +132,7 @@ echit_in(hls::stream<ECHit> &s_hits, ECHit hit[NHIT])
 
 
 void
-ecpeakeventreader(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, ECPeak peak[NPEAK], uint32_t *bufout)
+ecpeakeventreader(hls::stream<eventdata_t> &event_stream, ECPeak peak[NPEAK], uint32_t *bufout)
 {
   eventdata_t eventdata;
   uint32_t data_end=0, word_first=0, tag=0, inst=0, view=0, data=0, it=0, *bufptr = bufout;
@@ -175,7 +175,7 @@ ecpeakeventreader(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &ev
 
 
 void
-echiteventreader(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, ECHit hit[NHIT], uint32_t *bufout)
+echiteventreader(hls::stream<eventdata_t> &event_stream, ECHit hit[NHIT], uint32_t *bufout)
 {
   eventdata_t eventdata;
   uint32_t data_end=0, word_first=0, tag=0, inst=0, view=0, data=0, it=0, *bufptr = bufout;
@@ -512,7 +512,6 @@ ectrig(unsigned int *bufptr, int sec, int npeak[NLAYER], TrigECPeak peak[NLAYER]
 
 
 
-
 static trig_t trig[4]; /* assumed to be cleaned up because of 'static' */
 
 /* to be used by analysis software: add peaks and hits to current evio event in form of evio banks */
@@ -614,9 +613,9 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 
 
     /* extract peaks */
-	ecpeakeventreader(trig_stream[0], event_stream[0], peak[0], bufout0);
-    ecpeakeventreader(trig_stream[1], event_stream[1], peak[1], bufout1);
-    ecpeakeventreader(trig_stream[2], event_stream[2], peak[2], bufout2);
+	ecpeakeventreader(event_stream[0], peak[0], bufout0);
+    ecpeakeventreader(event_stream[1], peak[1], bufout1);
+    ecpeakeventreader(event_stream[2], peak[2], bufout2);
     for(ii=0; ii<NPEAK; ii++) if(peak[0][ii].energy>0) printf("U peak[%d]\n",ii);
     for(ii=0; ii<NPEAK; ii++) if(peak[1][ii].energy>0) printf("V peak[%d]\n",ii);
     for(ii=0; ii<NPEAK; ii++) if(peak[2][ii].energy>0) printf("W peak[%d]\n",ii);
@@ -624,7 +623,7 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 
     /* extract hits */
     nhits=0;
-    echiteventreader(trig_stream[3], event_stream[3], hit, bufout3);
+    echiteventreader(event_stream[3], hit, bufout3);
     for(ii=0; ii<NHIT; ii++)
 	{
       if(hit[ii].energy>0)

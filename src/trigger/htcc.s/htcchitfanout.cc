@@ -19,7 +19,7 @@ using namespace std;
 //#define DEBUG
 
 
-/* 0.0/5/4/0%/0%/(306)~0%/(231)~0% II=4 */
+/* 2.15/2/1/0%/0%/(256)~0%/(157)~0% II=1 */
 
 void
 htcchitfanout(hls::stream<HTCCHit> &s_hit, hls::stream<HTCCHit> &s_hit1, hls::stream<HTCCHit> &s_hit2, volatile ap_uint<1> &hit_scaler_inc)

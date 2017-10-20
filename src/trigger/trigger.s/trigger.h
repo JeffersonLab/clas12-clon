@@ -1,10 +1,11 @@
 
 /* trigger.h */
 
-#define MAXTIMES   12/*8*/ /*8 for data, 1 for GEMC*/   /* maximum number of the time slices */
+#include "hls_fadc_sum.h"
+
+#define MAXTIMES   8 /*8 for data, 1 for GEMC*/   /* maximum number of the time slices */
 #define NTICKS     8    /* the number of ticks in one timing slice */
 #define TIME2TICKS 4000 /* conversion factor from FADC250 integral time to 4ns ticks */
-#define NH_READS   4   /* 8/4 hits area: the number of reads-write for streams */
 
 #if 0 /*was for PCAL*/
 #define MAXTIMES   12/*0*/   /* maximum number of the time slices */
@@ -60,13 +61,18 @@
 #define PC_DALITZ_MAX (ABC+ABC/50) /* +2% */
 
 
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
 
+int fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int detector, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS],
+          int dtimestamp, int dpulsetime, int *iev, unsigned long long *timestamp);
+void fadcs_32ns_to_8ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_4ch_t> &s_fadc_out);
+void fadcs_32ns_to_4ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_2ch_t> &s_fadc_out);
+
 void eclib(unsigned int *bufptr, uint16_t threshold[3], uint16_t nframes, uint16_t dipfactor, uint16_t dalitzmin, uint16_t dalitzmax, uint16_t nstripmax);
 void pclib(unsigned int *bufptr, uint16_t threshold[3], uint16_t nframes, uint16_t dipfactor, uint16_t dalitzmin, uint16_t dalitzmax, uint16_t nstripmax);
+void htcclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_);
 
 #ifdef	__cplusplus
 }

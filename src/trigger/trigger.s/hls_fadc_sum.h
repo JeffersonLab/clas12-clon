@@ -8,14 +8,15 @@
 #include <ap_fixed.h>
 #include <hls_stream.h>
 
+
+#define NFADCS 16 /* max possible number of fadcs in crate */
+
 typedef struct
 {
   ap_uint<13>	e;
   ap_uint<3>	t;
 
 } fadc_hit_t;
-
-
 
 typedef struct
 {
@@ -75,33 +76,6 @@ typedef struct
   ap_uint<3>	t15;
 
 } fadc_16ch_t;
-
-
-typedef struct
-{
-  fadc_hit_t hits[16];
-
-} fadc_hits_t;
-
-typedef ap_uint<14> esum_t;
-
-void hls_fadc_sum(ap_uint<16> esum_en, hls::stream<fadc_4ch_t> &s_fadc_words, hls::stream<esum_t> &s_esum);
-
-#define NFADCS 16 /* max possible number of fadcs in crate */
-
-
-#ifdef	__cplusplus
-extern "C" {
-#endif
-
-int fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int detector, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS],
-          int dtimestamp, int dpulsetime, int *iev, unsigned long long *timestamp);
-void fadcs_32ns_to_8ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_4ch_t> &s_fadc_out);
-void fadcs_32ns_to_4ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_2ch_t> &s_fadc_out);
-
-#ifdef	__cplusplus
-}
-#endif
 
 
 #endif
