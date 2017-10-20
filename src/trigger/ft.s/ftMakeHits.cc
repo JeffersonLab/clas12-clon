@@ -14,61 +14,6 @@
 #include "ftlib.h"
 #include "fttrans.h"
 
-int getCaloIdxFromCrateSlotChannel(int crate, int slot, int channel) {
-	int cr, sl, ch;
-	for (int ii = 0; ii < FT_CRYSTAL_NUM; ii++) {
-		cr = ftFullMap[ii][0];
-		sl = ftFullMap[ii][1];
-		ch = ftFullMap[ii][2];
-		if ((cr == crate) && (sl == slot) && (ch == channel))
-			return ii;
-	}
-	return -1;
-}
-
-int getCaloIdxFromXY(int xx, int yy) {
-	int x, y;
-	for (int ii = 0; ii < FT_CRYSTAL_NUM; ii++) {
-		x = ftFullMap[ii][4];
-		y = ftFullMap[ii][5];
-		if ((x == xx) && (y = yy))
-			return ii;
-	}
-	return -1;
-}
-
-int getMatchingHodoSlot(int xx, int yy, int layer) {
-	int x, y;
-	if ((layer < 1) || (layer > 2))
-		return -1;
-	for (int ii = 0; ii < FT_CRYSTAL_NUM; ii++) {
-		x = ftFullMap[ii][4];
-		y = ftFullMap[ii][5];
-		if ((x == xx) && (y = yy)) {
-			if (layer == 1)
-				return ftFullMap[ii][8];
-			else
-				return ftFullMap[ii][10];
-		}
-	}
-	return -1;
-}
-int getMatchingHodoChannel(int xx, int yy, int layer) {
-	int x, y;
-	if ((layer < 1) || (layer > 2))
-		return -1;
-	for (int ii = 0; ii < FT_CRYSTAL_NUM; ii++) {
-		x = ftFullMap[ii][4];
-		y = ftFullMap[ii][5];
-		if ((x == xx) && (y = yy)) {
-			if (layer == 1)
-				return ftFullMap[ii][9];
-			else
-				return ftFullMap[ii][11];
-		}
-	}
-	return -1;
-}
 
 /*This is the function that makes the FT hits - doing a geometrical coincidence between crystal, hodo L1, hodo L2
  * Inputs:
@@ -81,7 +26,7 @@ int getMatchingHodoChannel(int xx, int yy, int layer) {
  * See: ft_channel_mapper.vhd
  */
 void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t> s_ft2[NFADCS],
-		hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS], hls::stream<FTAllHit_t> s_hits[1]) {
+		hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS], hls::stream<FTAllHit_t> &s_hits) {
 
 	int ch, slot, idx, nslots;
 	ap_uint< FTHIT_CAL_ENERGY_BITS> energy;
@@ -539,6 +484,6 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 	}
 
 	/*Write the stream*/
-	s_hits[0].write(hits);
+	s_hits.write(hits);
 
 }
