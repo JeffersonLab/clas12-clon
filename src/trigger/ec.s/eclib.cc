@@ -135,7 +135,7 @@ void
 ecpeakeventreader(hls::stream<eventdata_t> &event_stream, ECPeak peak[NPEAK], uint32_t *bufout)
 {
   eventdata_t eventdata;
-  uint32_t data_end=0, word_first=0, tag=0, inst=0, view=0, data=0, it=0, *bufptr = bufout;
+  uint32_t data_end=0, word_first=0, tag=0, inst=0, view=0, it=0, *bufptr = bufout+1;
   int i = 0;
   while(1)
   {
@@ -143,9 +143,9 @@ ecpeakeventreader(hls::stream<eventdata_t> &event_stream, ECPeak peak[NPEAK], ui
     eventdata = event_stream.read();
     *bufptr++ = eventdata.data;
 
-    data = eventdata.data;
-    if(data == 0xFFFFFFFF)
+    if(eventdata.end == 1)
     {
+      bufout[0] = bufptr - bufout - 1;
       printf("ecpeakeventreader: END_OF_DATA\n");
       break;
     }
@@ -178,7 +178,7 @@ void
 echiteventreader(hls::stream<eventdata_t> &event_stream, ECHit hit[NHIT], uint32_t *bufout)
 {
   eventdata_t eventdata;
-  uint32_t data_end=0, word_first=0, tag=0, inst=0, view=0, data=0, it=0, *bufptr = bufout;
+  uint32_t data_end=0, word_first=0, tag=0, inst=0, view=0, it=0, *bufptr = bufout+1, nw;
   int i = 0;
   while(1)
   {
@@ -186,9 +186,9 @@ echiteventreader(hls::stream<eventdata_t> &event_stream, ECHit hit[NHIT], uint32
     eventdata = event_stream.read();
     *bufptr++ = eventdata.data;
 
-    data = eventdata.data;
-    if(data == 0xFFFFFFFF)
+    if(eventdata.end == 1)
     {
+      bufout[0] = bufptr - bufout - 1;
       /*printf("echiteventreader: END_OF_DATA\n");*/
       break;
     }
@@ -639,26 +639,39 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 
 
 
+
+
+
       /* done extracting results, now we will create trigger bank(s) if we have at least one peak */
 
       if(peak[0][0].energy>0 || peak[1][0].energy>0 || peak[2][0].energy>0)
 	  {
+
+#ifdef USE_PCAL
+        int fragtag = 107+sec;
+#else
+        int fragtag = 101+sec;
+#endif
+        int banktag = 0xe122;
+
+
+        trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
+
+        if(peak[0][0].energy>0) trigbank_write(bufout0);
+        if(peak[1][0].energy>0) trigbank_write(bufout1);
+        if(peak[2][0].energy>0) trigbank_write(bufout2);
+        if(hit[0].energy>0) trigbank_write(bufout3);
+
+        trigbank_close();
+
+
+
+
+
+
+#if 0
         int ind, ind_data;
         uint32_t word;
-        int a_instance = 0;
-        int a_view, a_time, a_coord, a_energy;
-
-	    int fragtag;
-#ifdef USE_PCAL
-        fragtag = 107+sec;
-#else
-        fragtag = 101+sec;
-#endif
-        int fragnum = 0;
-        int banktyp = 1;
-
-        int banktag = 0xe122;
-        int banknum = 255; /*real data have event number in block, usually from 0 to 39*/
 
         ind = evLinkFrag(bufptr, fragtag, fragnum);
         if(ind<=0)
@@ -687,12 +700,13 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
         printf("word2=0x%06x\n",word);fflush(stdout);
         PUT32(word);
 
+
+
         /*0x14 - peak */
         if(peak[0][0].energy>0)
 		{
-          for(int i=0; i<256; i++)
+          for(int i=1; i<bufout0[0]; i++)
 		  {
-            if(bufout0[i]==0xFFFFFFFF) break;
 			printf("bufout0[%d]=0x%08x\n",i,bufout0[i]);fflush(stdout);
             PUT32(bufout0[i]);
 		  }
@@ -701,7 +715,7 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
         /*0x14 - peak */
         if(peak[1][0].energy>0)
 		{
-          for(int i=0; i<256; i++)
+          for(int i=1; i<bufout1[0]; i++)
 		  {
             if(bufout1[i]==0xFFFFFFFF) break;
 			printf("bufout1[%d]=0x%08x\n",i,bufout1[i]);fflush(stdout);
@@ -712,7 +726,7 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
         /*0x14 - peak */
         if(peak[2][0].energy>0)
 		{
-          for(int i=0; i<256; i++)
+          for(int i=1; i<bufout2[0]; i++)
 		  {
             if(bufout2[i]==0xFFFFFFFF) break;
 			printf("bufout2[%d]=0x%08x\n",i,bufout2[i]);fflush(stdout);
@@ -723,16 +737,21 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
         /*0x15 - hit */
         if(hit[0].energy>0)
 		{
-          for(int i=0; i<256; i++)
+          for(int i=1; i<bufout3[0]; i++)
 		  {
             if(bufout3[i]==0xFFFFFFFF) break;
 			printf("bufout3[%d]=0x%08x\n",i,bufout3[i]);fflush(stdout);
             PUT32(bufout3[i]);
 		  }
 		}
+
+
 		printf("evClose() reached\n");fflush(stdout);
         evCloseBank(bufptr, fragtag, fragnum, banktag, banknum, b08out);
+#endif
+
 	  }
+
 
 
 

@@ -11,6 +11,12 @@
 
 #define NFADCS 16 /* max possible number of fadcs in crate */
 
+#define ECPEAK_TAG     0x4
+#define ECHIT_TAG      0x5
+#define HTCCHIT_TAG    0x6
+#define FTCLUSTER_TAG  0x7
+#define FTOFHIT_TAG    0x8
+
 typedef struct
 {
   ap_uint<13>	e;
@@ -77,5 +83,18 @@ typedef struct
 
 } fadc_16ch_t;
 
+/* stream to initiate readout */
+typedef struct
+{
+  ap_uint<11> t_start;
+  ap_uint<11> t_stop;
+} trig_t;
+
+/* readout data */
+typedef struct
+{
+  ap_uint<32> data;
+  ap_uint<1>  end;
+} eventdata_t;
 
 #endif

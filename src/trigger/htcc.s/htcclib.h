@@ -56,23 +56,6 @@ typedef struct htcchit
 
 
 
-
-
-#define HTCCHIT_TAG 0x6
-
-typedef struct
-{
-  ap_uint<11> t_start;
-  ap_uint<11> t_stop;
-} trig_t;
-
-typedef struct
-{
-  ap_uint<32> data;
-  ap_uint<1>  end;
-} eventdata_t;
-
-
 #define NBIT_HIT_ENERGY 16
 #define NBIT_COORD_EB 10 /*in event builder coordinates always 10 bits*/
 

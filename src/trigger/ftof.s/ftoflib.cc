@@ -33,29 +33,35 @@ static int nsb[21]; /* NSB */
 
 
 void
-ftofhiteventreader(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, FTOFHit &hit, uint32_t *bufout)
+ftofhiteventreader(hls::stream<eventdata_t> &event_stream, FTOFHit &hit, uint32_t *bufout)
 {
   eventdata_t eventdata;
   uint32_t data_end, word_first, tag, inst, view, data, *bufptr = bufout;
+  int j;
   while(1)
   {
     if(event_stream.empty()) {printf("ftofhiteventreader: EMPTY STREAM ERROR1\n");break;}
     eventdata = event_stream.read();
     *bufptr++ = eventdata.data;
 
-    data = eventdata.data;
-    if(data == 0xFFFFFFFF) break;
+    if(eventdata.end == 1) break;
 
     data_end = eventdata.end;           /* 0 for all words except last one when it is 1 */
     word_first = eventdata.data(31,31); /* 1 for the first word in hit, 0 for followings */
     tag = eventdata.data(30,27); /* must be 'FTOFHIT_TAG' */
-    hit.output(35,24) = eventdata.data(11,0);
+    j = eventdata.data(7,0);
 
     if(event_stream.empty()) {printf("ftofhiteventreader: EMPTY STREAM ERROR2\n");break;}
     eventdata = event_stream.read();
     *bufptr++ = eventdata.data;
     data_end = eventdata.end;
-	hit.output(23,0) = eventdata.data(23,0);
+	hit.output[j](61,32) = eventdata.data(29,0);
+
+    if(event_stream.empty()) {printf("ftofhiteventreader: EMPTY STREAM ERROR2\n");break;}
+    eventdata = event_stream.read();
+    *bufptr++ = eventdata.data;
+    data_end = eventdata.end;
+	hit.output[j](31,0) = eventdata.data(31,0);
   }
 
 }
@@ -75,10 +81,7 @@ ftoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
   ap_uint<16> threshold[3] = {threshold_[0], threshold_[1], threshold_[2]};
   nframe_t nframes = 1;
 
-  hls::stream<fadc_16ch_t> s_fadcs[NFADCS];
-  hls::stream<fadc_2ch_t> s_fadc_words[NFADCS];
-
-  hls::stream<FTOFStrip_s> s_strip0;
+  hls::stream<fadc_16ch_t> s_fadc_words[NFADCS];
   hls::stream<FTOFStrip_s> s_strip;
   hls::stream<FTOFHit> s_hits;
   volatile ap_uint<1> hit_scaler_inc;
@@ -96,19 +99,16 @@ ftoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
 
   for(sec=0; sec<NSECTOR; sec++)
   {
-    ret = fadcs(bufptr, threshold[0], sec, detector, s_fadcs, 0, 0, &iev, &timestamp);
+    ret = fadcs(bufptr, threshold[0], sec, detector, s_fadc_words, 0, 0, &iev, &timestamp);
     if(ret<=0) continue;
 
 
     for(int it=0; it<MAXTIMES; it++)
     {
-      /* adjust to 4ns domain */
-      for(int i=0; i<nslot; i++) fadcs_32ns_to_4ns(s_fadcs[i], s_fadc_words[i]);
-
       ftof(threshold, nframes, s_fadc_words, s_hits, buf_ram);
 
       ftofhiteventwriter(trig_stream, event_stream, buf_ram);
-      ftofhiteventreader(trig_stream, event_stream, hit);
+      ftofhiteventreader(event_stream, hit);
 
     }
   }

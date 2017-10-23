@@ -15,17 +15,14 @@ extern "C" {
 
 #define NSLOT 12
 
-#define NSTRIP1 62
-#define NSTRIP2 23
-#define NSTRIP3 5
-#define NSTRIP (NSTRIP1+NSTRIP2+NSTRIP3) /*90*/
+#define NSTRIP 62
 
 #define NCHAN 48
 #define NHIT NSTRIP
 
 
 #define NH_READS  8   /* the number of reads-write for streams, AND the number of 4ns intervals inside 32ns interval */
-#define MAXTIMES 2
+
 #define TIMECORR 7 /*TEMPORARY !!!!!!!!!!!!!!!! */
 
 /* strip persistency */
@@ -46,26 +43,9 @@ typedef struct ftofstrip_s
 
 typedef struct ftofhit
 {
-  ap_uint<NSTRIP> output;
+  ap_uint<NSTRIP> output[NPER];
 } FTOFHit;
 
-
-
-
-
-#define FTOFHIT_TAG 0x5 /*?????????????*/
-
-typedef struct
-{
-  ap_uint<11> t_start;
-  ap_uint<11> t_stop;
-} trig_t;
-
-typedef struct
-{
-  ap_uint<32> data;
-  ap_uint<1>  end;
-} eventdata_t;
 
 
 #define NBIT_HIT_ENERGY 16
@@ -73,20 +53,19 @@ typedef struct
 
 typedef struct
 {
-  ap_uint<NSTRIP> output;
+  ap_uint<NSTRIP> output[NPER];
 } hit_ram_t;
 
 
 
 
 int ftoflib(int handler);
-void ftofhiteventreader(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, FTOFHit &hit);
+void ftofhiteventreader(hls::stream<eventdata_t> &event_stream, FTOFHit &hit);
 
-void ftof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_2ch_t> s_fadc_words[NFADCS], hls::stream<FTOFHit> &s_hits1, hit_ram_t buf_ram[512]);
+void ftof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS], hls::stream<FTOFHit> &s_hits1, hit_ram_t buf_ram[512]);
 
-void ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_2ch_t> s_fadc_words[NSLOT], hls::stream<FTOFStrip_s> &s_strip0);
-void ftofstripspersistence(nframe_t nframes, hls::stream<FTOFStrip_s> &s_stripin, hls::stream<FTOFStrip_s> &s_stripout);
-void ftofhit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> cluster_threshold, hls::stream<FTOFStrip_s> &s_strip, hls::stream<FTOFHit> &s_hit);
+void ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_16ch_t> s_fadc_words[NSLOT], hls::stream<FTOFStrip_s> s_strip[NH_READS]);
+void ftofhit(nframe_t nframes, hls::stream<FTOFStrip_s> s_strip[NH_READS], hls::stream<FTOFHit> &s_hit);
 void ftofhitfanout(hls::stream<FTOFHit> &s_hit, hls::stream<FTOFHit> &s_hit1, hls::stream<FTOFHit> &s_hit2, volatile ap_uint<1> &hit_scaler_inc);
 void ftofhiteventfiller(hls::stream<FTOFHit> &s_hitin, hit_ram_t buf_ram[256]);
 void ftofhiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, hit_ram_t buf_ram_read[256]);

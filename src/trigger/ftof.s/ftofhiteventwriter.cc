@@ -32,7 +32,6 @@ ftofhiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &e
 
   eventdata_t eventdata;
 
-#ifdef __SYNTHESIS__
   trig_t trig = trig_stream.read();
   ap_uint<11> w = (trig.t_stop - trig.t_start); /* readout window width */
   ap_uint<8> start_addr = trig.t_start.range(10,3); /* starting position in buf_ram_read[] */
@@ -40,38 +39,34 @@ ftofhiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &e
   ap_uint<8> addr = start_addr;
 
   while(addr != stop_addr)
-#else
-  ap_uint<8> start_addr = 0;
-  ap_uint<8> addr = 0;
-#endif
   {
     hit_ram_t buf_ram_val = buf_ram_read[addr];
 
-    if(buf_ram_val.output != 0)
+    for(int j=0; j<NPER; j++)
 	{
-      eventdata.end = 0;
-      eventdata.data(31,31)  = 1;
-      eventdata.data(30,27)  = FTOFHIT_TAG;
-      eventdata.data(26,24)  = 0;
-      eventdata.data(23,16)  = addr - start_addr;  /*8 bits*/
-      eventdata.data(15,0)   = 0;
-      event_stream.write(eventdata);
+      if(buf_ram_val.output[j] != 0)
+	  {
+        eventdata.end = 0;
+        eventdata.data(31,31)  = 1;
+        eventdata.data(30,27)  = FTOFHIT_TAG;
+        eventdata.data(26,24)  = 0;
+        eventdata.data(23,16)  = addr - start_addr;  /*8 bits*/
+        eventdata.data(15,8)   = 0;
+        eventdata.data(7,0)    = j; /* 4ns timing bin inside 32ns interval */
+        event_stream.write(eventdata);
 
-      eventdata.end = 0;
-      eventdata.data(31,26)   = 0;
-      eventdata.data(25,0)   = buf_ram_val.output(89,64); /*26 bits*/
-      event_stream.write(eventdata);
+        eventdata.end = 0;
+        eventdata.data(31,30)  = 0;
+        eventdata.data(29,0)   = buf_ram_val.output[j](61,32); /*30 bits*/
+        event_stream.write(eventdata);
 
-      eventdata.end = 0;
-      eventdata.data(31,0)   = buf_ram_val.output(63,32); /*32 bits*/
-      event_stream.write(eventdata);
-
-      eventdata.end = 0;
-      eventdata.data(31,0)   = buf_ram_val.output(31,0); /*32 bits*/
-      event_stream.write(eventdata);
+        eventdata.end = 0;
+        eventdata.data(31,0)   = buf_ram_val.output[j](31,0); /*32 bits*/
+        event_stream.write(eventdata);
+	  }
 	}
 
-    addr ++;
+    addr ++; /*jump to the next 32ns interval*/
   }
 
   eventdata.data = 0xFFFFFFFF;

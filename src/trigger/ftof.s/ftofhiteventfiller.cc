@@ -34,7 +34,7 @@ ftofhiteventfiller(hls::stream<FTOFHit> &s_hitin, hit_ram_t buf_ram[256])
   static ap_uint<8> itime = 0;
 
   fifo = s_hitin.read();
-  buf_ram[itime].output = fifo.output;
+  for(int i=0; i<NPER; i++) buf_ram[itime].output[i] = fifo.output[i];
 
 #ifdef __SYNTHESIS__
   itime ++;

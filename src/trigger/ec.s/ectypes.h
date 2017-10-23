@@ -351,22 +351,7 @@ typedef ap_uint<NSTRIP> ECfml_t;
 
 /* event builder(s) */
 
-#define ECPEAK_TAG          0x4
-#define ECHIT_TAG           0x5
 #define MAX_BIN_SCAN_DEPTH  32
-
-typedef struct
-{
-  ap_uint<11> t_start;
-  ap_uint<11> t_stop;
-} trig_t;
-
-typedef struct
-{
-  ap_uint<32> data;
-  ap_uint<1>  end;
-} eventdata_t;
-
 
 #define NBIT_COORD_EB 10 /*in event builder coordinates always 10 bits*/
 
