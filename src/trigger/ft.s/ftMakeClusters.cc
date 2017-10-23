@@ -172,6 +172,7 @@ void ftMakeClusters(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_u
 		hls::stream<FTAllCluster_t> &s_clusters) {
 
 	int idx;
+	int roc;
 
 	static ap_uint<8> frame_count = 0;
 
@@ -220,6 +221,9 @@ void ftMakeClusters(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_u
 					clusters.clusters[idx], clusters.valid[idx]);
 			clusters.clusters[idx].x = ix;
 			clusters.clusters[idx].y = iy;
+#ifndef _SYNTHESIS_
+			clusters.clusters[idx].rocID = ( getROCFromXY(ix,iy) == 70 ? 0 : 1);
+#endif
 		}
 	}
 

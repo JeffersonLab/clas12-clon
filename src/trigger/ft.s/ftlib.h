@@ -10,7 +10,6 @@ extern "C" {
 /* ftlib.h */
 
 
-
 #define ADCFT1_ROC_ID    70
 #define ADCFT2_ROC_ID    71
 #define ADCFT3_ROC_ID    72
