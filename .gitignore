@@ -27,3 +27,7 @@ src/cmon
 src/cmroot
 src/trigger/root
 src/trigger/root_dc
+#a.c. following
+src/trigger/Makefile
+src/Makefile.include
+

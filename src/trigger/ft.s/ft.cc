@@ -108,6 +108,7 @@ ft(ap_uint<13> calo_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, ap_u
 
 	/*This functions makes the clusters - ALL of them are reported*/
 	ftMakeClusters(calo_seed_threshold,calo_dt,hodo_dt,s_hits,s_ALLclusters);
+
 	/*This function reports to the s_clusters stream just those having valid==1*/
 	/*VERY IMPORTANT: up to here, all the read-write operations to streams were fixed in number.
 	 *Here, if I just write to the s_clusters stream the GOOD clusters, this number of operations will
@@ -116,10 +117,6 @@ ft(ap_uint<13> calo_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, ap_u
 	ftSelectClusters(s_ALLclusters,s_clusters);
 
 	/*Copy s_clusters to s_clustersOUT and s_clusters2*/
-	ftClusterFanout(s_clusters,s_clustersOUT,s_clusters2);
-	/*Both are full now, and the number of elements vary event by event. s_clusters is empty*/
-
-	/*Now load data in ram for reporting*/
-	/*Need also to save how many where found*/
-	ftClusterEventFiller(s_clusters2,/*cluster_ram,nClusters*/s_clustersEVIO);
+	ftClusterFanout(s_clusters,s_clustersOUT,s_clustersEVIO);
+	/*Both are full now, and the number of elements vary event by event. s_clusters is empty - it has been fully read*/
 }
