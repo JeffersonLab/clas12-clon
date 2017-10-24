@@ -642,27 +642,27 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 
 
 
-      /* done extracting results, now we will create trigger bank(s) if we have at least one peak */
+    /* done extracting results, now we will create trigger bank(s) if we have at least one peak */
 
-      if(peak[0][0].energy>0 || peak[1][0].energy>0 || peak[2][0].energy>0)
-	  {
+    if(peak[0][0].energy>0 || peak[1][0].energy>0 || peak[2][0].energy>0)
+	{
 
 #ifdef USE_PCAL
-        int fragtag = 107+sec;
+      int fragtag = 107+sec;
 #else
-        int fragtag = 101+sec;
+      int fragtag = 101+sec;
 #endif
-        int banktag = 0xe122;
+      int banktag = 0xe122;
 
 
-        trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
+      trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
 
-        if(peak[0][0].energy>0) trigbank_write(bufout0);
-        if(peak[1][0].energy>0) trigbank_write(bufout1);
-        if(peak[2][0].energy>0) trigbank_write(bufout2);
-        if(hit[0].energy>0) trigbank_write(bufout3);
+      if(peak[0][0].energy>0) trigbank_write(bufout0);
+      if(peak[1][0].energy>0) trigbank_write(bufout1);
+      if(peak[2][0].energy>0) trigbank_write(bufout2);
+      if(hit[0].energy>0) trigbank_write(bufout3);
 
-        trigbank_close();
+      trigbank_close();
 
 
 

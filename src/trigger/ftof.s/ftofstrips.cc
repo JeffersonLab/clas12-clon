@@ -18,6 +18,14 @@ using namespace std;
 #include "ftoftrans.h"
 #include "ftoflib.h"
 
+#define TRANSLATE(ch_m) \
+      energy = fadcs.e##ch_m; \
+      chan = ch_m; \
+      lay    = adclayer[isl][chan] - 1; \
+      str    = adcstrip[isl][chan] - 1; \
+      lr     = adclr[isl][chan] - 1; \
+      timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.t##ch_m) : 8); /* error in '?' without (uint16_t) ...*/ \
+      if(lay==0) timetmp[lr][str] = timexxx
 
 
 /* 1.96/16/8/0%/0%/~0%(638)/~0%(519) II=8 */
@@ -41,13 +49,15 @@ ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_16ch_t> s_fadc_words[NF
   ap_uint<6> str; /*0-61*/
   ap_uint<1> lr; /*0-1*/
 
+  int nslot=12;
+
   fadc_16ch_t fadcs;
 
-  ap_uint<4> timetmp; /* 3 low bits for time interval (0-7), high bit to mark missing hits */
+  ap_uint<4> timexxx;
 
-  ap_uint<4> time[2][NSTRIP];
-#pragma HLS ARRAY_PARTITION variable=time complete dim=1
-#pragma HLS ARRAY_PARTITION variable=time complete dim=2
+  ap_uint<4> timetmp[2][NSTRIP]; /* 3 low bits for time interval (0-7), high bit to mark missing hits */
+#pragma HLS ARRAY_PARTITION variable=timetmp complete dim=1
+#pragma HLS ARRAY_PARTITION variable=timetmp complete dim=2
   ap_uint<NSTRIP> out[2];
 #pragma HLS ARRAY_PARTITION variable=out complete dim=1
 
@@ -60,49 +70,34 @@ ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_16ch_t> s_fadc_words[NF
 
   for(int i=0; i<2; i++)
   {
-    for(int j=0; j<NSTRIP; j++) time[i][j] = 0;
+    for(int j=0; j<NSTRIP; j++) timetmp[i][j] = 0;
     out[i] = 0;
   }
 
 
 
   /********************************************************************/
-  /* get FADC data for 32-ns interval, and fill time[2][NSTRIP] array */
+  /* get FADC data for 32-ns interval, and fill timetmp[2][NSTRIP] array */
 
-  for(int isl=0; isl<NFADCS; isl++)
+  for(int isl=0; isl<nslot; isl++)
   {
-    /* read one timing slice */
-	for(int j=0; j<NH_READS; j++)
-	{
-	  fadcs = s_fadc_words[isl].read();
-#ifdef DEBUG
-      if(fadcs.e0>0 || fadcs.e1>0) cout<<"fadcs[slot="<<isl<<"][read="<<j<<"]="<<fadcs.e0<<" "<<fadcs.e1<<endl;
-#endif
-
-      energy = fadcs.e0;
-      chan   = j*2;
-      lay    = adclayer[isl][chan] - 1;
-      str    = adcstrip[isl][chan] - 1;
-      lr     = adclr[isl][chan] - 1;
-	  //printf("isl=%d chan=%d -> str=%d\n",isl,(uint16_t)chan,(uint16_t)str);
-      timetmp = ((energy >= strip_threshold) ? ((uint8_t)fadcs.t0) : 8); /* error in '?' without (uint16_t) ...*/
-#ifdef DEBUG
-      if(timetmp<8) cout<<"   str="<<str<<" -> t0="<<timetmp<<endl;
-#endif
-      if(lay==0) time[lr][str] = timetmp;
-
-      energy = fadcs.e1;
-      chan   = j*2+1;
-      lay    = adclayer[isl][chan] - 1;
-      str    = adcstrip[isl][chan] - 1;
-      lr     = adclr[isl][chan] - 1;
-	  //printf("isl=%d chan=%d -> str=%d\n",isl,(uint16_t)chan,(uint16_t)str);
-      timetmp = ((energy >= strip_threshold) ? ((uint8_t)fadcs.t1) : 8);
-#ifdef DEBUG
-      if(timetmp<8) cout<<"   str="<<str<<" -> t0="<<timetmp<<endl;
-#endif
-      if(lay==0) time[lr][str] = timetmp;
-	}
+	fadcs = s_fadc_words[isl].read();
+    TRANSLATE(0);
+    TRANSLATE(1);
+    TRANSLATE(2);
+    TRANSLATE(3);
+    TRANSLATE(4);
+    TRANSLATE(5);
+    TRANSLATE(6);
+    TRANSLATE(7);
+    TRANSLATE(8);
+    TRANSLATE(9);
+    TRANSLATE(10);
+    TRANSLATE(11);
+    TRANSLATE(12);
+    TRANSLATE(13);
+    TRANSLATE(14);
+    TRANSLATE(15);
   }
 
   /************************************/
@@ -120,8 +115,8 @@ ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_16ch_t> s_fadc_words[NF
     {
       for(int i=0; i<NSTRIP; i++)
       {
-        if(time[k][i]==j) out[k][i] = 1;
-        else              out[k][i] = 0;
+        if(timetmp[k][i]==j) out[k](i,i) = 1;
+        else                 out[k](i,i) = 0;
       }
     }
 

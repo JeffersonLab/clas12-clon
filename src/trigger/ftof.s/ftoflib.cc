@@ -68,6 +68,23 @@ ftofhiteventreader(hls::stream<eventdata_t> &event_stream, FTOFHit &hit, uint32_
 
 
 
+void
+ftof_buf_ram_to_event_buf_ram(hit_ram_t buf_ram[256], event_ram_t event_buf_ram[2048])
+{
+  for(int i=0; i<256; i++)
+  {
+    event_buf_ram[i*8+0].output = buf_ram[i].output[0];
+    event_buf_ram[i*8+1].output = buf_ram[i].output[1];
+    event_buf_ram[i*8+2].output = buf_ram[i].output[2];
+    event_buf_ram[i*8+3].output = buf_ram[i].output[3];
+    event_buf_ram[i*8+4].output = buf_ram[i].output[4];
+    event_buf_ram[i*8+5].output = buf_ram[i].output[5];
+    event_buf_ram[i*8+6].output = buf_ram[i].output[6];
+    event_buf_ram[i*8+7].output = buf_ram[i].output[7];
+  }
+}
+
+
 
 
 
@@ -82,14 +99,17 @@ ftoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
   nframe_t nframes = 1;
 
   hls::stream<fadc_16ch_t> s_fadc_words[NFADCS];
-  hls::stream<FTOFStrip_s> s_strip;
-  hls::stream<FTOFHit> s_hits;
+  hls::stream<FTOFHit> s_hits[NH_READS];
+  FTOFHit hit_tmp;
   volatile ap_uint<1> hit_scaler_inc;
 
   hls::stream<trig_t> trig_stream;
   hit_ram_t buf_ram[256];
+  event_ram_t event_buf_ram[2048];
   hls::stream<eventdata_t> event_stream;
   FTOFHit hit;
+
+  uint32_t bufout[2048];
 
   int detector = FTOF;
   int nslot = 12;
@@ -102,15 +122,27 @@ ftoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
     ret = fadcs(bufptr, threshold[0], sec, detector, s_fadc_words, 0, 0, &iev, &timestamp);
     if(ret<=0) continue;
 
-
     for(int it=0; it<MAXTIMES; it++)
     {
       ftof(threshold, nframes, s_fadc_words, s_hits, buf_ram);
 
-      ftofhiteventwriter(trig_stream, event_stream, buf_ram);
-      ftofhiteventreader(event_stream, hit);
+      /* read hits to avoid 'leftover' warnings */
+      for(int i=0; i<NH_READS; i++) hit_tmp = s_hits[i].read();
 
+      ftof_buf_ram_to_event_buf_ram(buf_ram, event_buf_ram);
+      ftofhiteventwriter(trig_stream, event_stream, event_buf_ram);
+      ftofhiteventreader(event_stream, hit, bufout);
     }
+
+    if(bufout[0]>0)
+	{
+      int fragtag = 95+sec;
+      int banktag = 0xe122;
+      trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
+      trigbank_write(bufout);
+      trigbank_close();
+	}
+
   }
 
 

@@ -21,24 +21,26 @@ using namespace std;
 /* 2.66/4/4/0%/0%/(194)~0%/(102)~0% II=4 */
 
 void
-ftofhiteventfiller(hls::stream<FTOFHit> &s_hitin, hit_ram_t buf_ram[256])
+ftofhiteventfiller(hls::stream<FTOFHit> s_hitin[NH_READS], hit_ram_t buf_ram[256])
 {
-#pragma HLS INTERFACE axis register both port=s_hitin
 #pragma HLS DATA_PACK variable=s_hitin
+#pragma HLS INTERFACE axis register both port=s_hitin
+#pragma HLS ARRAY_PARTITION variable=s_hitin complete dim=1
 #pragma HLS DATA_PACK variable=buf_ram
-//#pragma HLS ARRAY_PARTITION variable=buf_ram block factor=4 dim=1
+//#pragma HLS ARRAY_PARTITION variable=buf_ram block factor=8 dim=1
 #pragma HLS PIPELINE II=1
 
   FTOFHit fifo;
 
   static ap_uint<8> itime = 0;
 
-  fifo = s_hitin.read();
-  for(int i=0; i<NPER; i++) buf_ram[itime].output[i] = fifo.output[i];
+  for(int i=0; i<NH_READS; i++)
+  {
+    fifo = s_hitin[i].read();
+    for(int j=0; j<NPER; j++) buf_ram[itime].output[j] = fifo.output[j];
+  }
 
-#ifdef __SYNTHESIS__
   itime ++;
-#endif
 }
 
 
