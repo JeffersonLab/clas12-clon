@@ -148,7 +148,7 @@ int getMatchingHodoChannel(int xx, int yy, int layer);
 int getMatchingHodoSlot(int xx, int yy, int layer);
 int getCaloIdxFromXY(int xx, int yy);
 int getCaloIdxFromCrateSlotChannel(int crate, int slot, int channel);
-
+int getROCFromXY(int xx, int yy);
 
 
 #endif /* FTTRANS_H_ */

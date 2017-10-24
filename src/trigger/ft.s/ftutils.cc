@@ -5,7 +5,6 @@
  *      Author: clasrun
  */
 
-
 #include "fttrans.h"
 #include "fttypes.h"
 int getCaloIdxFromCrateSlotChannel(int crate, int slot, int channel) {
@@ -27,6 +26,18 @@ int getCaloIdxFromXY(int xx, int yy) {
 		y = ftFullMap[ii][5];
 		if ((x == xx) && (y = yy))
 			return ii;
+	}
+	return -1;
+}
+
+int getROCFromXY(int xx, int yy) {
+	int x, y,roc;
+	for (int ii = 0; ii < FT_CRYSTAL_NUM; ii++) {
+		x = ftFullMap[ii][4];
+		y = ftFullMap[ii][5];
+		roc = ftFullMap[ii][0];
+		if ((x == xx) && (y = yy))
+			return roc;
 	}
 	return -1;
 }
@@ -64,7 +75,7 @@ int getMatchingHodoChannel(int xx, int yy, int layer) {
 	return -1;
 }
 
-void copyFTHit(FTHit_t &source, FTHit_t &dest){
+void copyFTHit(FTHit_t &source, FTHit_t &dest) {
 	dest.cal_e = source.cal_e;
 	dest.cal_t = source.cal_t;
 	dest.hodo_l1_hit = source.hodo_l1_hit;

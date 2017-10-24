@@ -17,14 +17,15 @@ using namespace std;
 
 static trig_t trig; /* assumed to be cleaned up because of 'static' */
 
-void
-ftClusterEventReader(hls::stream<eventdata_t> &event_stream,
-		FTCluster_t clusters[FT_MAX_CLUSTERS * MAXTIMES], uint32_t *bufout, bool &dataPresent)
-{
+void ftClusterEventReader(hls::stream<eventdata_t> &event_stream, FTCluster_t clusters[FT_MAX_CLUSTERS * MAXTIMES], uint32_t *bufoutADCFT1,
+		uint32_t *bufoutADCFT2) {
 	eventdata_t eventdata;
-	uint32_t data_end = 0, word_first = 0, tag = 0, inst = 0, view = 0, data = 0, it = 0, *bufptr = bufout;
+	uint32_t data_end = 0, word_first = 0, tag = 0, inst = 0, view = 0, data = 0, it = 0;
+	uint32_t *bufptr1 = bufoutADCFT1 + 1, *bufptr2 = bufoutADCFT2 + 1;
+	uint32_t **bufptr;
 	int i = 0;
-	dataPresent = false;
+	ap_uint<1> ROC;
+	bool present = false;
 
 	/*Each cluster should be 2 words in event_stream*/
 	while (1) {
@@ -34,22 +35,33 @@ ftClusterEventReader(hls::stream<eventdata_t> &event_stream,
 		}
 
 		eventdata = event_stream.read(); /*read 1*/
-		*bufptr++ = eventdata.data;
 
-        if(eventdata.end == 1)
-        {
-          bufout[0] = bufptr - bufout - 1;
-          printf("ftClusterEventreader: END_OF_DATA\n");
-          break;
-        }
+		/*Now, determine where it should go*/
+		ROC = eventdata.data(30, 27);
+		if (ROC == 0)
+			bufptr = &bufptr1;
+		else if (ROC == 1)
+			bufptr = &bufptr2;
+		else {
+			printf("ftClusterEventReader - not ROC found for roc id: %i \n", (int)ROC);
+		}
 
+		eventdata.data(30, 27) = 0x17; //fix tag to the correct value
 
-		/*If there were no clusters, then there's one word in event_stream,
-		 * with data==0xFFFFFFFF, but nothing else
-		 * Hence, if we're here, it means there is at least 1 cluster
-		 * */
+		*(*bufptr) = eventdata.data; /*Write to output*/
+		(*bufptr)++; /*increment the pointer*/
 
-		dataPresent = true;
+		if (eventdata.end == 1) { /*Write number of words in first word*/
+			if (ROC == 0) {
+				bufoutADCFT1[0] = *bufptr - bufoutADCFT1 - 1;
+			} else if (ROC == 1) {
+				bufoutADCFT2[0] = *bufptr - bufoutADCFT2 - 1;
+			} else {
+				printf("ftClusterEventReader - not ROC found (2) for roc id: %i \n", (int)ROC);
+			}
+			printf("ftClusterEventReader: END_OF_DATA\n");
+			break;
+		}
 
 		data_end = eventdata.end; /* 0 for all words except last one when it is 1 */
 		word_first = eventdata.data(31, 31); /* 1 for the first word in hit, 0 for followings */
@@ -60,7 +72,8 @@ ftClusterEventReader(hls::stream<eventdata_t> &event_stream,
 			break;
 		}
 		eventdata = event_stream.read(); /*read 1*/
-		*bufptr++ = eventdata.data;
+		*(*bufptr) = eventdata.data; /*Write to output*/
+		(*bufptr)++; /*increment the pointer*/
 		data_end = eventdata.end;
 
 		i++;
@@ -93,8 +106,8 @@ int ftlib(uint32_t *bufptr, ap_uint<13> calo_seed_threshold, ap_uint<13> hodo_hi
 
 	FTCluster_t clusters[FT_MAX_CLUSTERS];
 
-	uint32_t bufout[FT_WORDS_PER_CLUSTER * FT_MAX_CLUSTERS * MAXTIMES + 1]; /*this is the output buffer for evio. each time slice has at max FT_MAX_CLUSTERS*/
-	bool dataPresent;
+	uint32_t bufoutADCFT1[FT_WORDS_PER_CLUSTER * FT_MAX_CLUSTERS * MAXTIMES + 1]; /*this is the output buffer for evio. each time slice has at max FT_MAX_CLUSTERS*/
+	uint32_t bufoutADCFT2[FT_WORDS_PER_CLUSTER * FT_MAX_CLUSTERS * MAXTIMES + 1]; /*this is the output buffer for evio. each time slice has at max FT_MAX_CLUSTERS*/
 
 	cout << "ftlib: " << endl;
 
@@ -127,22 +140,21 @@ int ftlib(uint32_t *bufptr, ap_uint<13> calo_seed_threshold, ap_uint<13> hodo_hi
 		fflush(stdout);
 
 		/* FPGA section - not to be syntethized on FPGA, rather to simulate that code*/
-		ft(calo_seed_threshold, calo_dt, hodo_dt, hodo_hit_threshold, s_fadcs_ft1, s_fadcs_ft2, s_fadcs_ft3, s_clusters, /*buf_ram,n_clusters*/s_clustersEVIO);
+		ft(calo_seed_threshold, calo_dt, hodo_dt, hodo_hit_threshold, s_fadcs_ft1, s_fadcs_ft2, s_fadcs_ft3, s_clusters, /*buf_ram,n_clusters*/
+		s_clustersEVIO);
 
+		/* read clusters to avoid 'leftover' warnings */
+		/* is this here while waiting for L2 simulation??*/
 		while (!s_clusters.empty())
-				s_clusters.read();
+			s_clusters.read();
 	}
 	/* FPGA section */
 
-	/* read clusters to avoid 'leftover' warnings */
-	/* is this here while waiting for L2 simulation??*/
-
-
-	/* move data from buf_ram to event_stream in according to trig_stream */
+	/* move data from s_clustersEVIO to event_stream in according to trig_stream */
 	ftClusterEventWriter(trig_stream, event_stream, /*buf_ram, n_clusters*/s_clustersEVIO);
 
 	/* extract clusters */
-	ftClusterEventReader(event_stream, clusters, bufout, dataPresent);
+	ftClusterEventReader(event_stream, clusters, bufoutADCFT1, bufoutADCFT2);
 
 	/* done extracting results, now we will create trigger bank(s) if we have at least one peak */
 
@@ -151,30 +163,26 @@ int ftlib(uint32_t *bufptr, ap_uint<13> calo_seed_threshold, ap_uint<13> hodo_hi
 	 * within the it-loop (as in ftoflib.cc ??)
 	 */
 
-
-
-    /* TO DO: banks have to be recorded in different fragtag's, 70 for adcft1 and 71 for adcft2,
-	   so 'bufout' have to be splitted between two fragments */    
-	for(int fragtag = 70; fragtag<=71; fragtag++)
-	{
-      int banktag = 0xe122;
-	  if (bufout[0]>0)
-      {
-        trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
-        trigbank_write(bufout);
-        trigbank_close();
-	  }
+	int banktag = 0xe122;
+	if (bufoutADCFT1[0] > 0) {
+		trigbank_open(bufptr, 70, banktag, iev, timestamp);
+		trigbank_write(bufoutADCFT1);
+		trigbank_close();
 	}
-
+	if (bufoutADCFT2[0] > 0) {
+		trigbank_open(bufptr, 71, banktag, iev, timestamp);
+		trigbank_write(bufoutADCFT2);
+		trigbank_close();
+	}
 
 #if 0
 	if (dataPresent)
-    {
+	{
 		int ind, ind_data;
 		uint32_t word;
 		int fragtag;
 
-		fragtag = 0;  /*->WHAT SHOULD I USE?*/
+		fragtag = 0; /*->WHAT SHOULD I USE?*/
 
 		int fragnum = 0;
 		int banktyp = 1;
@@ -190,7 +198,7 @@ int ftlib(uint32_t *bufptr, ap_uint<13> calo_seed_threshold, ap_uint<13> hodo_hi
 				printf("ERROR: cannot create fragment %d - exit\n", fragtag);
 				exit(0);
 			} else
-				printf("Created fragment fragtag=%d fragnum=%d\n", fragtag, fragnum);
+			printf("Created fragment fragtag=%d fragnum=%d\n", fragtag, fragnum);
 		}
 
 		ret = evOpenBank(bufptr, fragtag, fragnum, banktag, banknum, banktyp, "", &ind_data);
@@ -218,7 +226,7 @@ int ftlib(uint32_t *bufptr, ap_uint<13> calo_seed_threshold, ap_uint<13> hodo_hi
 
 		for (int ii = 0; ii < ( FT_WORDS_PER_CLUSTER * FT_MAX_CLUSTERS * MAXTIMES + 1); ii++) {
 			if (bufout[ii] == 0xFFFFFFFF)
-				break;
+			break;
 			printf("bufout3[%d]=0x%08x\n", ii, bufout[ii]);
 			fflush(stdout);
 			PUT32(bufout[ii]);
@@ -229,8 +237,6 @@ int ftlib(uint32_t *bufptr, ap_uint<13> calo_seed_threshold, ap_uint<13> hodo_hi
 		evCloseBank(bufptr, fragtag, fragnum, banktag, banknum, b08out);
 	}
 #endif
-
-
 
 	trig.t_start += MAXTIMES * 8; /* in preparation for next event, step up MAXTIMES*32ns in 4ns ticks */
 }

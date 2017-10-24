@@ -84,6 +84,11 @@ typedef struct {
 	ap_uint<FTCLUSTER_CAL_N_BITS> n;
 	ap_uint<1> h1;
 	ap_uint<1> h2;
+#ifndef _SYNTHESIS_
+	ap_uint<1> rocID; //0 for ADCFT1, 1 for ADCFT2
+#endif
+
+
 } FTCluster_t;
 
 #define NBIT_COORD_EB 10 /*in event builder coordinates always 10 bits WHY?*/
@@ -128,8 +133,8 @@ void ftMakeClusters(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_u
 		hls::stream<FTAllCluster_t> &s_clusters);
 void ftSelectClusters(hls::stream<FTAllCluster_t> &s_allClusters, hls::stream<FTCluster_t> &s_goodClusters);
 void ftClusterFanout(hls::stream<FTCluster_t> &s_cluster, hls::stream<FTCluster_t> &s_cluster1, hls::stream<FTCluster_t> &s_cluster2);
-
-void ftClusterEventFiller(hls::stream<FTCluster_t> &s_clusterin, /*cluster_ram_t buf_ram[FT_MAX_CLUSTERS][256],ap_uint<8> nClusters[256]*/hls::stream<FTCluster_t> &s_clusterout);
 void ftClusterEventWriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream,/*cluster_ram_t [FT_MAX_CLUSTERS][256],ap_uint<8> nClusters[256]*/hls::stream<FTCluster_t> &s_clustersEVIO);
+
+
 
 #endif /* FTTYPES_H_ */
