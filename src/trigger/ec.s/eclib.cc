@@ -135,21 +135,21 @@ void
 ecpeakeventreader(hls::stream<eventdata_t> &event_stream, ECPeak peak[NPEAK], uint32_t *bufout)
 {
   eventdata_t eventdata;
-  uint32_t data_end=0, word_first=0, tag=0, inst=0, view=0, it=0, *bufptr = bufout+1;
+  uint32_t data_end=0, word_first=0, tag=0, inst=0, view=0, it=0, *bufptr = bufout+1; /* reserve length word */
   int i = 0;
   while(1)
   {
-    if(event_stream.empty()) {printf("ecpeakeventreader: EMPTY STREAM 1\n"); break;}
-    eventdata = event_stream.read();
-    *bufptr++ = eventdata.data;
+    if(event_stream.empty()) {bufout[0]=0;printf("ecpeakeventreader: EMPTY STREAM 1\n"); break;}
 
+    eventdata = event_stream.read();
     if(eventdata.end == 1)
     {
-      bufout[0] = bufptr - bufout - 1;
+      bufout[0] = bufptr - bufout - 1; /* do not count end_of_data */
       printf("ecpeakeventreader: END_OF_DATA\n");
       break;
     }
 
+    *bufptr++ = eventdata.data;
     data_end = eventdata.end;              /* 0 for all words except last one when it is 1 */
     word_first = eventdata.data(31,31);    /* 1 for the first word in peak, 0 for followings */
     tag = eventdata.data(30,27);           /* must be 'ECPEAK_TAG' */
@@ -183,9 +183,8 @@ echiteventreader(hls::stream<eventdata_t> &event_stream, ECHit hit[NHIT], uint32
   while(1)
   {
     if(event_stream.empty()) {printf("echiteventreader: EMPTY STREAM 1\n");break;}
-    eventdata = event_stream.read();
-    *bufptr++ = eventdata.data;
 
+    eventdata = event_stream.read();
     if(eventdata.end == 1)
     {
       bufout[0] = bufptr - bufout - 1;
@@ -193,6 +192,7 @@ echiteventreader(hls::stream<eventdata_t> &event_stream, ECHit hit[NHIT], uint32
       break;
     }
 
+    *bufptr++ = eventdata.data;
     data_end = eventdata.end;           /* 0 for all words except last one when it is 1 */
     word_first = eventdata.data(31,31); /* 1 for the first word in hit, 0 for followings */
     tag = eventdata.data(30,27); /* must be 'ECHIT_TAG' */
@@ -639,120 +639,23 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 
 
 
-
-
-
     /* done extracting results, now we will create trigger bank(s) if we have at least one peak */
 
-    if(peak[0][0].energy>0 || peak[1][0].energy>0 || peak[2][0].energy>0)
+    if(bufout0[0]>0 || bufout1[0]>0 || bufout2[0]>0 || bufout3[0]>0)
 	{
-
 #ifdef USE_PCAL
-      int fragtag = 107+sec;
+      int fragtag = 60107+sec;
 #else
-      int fragtag = 101+sec;
+      int fragtag = 60101+sec;
 #endif
       int banktag = 0xe122;
-
-
       trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
-
-      if(peak[0][0].energy>0) trigbank_write(bufout0);
-      if(peak[1][0].energy>0) trigbank_write(bufout1);
-      if(peak[2][0].energy>0) trigbank_write(bufout2);
-      if(hit[0].energy>0) trigbank_write(bufout3);
-
+      if(bufout0[0]>0) trigbank_write(bufout0);
+      if(bufout1[0]>0) trigbank_write(bufout1);
+      if(bufout2[0]>0) trigbank_write(bufout2);
+      if(bufout3[0]>0) trigbank_write(bufout3);
       trigbank_close();
-
-
-
-
-
-
-#if 0
-        int ind, ind_data;
-        uint32_t word;
-
-        ind = evLinkFrag(bufptr, fragtag, fragnum);
-        if(ind<=0)
-		{
-          printf("Fragment %d does not exist - create one\n",fragtag);
-          ind = evOpenFrag(bufptr, fragtag, fragnum);
-          if(ind<=0) {printf("ERROR: cannot create fragment %d - exit\n",fragtag); exit(0);}
-          else printf("Created fragment fragtag=%d fragnum=%d\n",fragtag, fragnum);
-		}
-
-        ret = evOpenBank(bufptr, fragtag, fragnum, banktag, banknum, banktyp, "", &ind_data);
-        printf("evOpenBank returns = %d, ind_data=%d (fragtag=%d, fragnum=%d, banktag=%d, banknum=%d)\n",ret,ind_data, fragtag, fragnum, banktag, banknum);
-        b08out = (unsigned char *)&bufptr[ind_data];
-
-        /*0x12 - event header*/
-		word = (0x12<<27) + (iev&0x3FFFFF);
-        PUT32(word);
-
-        /*0x13 - time stamp*/
-        word = (timestamp>>24)&0xFFFFFF; /* OR OPPOSITE ??? */
-        printf("word1=0x%06x\n",word);fflush(stdout);
-        word = (0x13<<27) + word;;
-        PUT32(word);
-
-        word = timestamp&0xFFFFFF; /* OR OPPOSITE ??? */
-        printf("word2=0x%06x\n",word);fflush(stdout);
-        PUT32(word);
-
-
-
-        /*0x14 - peak */
-        if(peak[0][0].energy>0)
-		{
-          for(int i=1; i<bufout0[0]; i++)
-		  {
-			printf("bufout0[%d]=0x%08x\n",i,bufout0[i]);fflush(stdout);
-            PUT32(bufout0[i]);
-		  }
-		}
-        
-        /*0x14 - peak */
-        if(peak[1][0].energy>0)
-		{
-          for(int i=1; i<bufout1[0]; i++)
-		  {
-            if(bufout1[i]==0xFFFFFFFF) break;
-			printf("bufout1[%d]=0x%08x\n",i,bufout1[i]);fflush(stdout);
-            PUT32(bufout1[i]);
-		  }
-		}
-        
-        /*0x14 - peak */
-        if(peak[2][0].energy>0)
-		{
-          for(int i=1; i<bufout2[0]; i++)
-		  {
-            if(bufout2[i]==0xFFFFFFFF) break;
-			printf("bufout2[%d]=0x%08x\n",i,bufout2[i]);fflush(stdout);
-            PUT32(bufout2[i]);
-		  }
-		}
-        
-        /*0x15 - hit */
-        if(hit[0].energy>0)
-		{
-          for(int i=1; i<bufout3[0]; i++)
-		  {
-            if(bufout3[i]==0xFFFFFFFF) break;
-			printf("bufout3[%d]=0x%08x\n",i,bufout3[i]);fflush(stdout);
-            PUT32(bufout3[i]);
-		  }
-		}
-
-
-		printf("evClose() reached\n");fflush(stdout);
-        evCloseBank(bufptr, fragtag, fragnum, banktag, banknum, b08out);
-#endif
-
-	  }
-
-
+	}
 
 
     for(int i=0; i<4; i++) trig[i].t_start += MAXTIMES*8; /* in preparation for next event, step up MAXTIMES*32ns in 4ns ticks */

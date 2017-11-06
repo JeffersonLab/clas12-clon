@@ -51,7 +51,7 @@ typedef struct htccstrip_s
 
 typedef struct htcchit
 {
-  ap_uint<NCLSTR> output;
+  ap_uint<NCHAN> output;
 } HTCCHit;
 
 
@@ -61,7 +61,7 @@ typedef struct htcchit
 
 typedef struct
 {
-  ap_uint<NCLSTR> output;
+  ap_uint<NCHAN> output;
 } hit_ram_t;
 
 

@@ -35,26 +35,36 @@ void
 htcchiteventreader(hls::stream<eventdata_t> &event_stream, HTCCHit &hit, uint32_t *bufout)
 {
   eventdata_t eventdata;
-  uint32_t data_end, word_first, tag, inst, view, data, *bufptr = bufout;
+  uint32_t data_end, word_first, tag, inst, view, data, *bufptr = bufout + 1;
   while(1)
   {
-    if(event_stream.empty()) {printf("htcchiteventreader: EMPTY STREAM ERROR1\n");break;}
+    if(event_stream.empty()) {bufout[0]=0;printf("htcchiteventreader: EMPTY STREAM ERROR1\n");break;}
+
     eventdata = event_stream.read();
+    if(eventdata.end == 1)
+    {
+      bufout[0] = bufptr - bufout - 1;
+      printf("htcchiteventreader: END_OF_DATA\n");
+      break;
+    }
+
     *bufptr++ = eventdata.data;
-
-    data = eventdata.data;
-    if(data == 0xFFFFFFFF) {printf("htcchiteventreader: END_OF_DATA\n");break;}
-
     data_end = eventdata.end;           /* 0 for all words except last one when it is 1 */
     word_first = eventdata.data(31,31); /* 1 for the first word in hit, 0 for followings */
     tag = eventdata.data(30,27); /* must be 'HTCCHIT_TAG' */
-    hit.output(35,24) = eventdata.data(11,0);
 
     if(event_stream.empty()) {printf("htcchiteventreader: EMPTY STREAM ERROR2\n");break;}
     eventdata = event_stream.read();
     *bufptr++ = eventdata.data;
     data_end = eventdata.end;
-	hit.output(23,0) = eventdata.data(23,0);
+	hit.output(47,31) = eventdata.data(16,0);
+    cout<<"htcchiteventreader: output="<<hit.output<<endl;
+
+    if(event_stream.empty()) {printf("htcchiteventreader: EMPTY STREAM ERROR2\n");break;}
+    eventdata = event_stream.read();
+    *bufptr++ = eventdata.data;
+    data_end = eventdata.end;
+	hit.output(30,0) = eventdata.data(30,0);
     cout<<"htcchiteventreader: output="<<hit.output<<endl;
   }
 }
@@ -116,8 +126,20 @@ htcclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
     for(int i=0; i<NH_READS; i++) hit_tmp = s_hits.read();
   }
 
+  printf("htcclib1\n");
   htcchiteventwriter(trig_stream, event_stream, buf_ram);
+  printf("htcclib2\n");
   htcchiteventreader(event_stream, hit, bufout);
+  printf("htcclib3\n");
+
+  if(bufout[0]>0)
+  {
+    int fragtag = 60093;
+    int banktag = 0xe122;
+    trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
+    trigbank_write(bufout);
+    trigbank_close();
+  }
 
   printf("bla\n");
   trig.t_start += MAXTIMES*8; /* in preparation for next event, step up MAXTIMES*32ns in 4ns ticks */

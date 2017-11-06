@@ -33,16 +33,30 @@ htcchiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &e
 //#pragma HLS ARRAY_PARTITION variable=buf_ram_read block factor=4
 
   eventdata_t eventdata;
+  hit_ram_t buf_ram_val;
 
   trig_t trig = trig_stream.read();
   ap_uint<RAM_BITS> w = (trig.t_stop - trig.t_start); /* readout window width */
-  ap_uint<RAM_BITS> start_addr = trig.t_start.range(10,0/*3*/); /* starting position in buf_ram_read[] */
-  ap_uint<RAM_BITS> stop_addr = trig.t_stop.range(10,0/*3*/); /* ending position in buf_ram_read[] */
+  ap_uint<RAM_BITS> start_addr = trig.t_start.range(10,0); /* starting position in buf_ram_read[] */
+  ap_uint<RAM_BITS> stop_addr = trig.t_stop.range(10,0); /* ending position in buf_ram_read[] */
   ap_uint<RAM_BITS> addr = start_addr;
+
+#ifdef DEBUG
+  cout<<"htcchiteventwriter: start_addr="<<start_addr<<endl;
+  cout<<"htcchiteventwriter: stop_addr="<<stop_addr<<endl;
+  cout<<"htcchiteventwriter: addr="<<addr<<endl<<endl;
+#endif
 
   while(addr != stop_addr)
   {
-    hit_ram_t buf_ram_val = buf_ram_read[addr];
+#ifdef DEBUG
+    cout<<"htcchiteventwriter: addr0="<<addr<<endl;
+#endif
+    buf_ram_val = buf_ram_read[addr];
+    //buf_ram_val.output = buf_ram_read[addr].output;
+#ifdef DEBUG
+    cout<<"htcchiteventwriter: addr00="<<addr<<endl;
+#endif
 
     if(buf_ram_val.output)
 	{
@@ -50,17 +64,20 @@ htcchiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &e
       eventdata.data(31,31)  = 1;
       eventdata.data(30,27)  = HTCCHIT_TAG;
       eventdata.data(26,16)  = addr - start_addr;  /*11 bits*/
-      eventdata.data(15,12)  = 0;
-      eventdata.data(11,0)   = buf_ram_val.output(35,24); /*12 bits*/
+      eventdata.data(15, 0)  = 0;
       event_stream.write(eventdata);
         
       eventdata.end = 0;
-      eventdata.data(31,24)  = 0;
-      eventdata.data(23,0)    = buf_ram_val.output(23,0); /*24 bits*/
+      eventdata.data(31,17)   = 0;
+      eventdata.data(16,0)    = buf_ram_val.output(47,31); /*17 bits*/
+      event_stream.write(eventdata);
+
+      eventdata.end = 0;
+      eventdata.data(31,31)  = 0;
+      eventdata.data(30,0)   = buf_ram_val.output(30,0); /*31 bit*/
       event_stream.write(eventdata);
 	}
 
-    //cout<<"htcchiteventwriter: addr="<<addr<<endl;
     addr ++;
   }
 

@@ -13,18 +13,7 @@ using namespace std;
 #include "evio.h"
 #include "evioBankUtil.h"
 
-/*
-                  
-trigbanks(bufptr, fragtag, banktag)
-
-#ifdef USE_PCAL
-  fragtag = 107+sec;
-#else
-  fragtag = 101+sec;
-#endif
-  int banktag = 0xe122;
-
-*/
+#include "trigger.h"
 
 static uint32_t *bufptr_save;
 static int fragtag_save;
@@ -50,6 +39,11 @@ trigbank_open(uint32_t *bufptr, int fragtag, int banktag, int iev, unsigned long
     ind = evOpenFrag(bufptr, fragtag, FRAGNUM);
     if(ind<=0) {printf("ERROR: cannot create fragment %d - exit\n",fragtag); exit(0);}
     else printf("Created fragment fragtag=%d fragnum=%d\n",fragtag, FRAGNUM);
+  }
+  else
+  {
+    printf("Fragment %d exist already - exit\n",fragtag);
+	exit(0);
   }
 
   ret = evOpenBank(bufptr, fragtag, FRAGNUM, banktag, BANKNUM, BANKTYP, "", &ind_data);
@@ -103,4 +97,11 @@ trigbank_close()
 {
   printf("evClose() reached\n");fflush(stdout);
   return(evCloseBank(bufptr_save, fragtag_save, FRAGNUM, banktag_save, BANKNUM, b08out_save));
+}
+
+
+int
+trigbank_read()
+{
+  return(0);
 }

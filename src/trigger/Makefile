@@ -24,7 +24,7 @@ CFLAGS = -g
 CXXFLAGS = -g
 
 CLON_FLAGS += -I./$(MAIN).s \
-			-I./ec.s -I./pc.s -I./dc.s -I./htcc.s -I./ft.s \
+			-I./ec.s -I./pc.s -I./dc.s -I./htcc.s -I./ft.s -I./ftof.s -I./ctof.s \
 			-I$(CODA)/common/include \
 			-I$(ROOTSYS)/include \
 			-D_POSIX_PTHREAD_SEMANTICS

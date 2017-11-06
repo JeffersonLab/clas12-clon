@@ -30,11 +30,52 @@ using namespace std;
 #define MIN(a,b)    (a < b ? a : b)
 #define ABS(x)      ((x) < 0 ? -(x) : (x))
 
-
+#define OUT48
 
 /*xc7vx550tffg1158-1*/
 
+#ifdef OUT48
+static ap_uint<6> cl2d[NCLSTR][4] = {
+  0, 1, 12,13,
+  1, 2, 13,14,
+  2, 3, 14,15,
+  3, 4, 15,16,
+  4, 5, 16,17,
+  5, 6, 17,18,
+  6, 7, 18,19,
+  7, 8, 19,20,
+  8, 9, 20,21,
+  9, 10,21,22,
+  10,11,22,23,
+  11, 0,23,12,
 
+  12,13,24,25,
+  13,14,25,26,
+  14,15,26,27,
+  15,16,27,28,
+  16,17,28,29,
+  17,18,29,30,
+  18,19,30,31,
+  19,20,31,32,
+  20,21,32,33,
+  21,22,33,34,
+  22,23,34,35,
+  23,12,35,24,
+
+  24,25,36,37,
+  25,26,37,38,
+  26,27,38,39,
+  27,28,39,40,
+  28,29,40,41,
+  29,30,41,42,
+  30,31,42,43,
+  31,32,43,44,
+  32,33,44,45,
+  33,34,45,46,
+  34,35,46,47,
+  35,24,47,36
+};
+#endif
 
 /* High Threshold Cherenkov Counter:
 
@@ -70,7 +111,8 @@ return:
 /* 1.96/39/1/0%/0%/(15739)2%/(8352)2% II=1 */
 
 void
-htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> cluster_threshold, hls::stream<HTCCStrip_s> s_strip[NSTREAMS1], hls::stream<HTCCHit> &s_hit)
+htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> cluster_threshold, hls::stream<HTCCStrip_s> s_strip[NSTREAMS1],
+        hls::stream<HTCCHit> &s_hit)
 {
 #pragma HLS INTERFACE ap_stable port=strip_threshold
 #pragma HLS INTERFACE ap_stable port=mult_threshold
@@ -81,6 +123,15 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
 #pragma HLS DATA_PACK variable=s_hit
 #pragma HLS INTERFACE axis register both port=s_hit
 #pragma HLS PIPELINE II=1
+
+
+  /* to become output */
+  ap_uint<NCHAN> output;
+
+#ifdef OUT48
+  ap_uint<NCHAN> dmask;
+  ap_uint<NCHAN> cmask;
+#endif
 
   int i;
   ap_uint<NCLSTR> maskEnergy, maskMult, mask;
@@ -106,6 +157,15 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
 	d[j*N1+5]  = fifo.energy05;
   }
 
+
+  /* channel mask */
+#ifdef OUT48
+  dmask = 0;
+  for(i=0; i<NCHAN; i++)
+  {
+	if(d[i]>strip_threshold) dmask(i,i) = 1;
+  }
+#endif
 
   /* clusters energy sums */
 
@@ -187,7 +247,9 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
 
 
   /* trigger solution */
-
+#ifdef OUT48
+  cmask = 0;
+#endif
   maskEnergy = 0;
   maskMult = 0;
   for(i=0; i<NCLSTR; i++)
@@ -198,6 +260,11 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
 #ifdef DEBUG
       printf("cluster[%d]: energy=%d\n",i,(uint16_t)clusters[i]);
 #endif
+
+#ifdef OUT48
+      for(int j=0; j<4; j++) cmask(cl2d[i][j],cl2d[i][j]) = 1;
+#endif
+
 	}
     if(mult[i] > mult_threshold)
 	{
@@ -209,9 +276,16 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
   }
   mask = maskEnergy & maskMult;
 
+#ifdef OUT48
+  output = dmask & mask;
+#else
+  output = mask;
+#endif
+
+  /* output stream */
 
   HTCCHit fifo1;
-  fifo1.output = mask;
+  fifo1.output = output;
   s_hit.write(fifo1);
 
 }

@@ -84,7 +84,7 @@ class MessageActionHist : public MessageAction {
       recv >> packed >> hist.id >> hist.entries >> hist.ntitle >> title;
       hist.title = strdup(title.c_str());
 
-	  std::cout<<"ntitle="<<hist.ntitle<<" title="<<hist.title<<std::endl;
+	  std::cout<<"id="<<hist.id<<" ntitle="<<hist.ntitle<<" title="<<hist.title<<std::endl;
 
       recv >> hist.nbinx >> hist.xmin >> hist.xmax >> hist.xunderflow >> hist.xoverflow >> hist.nbiny;
 

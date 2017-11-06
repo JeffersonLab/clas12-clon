@@ -1,4 +1,6 @@
 
+/* ftoflib.cc */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -33,35 +35,38 @@ static int nsb[21]; /* NSB */
 
 
 void
-ftofhiteventreader(hls::stream<eventdata_t> &event_stream, FTOFHit &hit, uint32_t *bufout)
+ftofhiteventreader(hls::stream<eventdata3_t> &event_stream, FTOFHit_8slices &hit, uint32_t *bufout)
 {
-  eventdata_t eventdata;
-  uint32_t data_end, word_first, tag, inst, view, data, *bufptr = bufout;
+  eventdata3_t eventdata;
+  uint32_t data_end, word_first, tag, inst, view, data, *bufptr = bufout + 1;
   int j;
   while(1)
   {
-    if(event_stream.empty()) {printf("ftofhiteventreader: EMPTY STREAM ERROR1\n");break;}
+    if(event_stream.empty())
+    {
+      bufout[0] = 0;
+      printf("ftofhiteventreader: EMPTY STREAM ERROR1\n");
+      break;
+    }
+
     eventdata = event_stream.read();
-    *bufptr++ = eventdata.data;
+    if(eventdata.end == 1) /* 0 for all words except last one when it is 1 */
+    {
+      bufout[0] = bufptr - bufout - 1;
+      printf("ftofhiteventreader: END_OF_DATA\n");
+      break;
+    }
 
-    if(eventdata.end == 1) break;
+    *bufptr++ = eventdata.data[0];  
+    word_first = eventdata.data[0](31,31); /* 1 for the first word in hit, 0 for followings */
+    tag = eventdata.data[0](30,27); /* must be 'FTOFHIT_TAG' */
+    j = eventdata.data[0](18,16); /* 3 lowest bits of timing */
 
-    data_end = eventdata.end;           /* 0 for all words except last one when it is 1 */
-    word_first = eventdata.data(31,31); /* 1 for the first word in hit, 0 for followings */
-    tag = eventdata.data(30,27); /* must be 'FTOFHIT_TAG' */
-    j = eventdata.data(7,0);
+    *bufptr++ = eventdata.data[1];
+	hit.output[j](61,31) = eventdata.data[1](30,0);
 
-    if(event_stream.empty()) {printf("ftofhiteventreader: EMPTY STREAM ERROR2\n");break;}
-    eventdata = event_stream.read();
-    *bufptr++ = eventdata.data;
-    data_end = eventdata.end;
-	hit.output[j](61,32) = eventdata.data(29,0);
-
-    if(event_stream.empty()) {printf("ftofhiteventreader: EMPTY STREAM ERROR2\n");break;}
-    eventdata = event_stream.read();
-    *bufptr++ = eventdata.data;
-    data_end = eventdata.end;
-	hit.output[j](31,0) = eventdata.data(31,0);
+    *bufptr++ = eventdata.data[2];
+	hit.output[j](30,0) = eventdata.data[2](30,0);
   }
 
 }
@@ -69,9 +74,9 @@ ftofhiteventreader(hls::stream<eventdata_t> &event_stream, FTOFHit &hit, uint32_
 
 
 void
-ftof_buf_ram_to_event_buf_ram(hit_ram_t buf_ram[256], event_ram_t event_buf_ram[2048])
+ftof_buf_ram_to_event_buf_ram(hit_ram_t buf_ram[512], event_ram_t event_buf_ram[4096])
 {
-  for(int i=0; i<256; i++)
+  for(int i=0; i<512; i++)
   {
     event_buf_ram[i*8+0].output = buf_ram[i].output[0];
     event_buf_ram[i*8+1].output = buf_ram[i].output[1];
@@ -87,8 +92,9 @@ ftof_buf_ram_to_event_buf_ram(hit_ram_t buf_ram[256], event_ram_t event_buf_ram[
 
 
 
+static trig_t trig; /* assumed to be cleaned up because of 'static' */
 
-int
+void
 ftoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
 {
   int status, ret, sec;
@@ -98,54 +104,58 @@ ftoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
   ap_uint<16> threshold[3] = {threshold_[0], threshold_[1], threshold_[2]};
   nframe_t nframes = 1;
 
-  hls::stream<fadc_16ch_t> s_fadc_words[NFADCS];
-  hls::stream<FTOFHit> s_hits[NH_READS];
-  FTOFHit hit_tmp;
+  hls::stream<fadc_16ch_t> s_fadc_words[NSLOT];
+  hls::stream<fadc_256ch_t> s_fadcs;
+  hls::stream<FTOFHit_8slices> s_hits;
+  FTOFHit_8slices hit_tmp;
   volatile ap_uint<1> hit_scaler_inc;
 
   hls::stream<trig_t> trig_stream;
-  hit_ram_t buf_ram[256];
-  event_ram_t event_buf_ram[2048];
-  hls::stream<eventdata_t> event_stream;
-  FTOFHit hit;
+  hit_ram_t buf_ram[512];
+  event_ram_t event_buf_ram[4096];
+  hls::stream<eventdata3_t> event_stream;
+  FTOFHit_8slices hit;
 
   uint32_t bufout[2048];
 
   int detector = FTOF;
-  int nslot = 12;
-
-
-
 
   for(sec=0; sec<NSECTOR; sec++)
   {
     ret = fadcs(bufptr, threshold[0], sec, detector, s_fadc_words, 0, 0, &iev, &timestamp);
     if(ret<=0) continue;
 
+    trig.t_stop = trig.t_start + MAXTIMES*NH_READS; /* set readout window MAXTIMES*32ns in 4ns ticks */
+    trig_stream.write(trig);
+
     for(int it=0; it<MAXTIMES; it++)
     {
-      ftof(threshold, nframes, s_fadc_words, s_hits, buf_ram);
+      fadcs_to_onestream(NSLOT, s_fadc_words, s_fadcs);
+      ftof(threshold, nframes, s_fadcs, s_hits, hit_scaler_inc, buf_ram);
 
       /* read hits to avoid 'leftover' warnings */
-      for(int i=0; i<NH_READS; i++) hit_tmp = s_hits[i].read();
-
-      ftof_buf_ram_to_event_buf_ram(buf_ram, event_buf_ram);
-      ftofhiteventwriter(trig_stream, event_stream, event_buf_ram);
-      ftofhiteventreader(event_stream, hit, bufout);
+      hit_tmp = s_hits.read();
     }
 
-    if(bufout[0]>0)
+    ftof_buf_ram_to_event_buf_ram(buf_ram, event_buf_ram);
+    ftofhiteventwriter(trig_stream, event_stream, event_buf_ram);
+    ftofhiteventreader(event_stream, hit, bufout);
+
+    for(int i=0; i<bufout[0]; i++) printf("bufout[%d]=0x%08x\n",i,bufout[i]);
+
+    if(bufout[0]>0) /*bufout contains something */
 	{
-      int fragtag = 95+sec;
+      int fragtag = 60094+sec; /* ftof vtp rocid range is 94-99 */
       int banktag = 0xe122;
       trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
       trigbank_write(bufout);
       trigbank_close();
 	}
 
+
+    trig.t_start += MAXTIMES*8; /* in preparation for next event, step up MAXTIMES*32ns in 4ns ticks */
   }
 
 
-
-  return(0);
+  return;
 }

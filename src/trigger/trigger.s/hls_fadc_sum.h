@@ -16,6 +16,8 @@
 #define HTCCHIT_TAG    0x6
 #define FTCLUSTER_TAG  0x7
 #define FTOFHIT_TAG    0x8
+#define CTOFHIT_TAG    0x9
+#define CNDHIT_TAG     0xA
 
 typedef struct
 {
@@ -83,6 +85,12 @@ typedef struct
 
 } fadc_16ch_t;
 
+typedef struct
+{
+  fadc_16ch_t fadc[NFADCS];
+
+} fadc_256ch_t;
+
 /* stream to initiate readout */
 typedef struct
 {
@@ -96,5 +104,11 @@ typedef struct
   ap_uint<32> data;
   ap_uint<1>  end;
 } eventdata_t;
+
+typedef struct
+{
+  ap_uint<32> data[3];
+  ap_uint<1>  end;
+} eventdata3_t;
 
 #endif

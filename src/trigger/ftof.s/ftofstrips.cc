@@ -19,12 +19,12 @@ using namespace std;
 #include "ftoflib.h"
 
 #define TRANSLATE(ch_m) \
-      energy = fadcs.e##ch_m; \
+      energy = fadcs.fadc[isl].e##ch_m; \
       chan = ch_m; \
       lay    = adclayer[isl][chan] - 1; \
       str    = adcstrip[isl][chan] - 1; \
       lr     = adclr[isl][chan] - 1; \
-      timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.t##ch_m) : 8); /* error in '?' without (uint16_t) ...*/ \
+      timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].t##ch_m) : 8); /* error in '?' without (uint16_t) ...*/ \
       if(lay==0) timetmp[lr][str] = timexxx
 
 
@@ -32,15 +32,11 @@ using namespace std;
 
 /* reads one 32-ns timing slice */
 void
-ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS], hls::stream<FTOFStrip_s> s_strip[NH_READS])
+ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, FTOFStrip_s s_strip[NH_READS])
 {
-#pragma HLS INTERFACE ap_stable port=strip_threshold
-#pragma HLS DATA_PACK variable=s_fadc_words
-#pragma HLS INTERFACE axis register both port=s_fadc_words
-#pragma HLS ARRAY_PARTITION variable=s_fadc_words complete dim=1
-#pragma HLS DATA_PACK variable=s_strip
-#pragma HLS INTERFACE axis register both port=s_strip
-#pragma HLS ARRAY_PARTITION variable=s_strip complete dim=1
+//#pragma HLS INTERFACE ap_stable port=strip_threshold
+//#pragma HLS DATA_PACK variable=s_fadcs
+//#pragma HLS INTERFACE axis register both port=s_fadcs
 #pragma HLS PIPELINE II=1
 
   ap_uint<13> energy;
@@ -49,9 +45,7 @@ ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_16ch_t> s_fadc_words[NF
   ap_uint<6> str; /*0-61*/
   ap_uint<1> lr; /*0-1*/
 
-  int nslot=12;
-
-  fadc_16ch_t fadcs;
+  fadc_256ch_t fadcs;
 
   ap_uint<4> timexxx;
 
@@ -79,9 +73,9 @@ ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_16ch_t> s_fadc_words[NF
   /********************************************************************/
   /* get FADC data for 32-ns interval, and fill timetmp[2][NSTRIP] array */
 
-  for(int isl=0; isl<nslot; isl++)
+  fadcs = s_fadcs.read();
+  for(int isl=0; isl<NSLOT; isl++)
   {
-	fadcs = s_fadc_words[isl].read();
     TRANSLATE(0);
     TRANSLATE(1);
     TRANSLATE(2);
@@ -107,8 +101,6 @@ ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_16ch_t> s_fadc_words[NF
 
   /* filling 4ns-slices using 3 timing bits, and send it over - one slice per stream, all in parallel - we are 32ns domain ! */
 
-  FTOFStrip_s fifo;
-
   for(int j=0; j<NH_READS; j++)
   {
     for(int k=0; k<NLR; k++)
@@ -120,9 +112,8 @@ ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_16ch_t> s_fadc_words[NF
       }
     }
 
-    fifo.outL = out[0];
-    fifo.outR = out[1];
-    s_strip[j].write(fifo);
+    s_strip[j].outL = out[0];
+    s_strip[j].outR = out[1];
   }
 
 

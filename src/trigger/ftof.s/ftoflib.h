@@ -27,7 +27,7 @@ extern "C" {
 
 /* strip persistency */
 #define NPER 8
-typedef ap_uint<3> nframe_t;
+typedef ap_uint<6> nframe_t;
 
 
 
@@ -43,8 +43,13 @@ typedef struct ftofstrip_s
 
 typedef struct ftofhit
 {
-  ap_uint<NSTRIP> output[NPER];
+  ap_uint<NSTRIP> output;
 } FTOFHit;
+
+typedef struct
+{
+  ap_uint<NSTRIP> output[NPER];
+} FTOFHit_8slices;
 
 
 
@@ -68,16 +73,15 @@ typedef struct
 
 
 
-int ftoflib(int handler);
-void ftofhiteventreader(hls::stream<eventdata_t> &event_stream, FTOFHit &hit, uint32_t *bufout);
+void ftofhiteventreader(hls::stream<eventdata_t> &event_stream, FTOFHit_8slices &hit, uint32_t *bufout);
 
-void ftof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS], hls::stream<FTOFHit> s_hits[NH_READS], hit_ram_t buf_ram[512]);
+void ftof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<FTOFHit_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512]);
 
-void ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_16ch_t> s_fadc_words[NSLOT], hls::stream<FTOFStrip_s> s_strip[NH_READS]);
-void ftofhit(nframe_t nframes, hls::stream<FTOFStrip_s> s_strip[NH_READS], hls::stream<FTOFHit> s_hit[NH_READS]);
-void ftofhitfanout(hls::stream<FTOFHit> s_hit[NH_READS], hls::stream<FTOFHit> s_hit1[NH_READS], hls::stream<FTOFHit> s_hit2[NH_READS], volatile ap_uint<1> &hit_scaler_inc);
-void ftofhiteventfiller(hls::stream<FTOFHit> s_hitin[NH_READS], hit_ram_t buf_ram[256]);
-void ftofhiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, event_ram_t buf_ram_read[2048]);
+void ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, FTOFStrip_s s_strip[NH_READS]);
+void ftofhit(nframe_t nframes, FTOFStrip_s s_strip[NH_READS], FTOFHit s_hit[NH_READS]);
+void ftofhitfanout(FTOFHit s_hit[NH_READS], hls::stream<FTOFHit_8slices> &s_hits, FTOFHit s_hit2[NH_READS], volatile ap_uint<1> &hit_scaler_inc);
+void ftofhiteventfiller(FTOFHit s_hitin[NH_READS], hit_ram_t buf_ram[512]);
+void ftofhiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata3_t> &event_stream, event_ram_t buf_ram_read[2048]);
 
 #ifdef	__cplusplus
 }

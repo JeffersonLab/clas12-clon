@@ -38,15 +38,9 @@ using namespace std;
 /* 1.96/46/8/0%/0%/(10270)1%/(5734)1% II=8 */
 
 void
-ftofhit(nframe_t nframes, hls::stream<FTOFStrip_s> s_strip[NH_READS], hls::stream<FTOFHit> s_hit[NH_READS])
+ftofhit(nframe_t nframes, FTOFStrip_s s_strip[NH_READS], FTOFHit s_hit[NH_READS])
 {
-#pragma HLS INTERFACE ap_stable port=nframes
-#pragma HLS DATA_PACK variable=s_strip
-#pragma HLS INTERFACE axis register both port=s_strip
-#pragma HLS ARRAY_PARTITION variable=s_strip complete dim=1
-#pragma HLS DATA_PACK variable=s_hit
-#pragma HLS INTERFACE axis register both port=s_hit
-#pragma HLS ARRAY_PARTITION variable=s_hit complete dim=1
+//#pragma HLS INTERFACE ap_stable port=nframes
 #pragma HLS PIPELINE II=1
 
   static ap_uint<NSTRIP> outL[NPIPE], outR[NPIPE];
@@ -64,10 +58,8 @@ ftofhit(nframe_t nframes, hls::stream<FTOFStrip_s> s_strip[NH_READS], hls::strea
   /* get new data */
   for(int j=0; j<NH_READS; j++)
   {
-    FTOFStrip_s fifo;
-    fifo = s_strip[j].read();
-    outL[j]  = fifo.outL;
-    outR[j]  = fifo.outR;
+    outL[j]  = s_strip[j].outL;
+    outR[j]  = s_strip[j].outR;
   }
 
 
@@ -83,11 +75,8 @@ ftofhit(nframe_t nframes, hls::stream<FTOFStrip_s> s_strip[NH_READS], hls::strea
 
 
   /* send trigger solution */
-
-  FTOFHit fifo1;
-  for(int j=0; j<8; j++)
+  for(int j=0; j<NH_READS; j++)
   {
-    fifo1.output[j] = output[j];
-    s_hit[j].write(fifo1);
+    s_hit[j].output = output[j];
   }
 }

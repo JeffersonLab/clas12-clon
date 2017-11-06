@@ -726,3 +726,17 @@ fadcs_32ns_to_4ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_2ch_t> &
   fadcs_out.t1 = fadcs_in.t15;
   s_fadc_out.write(fadcs_out);
 }
+
+void
+fadcs_to_onestream(int nslot, hls::stream<fadc_16ch_t> s_fadc_in[NFADCS], hls::stream<fadc_256ch_t> &s_fadc_out)
+{
+  fadc_16ch_t fadcs_in;
+  fadc_256ch_t fadcs_out;
+
+  for(int ii=0; ii<nslot; ii++)
+  {
+    fadcs_in = s_fadc_in[ii].read();
+	fadcs_out.fadc[ii] = fadcs_in;
+  }
+  s_fadc_out.write(fadcs_out);
+}

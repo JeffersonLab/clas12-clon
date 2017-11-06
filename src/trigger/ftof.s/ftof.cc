@@ -15,31 +15,32 @@ using namespace std;
 
 #include "hls_fadc_sum.h"
 
-
-
-
 void
-ftof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS], hls::stream<FTOFHit> s_hits1[NH_READS], hit_ram_t buf_ram[512])
+ftof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<FTOFHit_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512])
 {
 #pragma HLS INTERFACE ap_stable port=threshold
-#pragma HLS DATA_PACK variable=s_fadc_words
-#pragma HLS INTERFACE axis register both port=s_fadc_words
-#pragma HLS ARRAY_PARTITION variable=s_fadc_words complete dim=1
-#pragma HLS DATA_PACK variable=s_hits1
-#pragma HLS INTERFACE axis register both port=s_hits1
-#pragma HLS ARRAY_PARTITION variable=s_hits1 complete dim=1
+#pragma HLS ARRAY_PARTITION variable=threshold dim=1
+#pragma HLS INTERFACE ap_stable port=nframes
+
+#pragma HLS DATA_PACK variable=s_fadcs
+#pragma HLS INTERFACE axis register both port=s_fadcs
+
+#pragma HLS DATA_PACK variable=s_hits
+#pragma HLS INTERFACE axis register both port=s_hits
+
+#pragma HLS INTERFACE ap_none port=hit_scaler_inc
+
 #pragma HLS DATA_PACK variable=buf_ram
+//#pragma HLS ARRAY_PARTITION variable=buf_ram block factor=8 dim=1
+
 #pragma HLS PIPELINE II=1
 
-  ap_uint<16> strip_threshold = threshold[0];
+  FTOFStrip_s s_strip[NH_READS];
+  FTOFHit hit1[NH_READS];
+  FTOFHit hit2[NH_READS];
 
-  hls::stream<FTOFStrip_s> s_strip[NH_READS];
-  hls::stream<FTOFHit> s_hits[NH_READS];
-  hls::stream<FTOFHit> s_hits2[NH_READS];
-  volatile ap_uint<1> hit_scaler_inc;
-
-  ftofstrips(strip_threshold, s_fadc_words, s_strip);
-  ftofhit(nframes, s_strip, s_hits);
-  ftofhitfanout(s_hits, s_hits1, s_hits2, hit_scaler_inc);
-  ftofhiteventfiller(s_hits2, buf_ram);
+  ftofstrips(threshold[0], s_fadcs, s_strip);
+  ftofhit(nframes, s_strip, hit1);
+  ftofhitfanout(hit1, s_hits, hit2, hit_scaler_inc);
+  ftofhiteventfiller(hit2, buf_ram);
 }
