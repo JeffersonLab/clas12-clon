@@ -30,11 +30,10 @@ using namespace std;
 #define MIN(a,b)    (a < b ? a : b)
 #define ABS(x)      ((x) < 0 ? -(x) : (x))
 
-#define OUT48
 
 /*xc7vx550tffg1158-1*/
 
-#ifdef OUT48
+
 static ap_uint<6> cl2d[NCLSTR][4] = {
   0, 1, 12,13,
   1, 2, 13,14,
@@ -75,7 +74,7 @@ static ap_uint<6> cl2d[NCLSTR][4] = {
   34,35,46,47,
   35,24,47,36
 };
-#endif
+
 
 /* High Threshold Cherenkov Counter:
 
@@ -127,11 +126,8 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
 
   /* to become output */
   ap_uint<NCHAN> output;
-
-#ifdef OUT48
   ap_uint<NCHAN> dmask;
   ap_uint<NCHAN> cmask;
-#endif
 
   int i;
   ap_uint<NCLSTR> maskEnergy, maskMult, mask;
@@ -142,6 +138,10 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
 #pragma HLS ARRAY_PARTITION variable=mult complete dim=1
   ap_uint<16> clusters[NCLSTR];
 #pragma HLS ARRAY_PARTITION variable=clusters complete dim=1
+
+#ifdef DEBUG
+  cout<<endl<<"htcchit reached: strip_threshold="<<strip_threshold<<" mult_threshold="<<mult_threshold<<" cluster_threshold="<<cluster_threshold<<endl;
+#endif
 
   HTCCStrip_s fifo;
 
@@ -159,13 +159,21 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
 
 
   /* channel mask */
-#ifdef OUT48
   dmask = 0;
   for(i=0; i<NCHAN; i++)
   {
-	if(d[i]>strip_threshold) dmask(i,i) = 1;
-  }
+	if(d[i] >= strip_threshold)
+	{
+      dmask(i,i) = 1;
+#ifdef DEBUG
+      printf("htcchit: chan=%d, energy=%d\n",i,(uint16_t)d[i]);
 #endif
+	}
+  }
+#ifdef DEBUG
+  cout<<"htcchit: dmask=0x"<<hex<<dmask<<dec<<endl;
+#endif
+
 
   /* clusters energy sums */
 
@@ -211,75 +219,93 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
   for(i=0; i<NCLSTR; i++) mult[i]=0;
   for(i=0; i<11; i++)
   {
-	if(d[i   ] > strip_threshold) mult[i] ++;
-	if(d[i+ 1] > strip_threshold) mult[i] ++;
-	if(d[i+12] > strip_threshold) mult[i] ++;
-	if(d[i+13] > strip_threshold) mult[i] ++;
+	if(d[i   ] >= strip_threshold) mult[i] ++;
+	if(d[i+ 1] >= strip_threshold) mult[i] ++;
+	if(d[i+12] >= strip_threshold) mult[i] ++;
+	if(d[i+13] >= strip_threshold) mult[i] ++;
   }
-  if(d[11] > strip_threshold) mult[11] ++;
-  if(d[12] > strip_threshold) mult[11] ++;
-  if(d[23] > strip_threshold) mult[11] ++;
-  if(d[ 0] > strip_threshold) mult[11] ++;
+  if(d[11] >= strip_threshold) mult[11] ++;
+  if(d[12] >= strip_threshold) mult[11] ++;
+  if(d[23] >= strip_threshold) mult[11] ++;
+  if(d[ 0] >= strip_threshold) mult[11] ++;
 
   for(i=12; i<23; i++)
   {
-	if(d[i   ] > strip_threshold) mult[i] ++;
-	if(d[i+ 1] > strip_threshold) mult[i] ++;
-	if(d[i+12] > strip_threshold) mult[i] ++;
-	if(d[i+13] > strip_threshold) mult[i] ++;
+	if(d[i   ] >= strip_threshold) mult[i] ++;
+	if(d[i+ 1] >= strip_threshold) mult[i] ++;
+	if(d[i+12] >= strip_threshold) mult[i] ++;
+	if(d[i+13] >= strip_threshold) mult[i] ++;
   }
-  if(d[23] > strip_threshold) mult[23] ++;
-  if(d[24] > strip_threshold) mult[23] ++;
-  if(d[35] > strip_threshold) mult[23] ++;
-  if(d[12] > strip_threshold) mult[23] ++;
+  if(d[23] >= strip_threshold) mult[23] ++;
+  if(d[24] >= strip_threshold) mult[23] ++;
+  if(d[35] >= strip_threshold) mult[23] ++;
+  if(d[12] >= strip_threshold) mult[23] ++;
 
   for(i=24; i<35; i++)
   {
-	if(d[i   ] > strip_threshold) mult[i] ++;
-	if(d[i+ 1] > strip_threshold) mult[i] ++;
-	if(d[i+12] > strip_threshold) mult[i] ++;
-	if(d[i+13] > strip_threshold) mult[i] ++;
+	if(d[i   ] >= strip_threshold) mult[i] ++;
+	if(d[i+ 1] >= strip_threshold) mult[i] ++;
+	if(d[i+12] >= strip_threshold) mult[i] ++;
+	if(d[i+13] >= strip_threshold) mult[i] ++;
   }
-  if(d[35] > strip_threshold) mult[35] ++;
-  if(d[36] > strip_threshold) mult[35] ++;
-  if(d[47] > strip_threshold) mult[35] ++;
-  if(d[24] > strip_threshold) mult[35] ++;
+  if(d[35] >= strip_threshold) mult[35] ++;
+  if(d[36] >= strip_threshold) mult[35] ++;
+  if(d[47] >= strip_threshold) mult[35] ++;
+  if(d[24] >= strip_threshold) mult[35] ++;
 
 
   /* trigger solution */
-#ifdef OUT48
-  cmask = 0;
-#endif
   maskEnergy = 0;
   maskMult = 0;
   for(i=0; i<NCLSTR; i++)
   {
-    if(clusters[i] > cluster_threshold)
+    if(clusters[i] >= cluster_threshold)
 	{
       maskEnergy |= (1<<i);
 #ifdef DEBUG
-      printf("cluster[%d]: energy=%d\n",i,(uint16_t)clusters[i]);
+      printf("htcchit: cluster[%d]: energy=%d\n",i,(uint16_t)clusters[i]);
 #endif
-
-#ifdef OUT48
-      for(int j=0; j<4; j++) cmask(cl2d[i][j],cl2d[i][j]) = 1;
-#endif
-
 	}
-    if(mult[i] > mult_threshold)
+    if(mult[i] >= mult_threshold)
 	{
       maskMult |= (1<<i);
 #ifdef DEBUG
-      printf("cluster[%d]: mult=%d\n",i,(uint16_t)mult[i]);
+      printf("htcchit: cluster[%d]: mult=%d\n",i,(uint16_t)mult[i]);
 #endif
 	}
   }
   mask = maskEnergy & maskMult;
+#ifdef DEBUG
+  cout<<"htcchit: maskEnergy=0x"<<hex<<maskEnergy<<dec<<endl;
+  cout<<"htcchit:   maskMult=0x"<<hex<<maskMult<<dec<<endl;
+  cout<<"htcchit:       mask=0x"<<hex<<mask<<dec<<endl;
+#endif
 
-#ifdef OUT48
-  output = dmask & mask;
-#else
-  output = mask;
+  cmask = 0;
+#ifdef DEBUG
+  cout<<"htcchit: CMASK BEFOR="<<hex<<cmask<<dec<<endl;
+#endif
+  for(int i=0; i<NCLSTR; i++)
+  {
+    if( (mask>>i)&0x1 )
+	{
+      for(int j=0; j<4; j++)
+	  {
+        cmask(cl2d[i][j],cl2d[i][j]) = 1;
+#ifdef DEBUG
+        cout<<"FOUND CLUSTER "<<i<<" -> ADD BIT " << cl2d[i][j] <<" to CMASK" << endl;
+#endif
+	  }
+	}
+  }
+#ifdef DEBUG
+  cout<<"htcchit: CMASK AFTER="<<hex<<cmask<<dec<<endl;
+#endif
+
+  output = dmask & cmask;
+
+#ifdef DEBUG
+  cout<<"htcchit: output="<<hex<<output<<dec<<endl<<endl;
 #endif
 
   /* output stream */

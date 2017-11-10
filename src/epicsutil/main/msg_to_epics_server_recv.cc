@@ -44,7 +44,7 @@ main()
 
   // connect to ipc server
   //server.init(getenv("EXPID"), NULL, NULL, "*", NULL, "*");
-  server.init(NULL, NULL, NULL, "HallB_TALK", NULL, "HallB_TALK");
+  server.init(NULL, NULL, NULL, "HallB_DAQ", NULL, "HallB_DAQ");
 
   MessageActionEPICS *epics = new MessageActionEPICS(npvs,pvNames,pvSizes,pPV);
   epics->set_debug(debug);

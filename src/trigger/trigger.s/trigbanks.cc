@@ -35,10 +35,10 @@ trigbank_open(uint32_t *bufptr, int fragtag, int banktag, int iev, unsigned long
   ind = evLinkFrag(bufptr, fragtag, FRAGNUM);
   if(ind<=0)
   {
-    printf("Fragment %d does not exist - create one\n",fragtag);
+    /*printf("Fragment %d does not exist - create one\n",fragtag);*/
     ind = evOpenFrag(bufptr, fragtag, FRAGNUM);
     if(ind<=0) {printf("ERROR: cannot create fragment %d - exit\n",fragtag); exit(0);}
-    else printf("Created fragment fragtag=%d fragnum=%d\n",fragtag, FRAGNUM);
+    else /*printf("Created fragment fragtag=%d fragnum=%d\n",fragtag, FRAGNUM)*/;
   }
   else
   {
@@ -47,7 +47,7 @@ trigbank_open(uint32_t *bufptr, int fragtag, int banktag, int iev, unsigned long
   }
 
   ret = evOpenBank(bufptr, fragtag, FRAGNUM, banktag, BANKNUM, BANKTYP, "", &ind_data);
-  printf("evOpenBank returns = %d, ind_data=%d (fragtag=%d, fragnum=%d, banktag=%d, banknum=%d)\n",ret,ind_data, fragtag, FRAGNUM, banktag, BANKNUM);
+  /*printf("evOpenBank returns = %d, ind_data=%d (fragtag=%d, fragnum=%d, banktag=%d, banknum=%d)\n",ret,ind_data, fragtag, FRAGNUM, banktag, BANKNUM);*/
   b08out = (unsigned char *)&bufptr[ind_data];
 
   /*0x12 - event header*/
@@ -56,12 +56,12 @@ trigbank_open(uint32_t *bufptr, int fragtag, int banktag, int iev, unsigned long
 
   /*0x13 - time stamp*/
   word = (timestamp>>24)&0xFFFFFF; /* OR OPPOSITE ??? */
-  printf("word1=0x%06x\n",word);fflush(stdout);
+  /*printf("trigbank_open: word1=0x%06x\n",word);fflush(stdout);*/
   word = (0x13<<27) + word;;
   PUT32(word);
 
   word = timestamp&0xFFFFFF; /* OR OPPOSITE ??? */
-  printf("word2=0x%06x\n",word);fflush(stdout);
+  /*printf("trigbank_open: word2=0x%06x\n",word);fflush(stdout);*/
   PUT32(word);
 
   bufptr_save = bufptr;
@@ -80,9 +80,9 @@ trigbank_write(uint32_t *data)
 
   b08out = b08out_save;
 
-  for(int i=1; i<data[0]; i++)
+  for(int i=1; i<=data[0]; i++)
   {
-	printf("data[%d]=0x%08x\n",i,data[i]);fflush(stdout);
+	/*printf("trigbank_write: data[%d]=0x%08x\n",i,data[i]);fflush(stdout);*/
     PUT32(data[i]);
   }
 
@@ -95,7 +95,7 @@ trigbank_write(uint32_t *data)
 int
 trigbank_close()
 {
-  printf("evClose() reached\n");fflush(stdout);
+  /*printf("evClose() reached\n");fflush(stdout);*/
   return(evCloseBank(bufptr_save, fragtag_save, FRAGNUM, banktag_save, BANKNUM, b08out_save));
 }
 

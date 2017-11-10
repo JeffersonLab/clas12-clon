@@ -31,11 +31,11 @@ using namespace std;
 #define MAX(a,b)    (a > b ? a : b)
 #define MIN(a,b)    (a < b ? a : b)
 
-  static int nslots[NDET] = {7,7,14,12,14,3,12,0,0,11,10,15};
+static int nslots[NDET] = {7,7,14,12,14,3,12,0,0,11,10,15};
 static int slot2isl[NDET][22] = {
   -1,-1,-1, 0, 1, 2, 3, 4, 5, 6,-1, -1,-1, -1,-1,-1,-1,-1,-1,-1,-1,-1, /* ECAL_IN slots: 3-9 */
   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 0, -1,-1,  1, 2, 3, 4, 5, 6,-1,-1,-1, /* ECAL_OUT slots: 10, 13-18 */
-  -1,-1,-1, 0, 1, 2, 3, 4, 5, 6, 0, -1,-1,  1, 2, 3, 4, 5, 6,-1,-1,-1, /* ECAL slots: 3-10, 13-18 */
+  -1,-1,-1, 0, 1, 2, 3, 4, 5, 6, 7, -1,-1,  8, 9,10,11,12,13,-1,-1,-1, /* ECAL slots: 3-10, 13-18 */
   -1,-1,-1, 0, 1, 2, 3, 4, 5, 6, 7, -1,-1,  8, 9,10,11,-1,-1,-1,-1,-1, /* PCAL slots: 3-10, 13-16 */
   -1,-1,-1, 0, 1, 2, 3, 4, 5, 6,-1, -1,-1,  7, 8, 9,10,11,12,13,-1,-1, /* DCRB slots: 3-9, 14-20 */
   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, -1,-1,  0, 1, 2,-1,-1,-1,-1,-1,-1, /* HTCC slots: 13-15 */
@@ -562,7 +562,9 @@ TEMP for GEMC !!!*/
 
         /*mm = isample + (8-tt);*/ /* search for more pulses starting from the beginning of next 'it' */
         mm = isample + 8; /* search for more pulses starting 8 pulses from previois crossing */
+#ifdef DEBUG_0
         printf("search for next pulse starting from mm=%d\n",mm);
+#endif
 		goto search_for_next_pulse;
 
 

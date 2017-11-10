@@ -20,8 +20,8 @@ include $(CLON)/src/Makefile.include
 #-----------------------
 # customize definitions
 #-----------------------
-CFLAGS = -g
-CXXFLAGS = -g
+#CFLAGS = -g
+#CXXFLAGS = -g
 
 CLON_FLAGS += -I./$(MAIN).s \
 			-I./ec.s -I./pc.s -I./dc.s -I./htcc.s -I./ft.s -I./ftof.s -I./ctof.s \

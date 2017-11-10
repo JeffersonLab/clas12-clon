@@ -38,7 +38,7 @@ static int adcioecal_NOTUSED[22][16] = {
 };
 
 
-/* layer (U-V-W INNER) */
+/* layer (U-V-W INNER), outer the same but slots 10,13-18 */
 static int adclayerecal[7][16] = {
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /*slot 3*/
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /*slot 4*/
@@ -80,7 +80,7 @@ static int adclayerecal_NOTUSED[22][16] = {
 
 
 
-/*strip numbers INNER */
+/*strip numbers INNER, outer the same but slots 10,13-18 */
 static int adcstripecal[7][16] = {
   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16, /*slot 3*/
  17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32, /*slot 4*/

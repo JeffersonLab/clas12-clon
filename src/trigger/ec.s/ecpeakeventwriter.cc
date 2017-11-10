@@ -41,7 +41,7 @@ using namespace std;
 
 #endif
 
-#define DEBUG
+//#define DEBUG
 
 
 
@@ -59,7 +59,6 @@ ecpeakeventwriter(ap_uint<2> view, ap_uint<1> inst, hls::stream<trig_t> &trig_st
 #pragma HLS ARRAY_PARTITION variable=buf_ram_read block factor=4
   eventdata_t eventdata;
 
-/*#ifdef __SYNTHESIS__*/
   trig_t trig = trig_stream.read();
   ap_uint<11> w = (trig.t_stop - trig.t_start); /* readout window width */
   ap_uint<8> start_addr = trig.t_start.range(10,3); /* starting position in buf_ram_read[] */
@@ -70,10 +69,6 @@ ecpeakeventwriter(ap_uint<2> view, ap_uint<1> inst, hls::stream<trig_t> &trig_st
 #endif
 
   while(addr != stop_addr)
-/*#else
-  ap_uint<8> addr = 0;
-  ap_uint<8> start_addr = 0;
-#endif*/
   {
 #ifdef DEBUG
     cout << "-ecwriter-> addr="<<addr<<endl;
@@ -117,6 +112,3 @@ ecpeakeventwriter(ap_uint<2> view, ap_uint<1> inst, hls::stream<trig_t> &trig_st
   eventdata.end = 1;
   event_stream.write(eventdata);  
 }
-
-
-

@@ -20,8 +20,7 @@ using namespace std;
 #include "trigger.h"
 
 
-#define DEBUG_0
-#define DEBUG_3
+//#define DEBUG
 
 
 #define MAX(a,b)    (a > b ? a : b)
@@ -53,7 +52,7 @@ ftofhiteventreader(hls::stream<eventdata3_t> &event_stream, FTOFHit_8slices &hit
     if(eventdata.end == 1) /* 0 for all words except last one when it is 1 */
     {
       bufout[0] = bufptr - bufout - 1;
-      printf("ftofhiteventreader: END_OF_DATA\n");
+      /*printf("ftofhiteventreader: END_OF_DATA\n");*/
       break;
     }
 
@@ -140,9 +139,9 @@ ftoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
     ftof_buf_ram_to_event_buf_ram(buf_ram, event_buf_ram);
     ftofhiteventwriter(trig_stream, event_stream, event_buf_ram);
     ftofhiteventreader(event_stream, hit, bufout);
-
-    for(int i=0; i<bufout[0]; i++) printf("bufout[%d]=0x%08x\n",i,bufout[i]);
-
+#ifdef DEBUG
+    for(int i=0; i<=bufout[0]; i++) printf("FTOF bufout[%d]=0x%08x\n",i,bufout[i]);
+#endif
     if(bufout[0]>0) /*bufout contains something */
 	{
       int fragtag = 60094+sec; /* ftof vtp rocid range is 94-99 */

@@ -145,7 +145,7 @@ ecpeakeventreader(hls::stream<eventdata_t> &event_stream, ECPeak peak[NPEAK], ui
     if(eventdata.end == 1)
     {
       bufout[0] = bufptr - bufout - 1; /* do not count end_of_data */
-      printf("ecpeakeventreader: END_OF_DATA\n");
+      /*printf("ecpeakeventreader: END_OF_DATA\n");*/
       break;
     }
 
@@ -153,7 +153,7 @@ ecpeakeventreader(hls::stream<eventdata_t> &event_stream, ECPeak peak[NPEAK], ui
     data_end = eventdata.end;              /* 0 for all words except last one when it is 1 */
     word_first = eventdata.data(31,31);    /* 1 for the first word in peak, 0 for followings */
     tag = eventdata.data(30,27);           /* must be 'ECPEAK_TAG' */
-	printf("ecpeakeventreader[it=%d i=%d]: tag=%d\n",it,i,tag);
+	/*printf("ecpeakeventreader[it=%d i=%d]: tag=%d\n",it,i,tag);*/
     inst = eventdata.data(26,26);          /* instance */
     view = eventdata.data(25,24);          /* view */
     peak[i].strip1 = eventdata.data(13,7); /* first strip in peak (not in hardware) */
@@ -552,12 +552,13 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
   int detector = PCAL;
   int nslot = 12;
 #else
-  int detector = ECIN;
-  int nslot = 7;
+  int detector = /*ECIN*/ECAL;
+  int nslot = /*7*/14;
 #endif
 
   for(sec=0; sec<NSECTOR; sec++)
   {
+#ifdef DEBUG_0
 #ifdef USE_PCAL
 	cout<<"pclib: sec1="<<sec<<endl;
 	cout<<"pclib: threshold="<<threshold[0]<<" "<<threshold[1]<<" "<<threshold[2]<<endl;
@@ -565,16 +566,19 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 	cout<<"eclib: sec1="<<sec<<endl;
 	cout<<"eclib: threshold="<<threshold[0]<<" "<<threshold[1]<<" "<<threshold[2]<<endl;
 #endif
+#endif
 
     ret = fadcs(bufptr, threshold[0], sec, detector, s_fadcs, 0, 0, &iev, &timestamp);
 	if(ret<=0) continue;
 
     /* trig will be incremented for every sector, because 'static addr' in ...eventfill is common for all sectors ..*/
     for(int i=0; i<4; i++) trig[i].t_stop = trig[i].t_start + MAXTIMES*8; /* set readout window MAXTIMES*32ns in 4ns ticks */
+#ifdef DEBUG_0
 #ifdef USE_PCAL
     cout<<"-pclib-> t_start="<<trig[0].t_start<<" t_stop="<<trig[0].t_stop<<endl;
 #else
     cout<<"-eclib-> t_start="<<trig[0].t_start<<" t_stop="<<trig[0].t_stop<<endl;
+#endif
 #endif
     for(int i=0; i<4; i++)
     {
@@ -583,10 +587,12 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 
     for(it=0; it<MAXTIMES; it++) /*loop over timing slices */
 	{
+#ifdef DEBUG_0
 #ifdef USE_PCAL
  	  printf("pclib: sec = %d, timing slice = %d\n",sec,it);fflush(stdout);
 #else
  	  printf("eclib: sec = %d, timing slice = %d\n",sec,it);fflush(stdout);
+#endif
 #endif
 
 	  /* adjust to 8ns domain */
@@ -616,10 +622,11 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 	ecpeakeventreader(event_stream[0], peak[0], bufout0);
     ecpeakeventreader(event_stream[1], peak[1], bufout1);
     ecpeakeventreader(event_stream[2], peak[2], bufout2);
+#ifdef DEBUG_0
     for(ii=0; ii<NPEAK; ii++) if(peak[0][ii].energy>0) printf("U peak[%d]\n",ii);
     for(ii=0; ii<NPEAK; ii++) if(peak[1][ii].energy>0) printf("V peak[%d]\n",ii);
     for(ii=0; ii<NPEAK; ii++) if(peak[2][ii].energy>0) printf("W peak[%d]\n",ii);
-
+#endif
 
     /* extract hits */
     nhits=0;
@@ -629,11 +636,13 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
       if(hit[ii].energy>0)
 	  {
         nhits++;
+#ifdef DEBUG_0
         cout<<"eclib/pcal: hit["<<ii<<"]: energy="<<+hit[ii].energy;
         cout<<" coordU="<<+hit[ii].coord[0]<<"("<<((uint32_t)hit[ii].coord[0])/fview[0]<<"/"<<pcal_coord_to_strip(0, ((uint32_t)hit[ii].coord[0])/fview[0] )<<")";
         cout<<" coordV="<<+hit[ii].coord[1]<<"("<<((uint32_t)hit[ii].coord[1])/fview[1]<<"/"<<pcal_coord_to_strip(1, ((uint32_t)hit[ii].coord[1])/fview[1] )<<")";
         cout<<" coordW="<<+hit[ii].coord[2]<<"("<<((uint32_t)hit[ii].coord[2])/fview[2]<<"/"<<pcal_coord_to_strip(2, ((uint32_t)hit[ii].coord[2])/fview[2] )<<")";
         cout<<" ind="<<+hit[ii].ind<<" enU="<<+hit[ii].enpeak[0]<<" enV="<<+hit[ii].enpeak[1]<<" enW="<<+hit[ii].enpeak[2]<<endl;
+#endif
 	  }
 	}
 

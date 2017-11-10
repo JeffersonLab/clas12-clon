@@ -26,7 +26,7 @@ using namespace std;
 
 #endif
 
-#define DEBUG
+//#define DEBUG
 
 
 
@@ -89,7 +89,7 @@ ecpeakeventfiller(ap_uint<2> view, hls::stream<ECPeak_s> &s_peakin, peak_ram_t b
     peakin.coord  = fifo.coord; \
     peakin.strip1 = fifo.strip1; \
     peakin.stripn = fifo.stripn; \
-    cout << "-fill-> addr="<<addr<<"  energy="<<peakin.energy<<endl; \
+    /*cout << "-fill-> addr="<<addr<<"  energy="<<peakin.energy<<endl;*/ \
     buf_ram[i][addr].energy = peakin.energy; \
     buf_ram[i][addr].coord = peakin.coord; \
     buf_ram[i][addr].view = view_macro; \
@@ -102,31 +102,37 @@ void
 ecpeakeventfiller0(hls::stream<ECPeak_s> &s_peakin, peak_ram_t buf_ram[NPEAK][256])
 {
   ECPEAKEVENTFILLER(0);
+  /*
 #ifdef USE_PCAL
   cout << "-pcfill0-> addr="<<addr-1<<endl;
 #else
   cout << "-ecfill0-> addr="<<addr-1<<endl;
 #endif
+  */
 }
 void
 ecpeakeventfiller1(hls::stream<ECPeak_s> &s_peakin, peak_ram_t buf_ram[NPEAK][256])
 {
   ECPEAKEVENTFILLER(1);
+  /*
 #ifdef USE_PCAL
   cout << "-pcfill1-> addr="<<addr-1<<endl;
 #else
   cout << "-ecfill1-> addr="<<addr-1<<endl;
 #endif
+  */
 }
 void
 ecpeakeventfiller2(hls::stream<ECPeak_s> &s_peakin, peak_ram_t buf_ram[NPEAK][256])
 {
   ECPEAKEVENTFILLER(2);
+  /*
 #ifdef USE_PCAL
   cout << "-pcfill2-> addr="<<addr-1<<endl;
 #else
   cout << "-ecfill2-> addr="<<addr-1<<endl;
 #endif
+  */
 }
 
 #endif

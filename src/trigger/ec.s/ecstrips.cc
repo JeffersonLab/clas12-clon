@@ -374,6 +374,55 @@ ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADC
 #ifdef DEBUG
       cout<<"   layer="<<layer<<" str="<<str<<" -> e3="<<energytmp[layer][str]<<endl;
 #endif
+
+
+
+	  /* for ECAL only, add outer part to inner; translation table the same but slots 7-13 (inner 0-6) */
+#ifndef USE_PCAL
+
+	  fadcs = s_fadc_words[isl+nslot].read();
+#ifdef DEBUG
+      cout<<"fadcs[slot="<<isl<<"][read="<<j<<"]="<<fadcs.e0<<" "<<fadcs.e1<<" "<<fadcs.e2<<" "<<fadcs.e3<<endl;
+#endif
+
+      energy = fadcs.e0;
+      chan = j*NH_READS;
+      layer = adclayerecal[isl][chan] - 1; /* from 0 */
+      str   = adcstripecal[isl][chan] - 1; /* from 0 */
+      energytmp[layer][str] += ((energy >= strip_threshold) ? ((uint16_t)energy) : 0); /* error in '?' without (uint16_t) ...*/
+#ifdef DEBUG
+      cout<<"   layer="<<layer<<" str="<<str<<" -> e0="<<energytmp[layer][str]<<endl;
+#endif
+
+      energy = fadcs.e1;
+      chan = j*NH_READS+1;
+      layer = adclayerecal[isl][chan] - 1; /* from 0 */
+      str   = adcstripecal[isl][chan] - 1; /* from 0 */
+      energytmp[layer][str] += ((energy >= strip_threshold) ? ((uint16_t)energy) : 0);
+#ifdef DEBUG
+      cout<<"   layer="<<layer<<" str="<<str<<" -> e1="<<energytmp[layer][str]<<endl;
+#endif
+
+      energy = fadcs.e2;
+      chan = j*NH_READS+2;
+      layer = adclayerecal[isl][chan] - 1; /* from 0 */
+      str   = adcstripecal[isl][chan] - 1; /* from 0 */
+      energytmp[layer][str] += ((energy >= strip_threshold) ? ((uint16_t)energy) : 0);
+#ifdef DEBUG
+      cout<<"   layer="<<layer<<" str="<<str<<" -> e2="<<energytmp[layer][str]<<endl;
+#endif
+
+      energy = fadcs.e3;
+      chan = j*NH_READS+3;
+      layer = adclayerecal[isl][chan] - 1; /* from 0 */
+      str   = adcstripecal[isl][chan] - 1; /* from 0 */
+      energytmp[layer][str] += ((energy >= strip_threshold) ? ((uint16_t)energy) : 0);
+#ifdef DEBUG
+      cout<<"   layer="<<layer<<" str="<<str<<" -> e3="<<energytmp[layer][str]<<endl;
+#endif
+
+#endif /*ifndef USE_PCAL*/
+
 	}
   }
 

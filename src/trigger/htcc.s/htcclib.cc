@@ -17,8 +17,8 @@ using namespace std;
 #include "hls_fadc_sum.h"
 #include "trigger.h"
 
-#define DEBUG_0
-#define DEBUG_3
+
+//#define DEBUG
 
 
 #define MAX(a,b)    (a > b ? a : b)
@@ -44,7 +44,7 @@ htcchiteventreader(hls::stream<eventdata_t> &event_stream, HTCCHit &hit, uint32_
     if(eventdata.end == 1)
     {
       bufout[0] = bufptr - bufout - 1;
-      printf("htcchiteventreader: END_OF_DATA\n");
+      /*printf("htcchiteventreader: END_OF_DATA\n");*/
       break;
     }
 
@@ -58,14 +58,14 @@ htcchiteventreader(hls::stream<eventdata_t> &event_stream, HTCCHit &hit, uint32_
     *bufptr++ = eventdata.data;
     data_end = eventdata.end;
 	hit.output(47,31) = eventdata.data(16,0);
-    cout<<"htcchiteventreader: output="<<hit.output<<endl;
+    /*cout<<"htcchiteventreader: output="<<hit.output<<endl;*/
 
     if(event_stream.empty()) {printf("htcchiteventreader: EMPTY STREAM ERROR2\n");break;}
     eventdata = event_stream.read();
     *bufptr++ = eventdata.data;
     data_end = eventdata.end;
 	hit.output(30,0) = eventdata.data(30,0);
-    cout<<"htcchiteventreader: output="<<hit.output<<endl;
+    /*cout<<"htcchiteventreader: output="<<hit.output<<endl;*/
   }
 }
 
@@ -108,15 +108,16 @@ htcclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
   if(ret<=0) return;
 
   trig.t_stop = trig.t_start + MAXTIMES*NH_READS; /* set readout window MAXTIMES*32ns in 4ns ticks */
-
+#ifdef DEBUG
   cout<<"-htcclib-> t_start="<<trig.t_start<<" t_stop="<<trig.t_stop<<endl;
-
+#endif
   trig_stream.write(trig);
 
   for(int it=0; it<MAXTIMES; it++)
   {
+#ifdef DEBUG
  	printf("htcclib: timing slice = %d\n",it);fflush(stdout);
-
+#endif
     /* adjust to 4ns domain */
     for(int i=0; i<nslot; i++) fadcs_32ns_to_4ns(s_fadcs[i], s_fadc_words[i]); /* 1 read, 8 writes */
 
@@ -126,11 +127,8 @@ htcclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
     for(int i=0; i<NH_READS; i++) hit_tmp = s_hits.read();
   }
 
-  printf("htcclib1\n");
   htcchiteventwriter(trig_stream, event_stream, buf_ram);
-  printf("htcclib2\n");
   htcchiteventreader(event_stream, hit, bufout);
-  printf("htcclib3\n");
 
   if(bufout[0]>0)
   {
@@ -141,9 +139,7 @@ htcclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
     trigbank_close();
   }
 
-  printf("bla\n");
   trig.t_start += MAXTIMES*8; /* in preparation for next event, step up MAXTIMES*32ns in 4ns ticks */
-
 
   return;
 }

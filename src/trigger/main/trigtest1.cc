@@ -70,7 +70,8 @@ unsigned int buf[MAXBUF];
 unsigned int *bufptr;
 
 
-#define MAXEVENTS 100
+#define SKIPEVENTS 0
+#define MAXEVENTS 1000
 
 
 int
@@ -168,6 +169,9 @@ main(int argc, char **argv)
     if(!(iev%1000)) printf("\n\n\nEvent %d\n\n",iev);
 
     status = evRead(handlerin, buf, MAXBUF);
+
+    if(iev<SKIPEVENTS) continue;
+
     if(status < 0)
 	{
 	  if(status==EOF)
