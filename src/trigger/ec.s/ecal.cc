@@ -81,7 +81,9 @@ ecal(ap_uint<16> threshold[3], nframe_t nframes, ap_uint<4> dipfactor, ap_uint<1
   hls::stream<ECStream16_s> s_enpeak[NH_FIFOS];
   hls::stream<hitsume_t> s_hitout1[NH_FIFOS];
   hls::stream<hitsume_t> s_hitout2[NH_FIFOS];
+
   hls::stream<ECPeak0_s> s_peak0strip_u[NF2], s_peak0strip_v[NF2], s_peak0strip_w[NF2];
+
   hls::stream<ECPeak0_s> s_peak0max_u[NF3], s_peak0max_v[NF3], s_peak0max_w[NF3];
   hls::stream<sortz_t> z1[NF4];
   hls::stream<sortz_t> z2[NF4];
@@ -117,13 +119,13 @@ ecal(ap_uint<16> threshold[3], nframe_t nframes, ap_uint<4> dipfactor, ap_uint<1
   ecstripspersistence0(nframes, s_strip0_u, s_strip_u); /* 'static' inside ! */
   ecstripspersistence1(nframes, s_strip0_v, s_strip_v); /* 'static' inside ! */
   ecstripspersistence2(nframes, s_strip0_w, s_strip_w); /* 'static' inside ! */
+
   ecstripsfanout(s_strip_u, s_strip1_u, s_strip2_u);
   ecstripsfanout(s_strip_v, s_strip1_v, s_strip2_v);
   ecstripsfanout(s_strip_w, s_strip1_w, s_strip2_w);
 
   ecpeak1(threshold[0], dipfactor, 0, s_strip1_u, s_first_u, s_middle_u, s_last_u);
   ecpeak2(threshold[1], s_strip2_u, s_first_u, s_middle_u, s_last_u, s_peak0strip_u);
-
   ecpeakzerosuppress(s_peak0strip_u, s_peak0max_u);
   ecpeaksort(s_peak0max_u, s_peak0_u);
   ecpeakcoord(0, s_peak0_u, s_peak_u);
@@ -131,7 +133,6 @@ ecal(ap_uint<16> threshold[3], nframe_t nframes, ap_uint<4> dipfactor, ap_uint<1
 
   ecpeak1(threshold[0], dipfactor, nstripmax, s_strip1_v, s_first_v, s_middle_v, s_last_v);
   ecpeak2(threshold[1], s_strip2_v, s_first_v, s_middle_v, s_last_v, s_peak0strip_v);
-
   ecpeakzerosuppress(s_peak0strip_v, s_peak0max_v);
   ecpeaksort(s_peak0max_v, s_peak0_v);
   ecpeakcoord(0, s_peak0_v, s_peak_v);
@@ -139,7 +140,6 @@ ecal(ap_uint<16> threshold[3], nframe_t nframes, ap_uint<4> dipfactor, ap_uint<1
 
   ecpeak1(threshold[0], dipfactor, 0, s_strip1_w, s_first_w, s_middle_w, s_last_w);
   ecpeak2(threshold[1], s_strip2_w, s_first_w, s_middle_w, s_last_w, s_peak0strip_w);
-
   ecpeakzerosuppress(s_peak0strip_w, s_peak0max_w);
   ecpeaksort(s_peak0max_w, s_peak0_w);
   ecpeakcoord(0, s_peak0_w, s_peak_w);
@@ -148,6 +148,8 @@ ecal(ap_uint<16> threshold[3], nframe_t nframes, ap_uint<4> dipfactor, ap_uint<1
   ecpeakeventfiller0(s_peak2_u, buf_ram_u); /* 'static' inside ! */
   ecpeakeventfiller1(s_peak2_v, buf_ram_v); /* 'static' inside ! */
   ecpeakeventfiller2(s_peak2_w, buf_ram_w); /* 'static' inside ! */
+
+
 
   echit(dalitzmin, dalitzmax, s_peak1_u, s_peak1_v, s_peak1_w, s_pcount, s_energy, s_coord);
 

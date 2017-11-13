@@ -37,11 +37,12 @@ else
   CLON_FLAGS += -I/apps/Xilinx/Vivado_HLS/2013.2/include
 endif
 
-#ccdb
-CLON_FLAGS += -I$(CCDB_HOME)/include \
-			-I$(CCDB_HOME)/include/SQLite
-LIBNAMES += $(CCDB_HOME)/lib/libccdb.a
-LIBNAMES += $(CCDB_HOME)/tmp/SQLite/libccdb_sqlite.a
+
+##ccdb
+#CLON_FLAGS += -I$(CCDB_HOME)/include -I$(CCDB_HOME)/include/SQLite
+#LIBNAMES += $(CCDB_HOME)/lib/libccdb.a
+#LIBNAMES += $(CCDB_HOME)/tmp/SQLite/libccdb_sqlite.a
+##ccdb
 
 
 LIBNAMES += $(CODA)/src/evio-4.3/$(OSTYPE_MACHINE)/lib/libevio.a

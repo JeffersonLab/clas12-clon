@@ -215,7 +215,7 @@ ecfrac3_1(/*uint8_t u, uint8_t v, uint8_t w, */hitsume_t hitouttmp2, uint16_t fr
   {
 	first = 0; 
 #endif
-  coeff1_init(coeff1);
+    coeff1_init(coeff1);
 #ifndef __SYNTHESIS__
   }
 #endif

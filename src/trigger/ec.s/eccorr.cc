@@ -229,17 +229,17 @@ eccorr_1(ap_uint<16> hit_threshold, ap_uint<16> energy[3], ap_uint<NBIT_COORD> c
 	first = 0; 
 #endif
 
-  /* In order to ensure that 'coeff1' is inferred and properly
-  initialized as a ROM, it is recommended that the array initialization
-  be done in a sub-function with global (wrt this source file) scope. */
+    /* In order to ensure that 'coeff1' is inferred and properly
+    initialized as a ROM, it is recommended that the array initialization
+    be done in a sub-function with global (wrt this source file) scope. */
 #ifdef USE_PCAL
-  atten_read(0, att_u_uv, att_u_uw, att_u_vw);
-  atten_read(1, att_v_uv, att_v_uw, att_v_vw);
-  atten_read(2, att_w_uv, att_w_uw, att_w_vw);
+    atten_read(0, att_u_uv, att_u_uw, att_u_vw);
+    atten_read(1, att_v_uv, att_v_uw, att_v_vw);
+    atten_read(2, att_w_uv, att_w_uw, att_w_vw);
 #else
-  atten_read(0, att_u);
-  atten_read(1, att_v);
-  atten_read(2, att_w);
+    atten_read(0, att_u);
+    atten_read(1, att_v);
+    atten_read(2, att_w);
 #endif
 
 #ifndef __SYNTHESIS__

@@ -19,13 +19,14 @@
 #define USE_HTCC
 #define USE_FTOF
 
+using namespace std;
 
+#if 0
 #include <CCDB/Calibration.h>
 #include <CCDB/CalibrationGenerator.h>
 #include <CCDB/SQLiteCalibration.h>
-
-using namespace std;
 using namespace ccdb;
+#endif
 
 #define ENCORR 10000. /* sergey: clara applies 1/10000 to ADC values */ 
 
@@ -33,12 +34,14 @@ using namespace ccdb;
 static int inIBuf[25][NHITS];
 static double inFBuf[25][NHITS];
 
+#if 0
 string create_connection_string()
 {
   /* creates example connection string to ccdb demo sqlite database*/
   string clon_parms(getenv("CLON_PARMS"));
   return string("sqlite://" + clon_parms + "/clas12.sqlite");
 }
+#endif
 
 #include "evio.h"
 #include "evioBankUtil.h"
@@ -70,7 +73,10 @@ unsigned int buf[MAXBUF];
 unsigned int *bufptr;
 
 
+/* 0,1,2 - segfauil on event 905; 3 and more - Ok */
 #define SKIPEVENTS 0
+
+
 #define MAXEVENTS 1000
 
 
@@ -82,6 +88,8 @@ main(int argc, char **argv)
   int nhitp, nhiti, nhito, nhitp_offline, nhiti_offline, nhito_offline;
   float tmp;
 
+
+#if 0
 
   //Obtain connection string. You can change it to mysql://localhost for example
   string connection_str = create_connection_string();
@@ -127,6 +135,9 @@ main(int argc, char **argv)
   //for more sophisticated data manipulation, like getting column types, 
   //see assignments.cc example
 
+#endif
+
+
 
   int runnum = 0;
 
@@ -166,11 +177,13 @@ main(int argc, char **argv)
   {
     iev ++;
 
-    if(!(iev%1000)) printf("\n\n\nEvent %d\n\n",iev);
+    /*if(!(iev%1000))*/ printf("\n\n\nEvent %d\n\n",iev);
 
     status = evRead(handlerin, buf, MAXBUF);
 
     if(iev<SKIPEVENTS) continue;
+    //if(iev==905) continue;
+    printf("Event %d processing\n",iev);
 
     if(status < 0)
 	{

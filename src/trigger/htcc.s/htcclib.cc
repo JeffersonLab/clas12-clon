@@ -91,12 +91,12 @@ htcclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
 
   hls::stream<fadc_16ch_t> s_fadcs[NFADCS];
   hls::stream<fadc_2ch_t> s_fadc_words[NFADCS];
-  hls::stream<HTCCHit> s_hits;
+hls::stream<HTCCHit> s_hits;
   HTCCHit hit_tmp;
 
-  hls::stream<trig_t> trig_stream;
+hls::stream<trig_t> trig_stream;
   hit_ram_t buf_ram[NRAM];
-  hls::stream<eventdata_t> event_stream;
+hls::stream<eventdata_t> event_stream;
   HTCCHit hit;
 
   int detector = HTCC;
