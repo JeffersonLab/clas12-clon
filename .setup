@@ -74,10 +74,15 @@ setenv CLAS_TOOLS /u/group/clas/tools
 
 
 setenv CLON_DAQ clondaq4
+
+if ($?EPICS_CA_ADDR_LIST) then
 # CLON_DAQ must be in EPICS_CA_ADDR_LIST !!!
-setenv EPICS_CA_ADDR_LIST  "$EPICS_CA_ADDR_LIST "129.57.167.227
+  setenv EPICS_CA_ADDR_LIST  "$EPICS_CA_ADDR_LIST "129.57.167.227
 # add dcrb2 temporary for dcrb test setup
-setenv EPICS_CA_ADDR_LIST  "$EPICS_CA_ADDR_LIST "129.57.86.65
+  setenv EPICS_CA_ADDR_LIST  "$EPICS_CA_ADDR_LIST "129.57.86.65
+##else
+##  echo "EPICS_CA_ADDR_LIST environment variable does not defined !!!"
+endif
 
 
 # HPS
