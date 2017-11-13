@@ -40,7 +40,7 @@ CLON_FLAGS +=	-I$(CODA)/common/include \
 
 ## activemq
 CLON_FLAGS += -std=c++11 
-CLON_FLAGS +=	-I$(IPC_HOME)/src/main -I$(CLON)/src/ipc/ipc.s
+CLON_FLAGS +=	-I$(IPC_HOME)/src/main -I$(CODA)/src/ipc/ipc.s
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   CLON_FLAGS += -I/usr/local/include/apr-1
 else
@@ -51,19 +51,11 @@ endif
 
 
 
-LIBNAMES += $(globallib)/libipc.a
-LIBNAMES += $(globallib)/libclonutil.a
-
-
-
-
-## smartsockets
-##LIBNAMES += $(CODA)/Linux_i686/lib/libmysql4.1.20.a
+LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
+LIBNAMES += $(CLON)/src/clonutil/$(OSTYPE_MACHINE)/lib/libclonutil.a
 
 ## activemq
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
-
-
 
 # EPICS libraries
 # 32bit !!!
@@ -76,15 +68,6 @@ LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libcas.a
 LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libca.a
 LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libgdd.a
 LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libCom.a
-
-
-
-
-
-
-## smartsockets
-##LIBNAMES += -L$(RTHOME)/lib/$(OSTYPE_MACHINE) -lrtipc -lrtipcl -lrtutil -lrtcxxipc50
-
 
 ## activemq
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")

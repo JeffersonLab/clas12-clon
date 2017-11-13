@@ -24,7 +24,7 @@ CLON_FLAGS += -std=c++11 -DRCDB_MYSQL -I/usr/include/mysql -I$(RCDB_HOME)/cpp/in
 
 CLON_FLAGS += -Imain -I$(CODA)/common/include -I$(CLON)/common/include \
 				-I$(RTHOME)/include \
-				-I$(IPC_HOME)/src/main -I$(CLON)/src/ipc/ipc.s
+				-I$(IPC_HOME)/src/main -I$(CODA)/src/ipc/ipc.s
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   CLON_FLAGS += -I/usr/local/include/apr-1
@@ -35,11 +35,10 @@ endif
 JFLAGS = -classpath ./:$(CLON)/common/jar/clonutil.jar:$(IMPORT_JAR)/klg.jar:$(IMPORT_JAR)/symclass.zip:$(IMPORT_JAR)/symbeans.jar:$(IMPORT_JAR)/ss.jar
 
 
-LIBNAMES += $(CLON)/$(OSTYPE_MACHINE)/lib/libclonutil.a
-LIBNAMES += $(CLON)/$(OSTYPE_MACHINE)/lib/libipc.a
+LIBNAMES += $(CLON)/src/clonutil/$(OSTYPE_MACHINE)/lib/libclonutil.a
+LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
 
-##LIBNAMES += -L$(RTHOME)/lib/$(OSTYPE_MACHINE) -lrtipc -lrtipcl -lrtutil -lrtcxxipc50
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   LIBNAMES += /usr/local/lib/libactivemq-cpp.so

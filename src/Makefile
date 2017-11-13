@@ -13,23 +13,25 @@ all:
 ##	- cd minuit;                         $(MAKE) install
 ##	- cd cmon;                           $(MAKE)
 ##	- cd cmon;                           $(MAKE) install
-	- cd ipc;                            $(MAKE)
-	- cd ipc;                            $(MAKE) java
-	- cd ipc;                            $(MAKE) install
-	- cd infoserver;                     $(MAKE)
-	- cd infoserver;                     $(MAKE) install
-	- cd timeline;                       $(MAKE)
-	- cd timeline;                       $(MAKE) install
+##	- cd ipc;                            $(MAKE)
+##	- cd ipc;                            $(MAKE) java
+##	- cd ipc;                            $(MAKE) install
+##	- cd infoserver;                     $(MAKE)
+##	- cd infoserver;                     $(MAKE) install
+##	- cd timeline;                       $(MAKE)
+##	- cd timeline;                       $(MAKE) install
 	- cd dbutil;                         $(MAKE)
-	- cd dbutil;                         $(MAKE) java
+##	- cd dbutil;                         $(MAKE) java
 	- cd dbutil;                         $(MAKE) install
 	- cd epicsutil;                      $(MAKE)
 	- cd epicsutil;                      $(MAKE) install
 	- cd runlog;                         $(MAKE)
 	- cd runlog;                         $(MAKE) install
-	- cd alarm;                          $(MAKE)
-	- cd alarm;                          $(MAKE) java
-	- cd alarm;                          $(MAKE) install
+	- cd trigger;                        $(MAKE)
+	- cd trigger;                        $(MAKE) install
+##	- cd alarm;                          $(MAKE)
+##	- cd alarm;                          $(MAKE) java
+##	- cd alarm;                          $(MAKE) install
 ###	- cd scripts;                        $(MAKE) install
 
 #	- cd evmon;                          $(MAKE)
@@ -57,13 +59,14 @@ clean:
 	cd clonutil;                         $(MAKE) clean
 #	- cd minuit;                         $(MAKE) clean
 #	- cd cmon;                           $(MAKE) clean
-	- cd ipc;                            $(MAKE) clean
-	- cd infoserver;                     $(MAKE) clean
-	- cd timeline;                       $(MAKE) clean
+#	- cd ipc;                            $(MAKE) clean
+#	- cd infoserver;                     $(MAKE) clean
+#	- cd timeline;                       $(MAKE) clean
 	- cd dbutil;                         $(MAKE) clean
 	- cd epicsutil;                      $(MAKE) clean
 	- cd runlog;                         $(MAKE) clean
-	- cd alarm;                          $(MAKE) clean
+	- cd trigger;                        $(MAKE) clean
+#	- cd alarm;                          $(MAKE) clean
 ###	- cd scripts;                        $(MAKE) clean
 
 distclean:

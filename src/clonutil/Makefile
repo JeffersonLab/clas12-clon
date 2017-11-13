@@ -24,7 +24,7 @@ CLON_FLAGS += -I./$(MAIN).s -I$(EPICS_BASE)/include \
 				-I$(EPICS_BASE)/include/os/solaris \
 				-I$(EPICS_EXTENSIONS)/src/ezca \
 				-I$(CODA)/common/include -I$(CLON)/common/include \
-				-I$(IPC_HOME)/src/main -I$(CLON)/src/ipc/ipc.s
+				-I$(IPC_HOME)/src/main -I$(CODA)/src/ipc/ipc.s
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   CLON_FLAGS += -I/usr/local/include/apr-1
@@ -37,7 +37,7 @@ endif
 JFLAGS = -classpath $(IMPORT_JAR)/ss.jar
 
 
-LIBNAMES += $(CLON)/$(OSTYPE_MACHINE)/lib/libipc.a
+LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libet.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libevio.a
