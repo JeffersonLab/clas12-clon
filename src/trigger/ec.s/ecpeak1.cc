@@ -160,7 +160,8 @@ ecpeak1(ap_uint<16> strip_threshold, ap_uint<4> strip_dip_factor, ap_uint<4> nst
 
     for(int i=b2[j]; i<=e2[j]; i++)
     {
-      ec_first_and_last(strip_threshold, strip_dip_factor, energy[i-2], energy[i-1], energy[i], energy[i+1], first_last);
+	  /*sergey: using strip_threshold=0 here, because it is applied already in ecstrips.cc*/
+      ec_first_and_last(0/*strip_threshold*/, strip_dip_factor, energy[i-2], energy[i-1], energy[i], energy[i+1], first_last);
       first[i] = first_last[0];
       last[i]  = first_last[1];
     }
