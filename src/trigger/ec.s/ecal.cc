@@ -38,6 +38,16 @@
 /*3.48/126/8/0%/1%/3%/8% II=8 - one view and bypass hit finder*/
 
 
+/*does not exist in hardware*/
+static ECStrip str[3][NSTRIP];
+
+void
+ec_get_str(ECStrip strip[3][NSTRIP])
+{
+  for(int i=0; i<3; i++) for(int j=0; j<NSTRIP; j++) {strip[i][j] = str[i][j]; /*printf("STR[%d][%d]=%d\n",i,j,(int16_t)str[i][j].energy);*/}
+}
+/*does not exist in hardware*/
+
 
 /*3.76/293/16/14%/6%/23%/47% II=8 */
 
@@ -124,6 +134,15 @@ ecal(ap_uint<16> threshold[3], nframe_t nframes, ap_uint<4> dipfactor, ap_uint<1
   ecstripsfanout(s_strip_v, s_strip1_v, s_strip2_v);
   ecstripsfanout(s_strip_w, s_strip1_w, s_strip2_w);
 
+  /*does not exist in hardware*/
+  ecstrip_in(s_strip1_u, str[0]);
+  ecstrip_in(s_strip1_v, str[1]);
+  ecstrip_in(s_strip1_w, str[2]);
+  ecstrip_out(str[0], s_strip1_u);
+  ecstrip_out(str[1], s_strip1_v);
+  ecstrip_out(str[2], s_strip1_w);  
+  /*does not exist in hardware*/
+
   ecpeak1(threshold[0], dipfactor, 0, s_strip1_u, s_first_u, s_middle_u, s_last_u);
   ecpeak2(threshold[1], s_strip2_u, s_first_u, s_middle_u, s_last_u, s_peak0strip_u);
   ecpeakzerosuppress(s_peak0strip_u, s_peak0max_u);
@@ -135,14 +154,14 @@ ecal(ap_uint<16> threshold[3], nframe_t nframes, ap_uint<4> dipfactor, ap_uint<1
   ecpeak2(threshold[1], s_strip2_v, s_first_v, s_middle_v, s_last_v, s_peak0strip_v);
   ecpeakzerosuppress(s_peak0strip_v, s_peak0max_v);
   ecpeaksort(s_peak0max_v, s_peak0_v);
-  ecpeakcoord(0, s_peak0_v, s_peak_v);
+  ecpeakcoord(1, s_peak0_v, s_peak_v);
   ecpeakfanout(s_peak_v, s_peak1_v, s_peak2_v, peak_scaler_inc_v);
 
   ecpeak1(threshold[0], dipfactor, 0, s_strip1_w, s_first_w, s_middle_w, s_last_w);
   ecpeak2(threshold[1], s_strip2_w, s_first_w, s_middle_w, s_last_w, s_peak0strip_w);
   ecpeakzerosuppress(s_peak0strip_w, s_peak0max_w);
   ecpeaksort(s_peak0max_w, s_peak0_w);
-  ecpeakcoord(0, s_peak0_w, s_peak_w);
+  ecpeakcoord(2, s_peak0_w, s_peak_w);
   ecpeakfanout(s_peak_w, s_peak1_w, s_peak2_w, peak_scaler_inc_w);
 
   ecpeakeventfiller0(s_peak2_u, buf_ram_u); /* 'static' inside ! */

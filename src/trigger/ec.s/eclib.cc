@@ -28,6 +28,7 @@ using namespace std;
 #define eclib pclib
 #define ecpeakeventreader pcpeakeventreader
 #define echiteventreader pchiteventreader
+#define ectrig pctrig
 #else
 #include "ectrans.h"
 #include "eclib.h"
@@ -240,7 +241,7 @@ echiteventreader(hls::stream<eventdata_t> &event_stream, ECHit hit[NHIT], uint32
 
 
 int
-ectrig(unsigned int *bufptr, int sec, int npeak[NLAYER], TrigECPeak peak[NLAYER][NPEAKMAX], int nhit[2], TrigECHit hit[2][NHIT])
+ectrig(unsigned int *bufptr, int sec, int npeak[NVIEW], TrigECPeak peak[NVIEW][NPEAKMAX], int *nhit, TrigECHit hit[NHIT])
 {
   int i, j, k, ind, nhits, npeaks, instance, view, str, layer, error, ii, nbytes, ind_data, nn, mm;
   int energy;
@@ -263,31 +264,31 @@ ectrig(unsigned int *bufptr, int sec, int npeak[NLAYER], TrigECPeak peak[NLAYER]
   uint32_t flag, index, val, last_val, v, coord, coordU, coordV, coordW;
   char view_array[4] = {'U', 'V', 'W', '?'};
 
-#ifdef DEBUG
+#ifdef DEBUG_2
   printf("ectrig reached, sector=%d\n",sec);
 #endif
 
 
-  bzero((char *)peak,NLAYER*NPEAKMAX*sizeof(TrigECPeak));
-  bzero((char *)npeak,NLAYER*sizeof(int));
-  bzero((char *)hit,2*NHIT*sizeof(TrigECPeak));
-  bzero((char *)nhit,2*sizeof(int));
+  bzero((char *)peak,NVIEW*NPEAKMAX*sizeof(TrigECPeak));
+  bzero((char *)npeak,NVIEW*sizeof(int));
+  bzero((char *)hit,NHIT*sizeof(TrigECPeak));
+  *nhit = 0;
   npeaks = 0;
   nhits = 0;
 
 
 #ifdef USE_PCAL
-  fragtag = 107+sec;
+  fragtag = 60107+sec;
 #else
-  fragtag = 101+sec;
+  fragtag = 60101+sec;
 #endif
   fragnum = -1;
   banktag = 0xe122;
-  banknum = 0/*101+sec*/;
+  banknum = 255;
 
   if((ind = evLinkBank(bufptr, fragtag, fragnum, banktag, banknum, &nbytes, &ind_data)) <= 0)
   {
-    printf("cannot find bank tag=0x%04x num=%d (trigger)\n",banktag,banknum);
+    printf("cannot find bank tag=0x%04x num=%d in fragtag=%d fragnum=%d (trigger)\n",banktag,banknum,fragtag,fragnum);
     return(0);
   }
 #ifdef DEBUG_2
@@ -363,14 +364,14 @@ ectrig(unsigned int *bufptr, int sec, int npeak[NLAYER], TrigECPeak peak[NLAYER]
       case 4:  // ECtrig Peak
         if(index == 1)
         {
-          instance = (last_val>>26) & 0x1;
+          instance = (last_val>>26) & 0x1; /* always 0 */
           view = (last_val>>24) & 0x3;
           time = (last_val>>16) & 0xff;
 
           coord = (val>>16) & 0x3ff;
           energy = (val>>0) & 0xffff;
 
-		  layer = instance*3 + view;
+		  layer = view;
           
 #ifdef DEBUG_2
           printf("ECtrig Peak: ");
@@ -392,7 +393,7 @@ ectrig(unsigned int *bufptr, int sec, int npeak[NLAYER], TrigECPeak peak[NLAYER]
       case 5:  // ECtrig Cluster
         if(index == 1)
         {
-          instance = (last_val>>26) & 0x1;
+          instance = (last_val>>26) & 0x1; /* always 0 */
           time =     (last_val>>16) & 0xff;
           energy =   (last_val>>0) & 0xffff;
 
@@ -408,15 +409,15 @@ ectrig(unsigned int *bufptr, int sec, int npeak[NLAYER], TrigECPeak peak[NLAYER]
           printf(" Energy = %4d", energy);
           printf(" Time = %4d\n", time);
 #endif
-		  nhits = nhit[instance];
           if(nhits < NHIT)
 		  {
-		    hit[instance][nhits].coord[0] = coordU;
-		    hit[instance][nhits].coord[1] = coordV;
-		    hit[instance][nhits].coord[2] = coordW;
-		    hit[instance][nhits].energy = energy;
-		    hit[instance][nhits].time = time;
-		    nhit[instance] ++;
+		    hit[nhits].coord[0] = coordU;
+		    hit[nhits].coord[1] = coordV;
+		    hit[nhits].coord[2] = coordW;
+		    hit[nhits].energy = energy;
+		    hit[nhits].time = time;
+            nhits ++;
+		    *nhit = nhits;
 		  }
           else
 		  {
@@ -446,6 +447,8 @@ ectrig(unsigned int *bufptr, int sec, int npeak[NLAYER], TrigECPeak peak[NLAYER]
   }
 
 
+
+return(ind);
 
 
 
@@ -510,6 +513,12 @@ ectrig(unsigned int *bufptr, int sec, int npeak[NLAYER], TrigECPeak peak[NLAYER]
 
 
 
+static ECStrip strall[6][MAXTIMES][3][NSTRIP];
+void
+ec_get_str_all(int sec, ECStrip strip[MAXTIMES][3][NSTRIP])
+{
+  for(int i=0; i<MAXTIMES; i++) for(int j=0; j<3; j++) for(int k=0; k<NSTRIP; k++) {strip[i][j][k] = strall[sec][i][j][k]; /*printf("STRALL[%d][%d][%d]=%d\n",i,j,k,(int16_t)strall[sec][i][j][k].energy);*/}
+}
 
 
 static trig_t trig[4]; /* assumed to be cleaned up because of 'static' */
@@ -605,6 +614,9 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
       /* read hits to avoid 'leftover' warnings */
       for(ii=0; ii<NHIT; ii++) hit_tmp = s_hits.read();
 
+      /*save strips*/
+      ec_get_str(strall[sec][it]);
+
     } /* it */
 
 
@@ -659,10 +671,10 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 #endif
       int banktag = 0xe122;
       trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
-      if(bufout0[0]>0) trigbank_write(bufout0);
-      if(bufout1[0]>0) trigbank_write(bufout1);
-      if(bufout2[0]>0) trigbank_write(bufout2);
-      if(bufout3[0]>0) trigbank_write(bufout3);
+      if(bufout0[0]>0) {printf("writing U\n");trigbank_write(bufout0);}
+      if(bufout1[0]>0) {printf("writing V\n");trigbank_write(bufout1);}
+      if(bufout2[0]>0) {printf("writing W\n");trigbank_write(bufout2);}
+      if(bufout3[0]>0) {printf("writing H\n");trigbank_write(bufout3);}
       trigbank_close();
 	}
 

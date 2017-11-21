@@ -53,9 +53,14 @@ endif
 CXXFLAGS += -I$(CODA)/src/evio-4.3/src.s \
 			-I$(CLON)/src/trigger/trigger.s \
 			-I$(CLON)/src/trigger/ec.s \
-			-I$(CLON)/src/trigger/pc.s \
-			-I/apps/Xilinx/Vivado_HLS/2013.2/include
+			-I$(CLON)/src/trigger/pc.s
 
+
+ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+  CXXFLAGS +=	-I/apps/Xilinx/Vivado_HLS/2015.4/include
+else
+  CXXFLAGS +=	-I/apps/Xilinx/Vivado_HLS/2013.2/include
+endif
 
 
 GLIBS +=	$(CLON)/src/trigger/$(OSTYPE_MACHINE)/lib/libtrigger.a \

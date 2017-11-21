@@ -16,6 +16,7 @@ common/
 *.a
 *.his
 *_hide
+*_vtphide
 *.jar
 *.class
 src/trigger_20_jul_2017
@@ -30,4 +31,4 @@ src/trigger/root_dc
 #a.c. following
 src/trigger/Makefile
 src/Makefile.include
-
+src/ipc_moved_to_coda

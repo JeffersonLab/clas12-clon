@@ -26,6 +26,7 @@ extern "C" {
 #define PSTRIPMAX 84
 #define PPEAKMAX  (PSTRIPMAX/2)
 #define PLAYER    3
+#define PVIEW     3
 #define PSECTOR   6
 #define PPEAK     4
 #define PHIT      4
@@ -34,6 +35,7 @@ extern "C" {
 #define NSTRIP    PSTRIPMAX
 #define NPEAKMAX  PPEAKMAX
 #define NLAYER    PLAYER
+#define NVIEW     PVIEW
 #define NSECTOR   PSECTOR
 #define NPEAK     PPEAK
 #define NHITMAX   (NPEAK*NPEAK*NPEAK) /* array size if index is calculated as 'u+(v<<2)+(w<<4)' */
@@ -96,6 +98,9 @@ extern "C" {
 #define echiteventfiller pchiteventfiller
 #define echiteventwriter pchiteventwriter
 #define echiteventreader pchiteventreader
+
+#define ec_get_str pc_get_str
+#define ec_get_str_all pc_get_str_all
 
 
 #include "../ec.s/ectypes.h"

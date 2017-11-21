@@ -10,6 +10,8 @@
 #include <iostream>
 using namespace std;
 
+//#define DEBUG
+
 #include "evio.h"
 #include "evioBankUtil.h"
 
@@ -38,7 +40,12 @@ trigbank_open(uint32_t *bufptr, int fragtag, int banktag, int iev, unsigned long
     /*printf("Fragment %d does not exist - create one\n",fragtag);*/
     ind = evOpenFrag(bufptr, fragtag, FRAGNUM);
     if(ind<=0) {printf("ERROR: cannot create fragment %d - exit\n",fragtag); exit(0);}
-    else /*printf("Created fragment fragtag=%d fragnum=%d\n",fragtag, FRAGNUM)*/;
+#ifdef DEBUG
+    else
+	{
+      printf("Created fragment fragtag=%d fragnum=%d\n",fragtag, FRAGNUM);
+	}
+#endif
   }
   else
   {
@@ -47,7 +54,9 @@ trigbank_open(uint32_t *bufptr, int fragtag, int banktag, int iev, unsigned long
   }
 
   ret = evOpenBank(bufptr, fragtag, FRAGNUM, banktag, BANKNUM, BANKTYP, "", &ind_data);
-  /*printf("evOpenBank returns = %d, ind_data=%d (fragtag=%d, fragnum=%d, banktag=%d, banknum=%d)\n",ret,ind_data, fragtag, FRAGNUM, banktag, BANKNUM);*/
+#ifdef DEBUG
+  printf("evOpenBank returns = %d, ind_data=%d (fragtag=%d, fragnum=%d, banktag=%d, banknum=%d)\n",ret,ind_data, fragtag, FRAGNUM, banktag, BANKNUM);
+#endif
   b08out = (unsigned char *)&bufptr[ind_data];
 
   /*0x12 - event header*/
@@ -82,7 +91,9 @@ trigbank_write(uint32_t *data)
 
   for(int i=1; i<=data[0]; i++)
   {
-	/*printf("trigbank_write: data[%d]=0x%08x\n",i,data[i]);fflush(stdout);*/
+#ifdef DEBUG
+	printf("trigbank_write: data[%d]=0x%08x\n",i,data[i]);fflush(stdout);
+#endif
     PUT32(data[i]);
   }
 
@@ -95,7 +106,9 @@ trigbank_write(uint32_t *data)
 int
 trigbank_close()
 {
-  /*printf("evClose() reached\n");fflush(stdout);*/
+#ifdef DEBUG
+  printf("evClose() reached\n");fflush(stdout);
+#endif
   return(evCloseBank(bufptr_save, fragtag_save, FRAGNUM, banktag_save, BANKNUM, b08out_save));
 }
 

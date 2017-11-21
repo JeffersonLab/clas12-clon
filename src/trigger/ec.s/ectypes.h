@@ -389,7 +389,9 @@ typedef struct
 
 uint16_t pcal_coord_to_strip(ap_uint<2> view, uint16_t jj);
 
-int  ectrig(unsigned int *bufptr, int sec, int npeak[NLAYER], TrigECPeak peak[NLAYER][NPEAKMAX], int nhits_trig[2], TrigECHit hits_trig[2][NHIT]);
+int  ectrig(unsigned int *bufptr, int sec, int npeak[NVIEW], TrigECPeak peak[NVIEW][NPEAKMAX], int *nhits_trig, TrigECHit hits_trig[NHIT]);
+void ec_get_str(ECStrip strip[3][NSTRIP]);
+void ec_get_str_all(int sec, ECStrip strip[MAXTIMES][3][NSTRIP]);
 
 void ecstrip_in(hls::stream<ECStrip_s> s_strip[NF1], ECStrip strip[NSTRIP]);
 void ecstrip_out(ECStrip strip[NSTRIP], hls::stream<ECStrip_s> s_strip[NF1]);

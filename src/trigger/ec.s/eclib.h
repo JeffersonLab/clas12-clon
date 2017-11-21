@@ -24,6 +24,7 @@ extern "C" {
 #define NSTRIP    36
 #define NPEAKMAX  (NSTRIP/2)
 #define NLAYER    6
+#define NVIEW     3
 #define NSECTOR   6
 #define NPEAK     4
 #define NHITMAX   (NPEAK*NPEAK*NPEAK) /* array size if index is calculated as 'u+(v<<2)+(w<<4)' */
