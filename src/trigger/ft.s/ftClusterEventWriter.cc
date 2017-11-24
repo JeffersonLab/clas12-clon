@@ -14,6 +14,10 @@
 #include "ftlib.h"
 #include "fttrans.h"
 
+
+#define DEBUG
+
+
 /*
  Since no further operations are foreseen on data - this goes to evio bank as described in clonbanks.xml
 
@@ -55,15 +59,21 @@ void ftClusterEventWriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdat
 /*cluster_ram_t buf_ram_read[FT_MAX_CLUSTERS][256], ap_uint<8> n_clusters[256]*/hls::stream<FTCluster_t> &s_clustersEVIO) {
 	eventdata_t eventdata;
 	trig_t trig = trig_stream.read();
-
+#ifdef DEBUG
+	printf("ftClusterEventWriter was called -->INPUT s_clustersEVIO.size() is: %d, OUTPUT event_stream.size() is: %d \n",s_clustersEVIO.size(), event_stream.size());
+	fflush(stdout);
+#endif
 	while (!s_clustersEVIO.empty()) {
 		FTCluster_t clusters = s_clustersEVIO.read();
-
-		if (clusters.e) {
+#ifdef DEBUG
+		printf("ftClusterEventWriter s_clustersEVIO.read()\n");
+		printf("rocID: %d Energy: %d \n", (int) clusters.rocID, (int) clusters.e);
+		fflush(stdout);
+#endif
+		if ((int) clusters.e > 0) {
 			eventdata.end = 0;
 			eventdata.data(31, 31) = 1;
 			/*Code here roc id just for now! it should be  0x17: 0x7 + 0x10 bit 31*/
-
 			if (clusters.rocID == 0) { //roc-70
 				eventdata.data(30, 27) = 0;
 			} else if (clusters.rocID == 1) { //roc-71
@@ -84,12 +94,22 @@ void ftClusterEventWriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdat
 			eventdata.data(25, 11) = clusters.e; /*15 bits, but vhdl seems 14?*/
 			eventdata.data(0, 10) = clusters.t; /*11 bits is OK: 3 fine (0..7 for position within window) and 8 coarse (0..255)*/
 			event_stream.write(eventdata);
+#ifdef DEBUG
+			printf("ftClusterEventWriter: wrote to event stream [%d] \n",event_stream.size());
+			printf("e: %d t: %d x: %d y: %d n: %d \n",(uint)clusters.e,(uint)clusters.t,(uint)clusters.x,(uint)clusters.y,(uint)clusters.n);
+			fflush(stdout);
+#endif
 		}
-
-		eventdata.data = 0xFFFFFFFF;
-		eventdata.end = 1;
-		event_stream.write(eventdata);
 	}
+
+	eventdata.data = 0xFFFFFFFF;
+	eventdata.end = 1;
+	event_stream.write(eventdata);
+
+#ifdef DEBUG
+	printf("ftClusterEventWriter end --> event_stream.size() is: %d\n", event_stream.size());
+	fflush(stdout);
+#endif
 
 #if 0
 	/*trig marks the time in terms of 32-ns readout windows, i.e. 8-clock cycles*/

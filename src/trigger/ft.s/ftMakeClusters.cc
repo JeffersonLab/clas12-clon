@@ -188,9 +188,9 @@ void ftMakeClusters(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_u
 			prev_data.hits[ix][iy].cal_e = this_data.hits[ix][iy].cal_e;
 			prev_data.hits[ix][iy].cal_t = (this_data.hits[ix][iy].cal_t) & 0x7; //put MSB to 0
 			prev_data.hits[ix][iy].hodo_l1_hit = this_data.hits[ix][iy].hodo_l1_hit;
-			prev_data.hits[ix][iy].hodo_l1_t = (this_data.hits[ix][iy].hodo_l1_t) & 0x7;
+			prev_data.hits[ix][iy].hodo_l1_t = (this_data.hits[ix][iy].hodo_l1_t) & 0x7;//put MSB to 0
 			prev_data.hits[ix][iy].hodo_l1_hit = this_data.hits[ix][iy].hodo_l2_hit;
-			prev_data.hits[ix][iy].hodo_l2_t = (this_data.hits[ix][iy].hodo_l2_t) & 0x7;
+			prev_data.hits[ix][iy].hodo_l2_t = (this_data.hits[ix][iy].hodo_l2_t) & 0x7;//put MSB to 0
 		}
 	}
 	/*read one time slice*/

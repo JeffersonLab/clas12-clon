@@ -416,8 +416,9 @@ search_for_next_pulse:
             fped += ped[det][slot][chan];
 		  }
 
-          pulse_integral = (int)roundf(fsum-fped);
-          
+          //pulse_integral = (int)roundf(fsum-fped);
+	  pulse_integral = (int)roundf((fsum-fped)*gain[det][slot][chan]);
+
 		  /*offset: 7900/4=1975*/
           offset = 1975;
           ptime = isample;

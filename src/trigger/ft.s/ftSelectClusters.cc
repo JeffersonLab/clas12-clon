@@ -14,6 +14,7 @@
 #include "ftlib.h"
 #include "fttrans.h"
 
+#define DEBUG
 
 /* This function gets all the clusters (332) and writes only the valid ones.
  *
@@ -29,17 +30,25 @@
  * 64 is a very-high conservative number
  */
 
-
-void ftSelectClusters(hls::stream<FTAllCluster_t> &s_allClusters,hls::stream<FTCluster_t> &s_goodClusters){
+void ftSelectClusters(hls::stream<FTAllCluster_t> &s_allClusters, hls::stream<FTCluster_t> &s_goodClusters) {
 	FTAllCluster_t clusters;
 
 	/*Read in all clusters for THIS time-slice (governed by the ftlib.cc loop)*/
-	clusters=s_allClusters.read();
+	clusters = s_allClusters.read();
 
 	/*Now WRITE all good clusters*/
-	for (int ii=0;ii<FT_CRYSTAL_NUM;ii++){
-		if (clusters.valid[ii]){
+	for (int ii = 0; ii < FT_CRYSTAL_NUM; ii++) {
+
+		if (clusters.valid[ii]) {
+
+#ifdef DEBUG
+			printf("ftSelectClusters e: %d t: %d x: %d y: %d n: %d \n", (uint) clusters.clusters[ii].e, (uint) clusters.clusters[ii].t,
+					(uint) clusters.clusters[ii].x, (uint) clusters.clusters[ii].y, (uint) clusters.clusters[ii].n);
+			fflush(stdout);
+#endif
+
 			s_goodClusters.write(clusters.clusters[ii]);
 		}
 	}
+
 }

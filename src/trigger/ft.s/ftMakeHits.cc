@@ -14,6 +14,7 @@
 #include "ftlib.h"
 #include "fttrans.h"
 
+#define DEBUG
 
 /*This is the function that makes the FT hits - doing a geometrical coincidence between crystal, hodo L1, hodo L2
  * Inputs:
@@ -25,8 +26,8 @@
  *
  * See: ft_channel_mapper.vhd
  */
-void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t> s_ft2[NFADCS],
-		hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS], hls::stream<FTAllHit_t> &s_hits) {
+void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t> s_ft2[NFADCS], hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS],
+		hls::stream<FTAllHit_t> &s_hits) {
 
 	int ch, slot, idx, nslots;
 	ap_uint< FTHIT_CAL_ENERGY_BITS> energy;
@@ -40,6 +41,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 	FTHODOHit_t allFTHODOHits[NFADCS][16]; //indexed by slot - channel
 
 	/*Read one time slice*/
+#ifdef DEBUG
+	printf("ftMakeHits called: MAXTIMES is: %d, s_ft1[0].size is: %d, s_ft2[0].size is:  (BEFORE THIS CALL READ!) %d\n", MAXTIMES, s_ft1[0].size(),
+			s_ft2[0].size());
+#endif
 
 	/*adcft1*/
 	nslots = 11;
@@ -52,6 +57,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 		time = fadcs.t0;
 		slot = (isl <= 7 ? isl + 3 : isl + 5);
 		idx = getCaloIdxFromCrateSlotChannel(ADCFT1_ROC_ID, slot, ch);
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 		if (idx >= 0) {
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
@@ -66,7 +75,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 		ch = 2;
 		energy = fadcs.e2;
 		time = fadcs.t2;
@@ -76,7 +88,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 		ch = 3;
 		energy = fadcs.e3;
 		time = fadcs.t3;
@@ -86,6 +101,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 
 		ch = 4;
 		energy = fadcs.e4;
@@ -96,6 +115,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 
 		ch = 5;
 		energy = fadcs.e5;
@@ -106,6 +129,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 
 		ch = 6;
 		energy = fadcs.e6;
@@ -116,6 +143,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 
 		ch = 7;
 		energy = fadcs.e7;
@@ -126,6 +157,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 
 		ch = 8;
 		energy = fadcs.e8;
@@ -136,6 +171,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 
 		ch = 9;
 		energy = fadcs.e9;
@@ -146,6 +185,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 
 		ch = 10;
 		energy = fadcs.e10;
@@ -156,7 +199,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 		ch = 11;
 		energy = fadcs.e11;
 		time = fadcs.t11;
@@ -166,6 +212,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 
 		ch = 12;
 		energy = fadcs.e12;
@@ -176,7 +226,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 		ch = 13;
 		energy = fadcs.e13;
 		time = fadcs.t13;
@@ -186,6 +239,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 
 		ch = 14;
 		energy = fadcs.e14;
@@ -196,6 +253,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 
 		ch = 15;
 		energy = fadcs.e15;
@@ -206,6 +267,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
+#ifdef DEBUG
+		if (energy > 0)
+			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+#endif
 
 	}
 

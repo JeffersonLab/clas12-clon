@@ -3,7 +3,7 @@
 
 #include "hls_fadc_sum.h"
 
-#define MAXTIMES   8 /*8 for data, 1 for GEMC*/   /* maximum number of the time slices */
+#define MAXTIMES   13 /*8 for data, 1 for GEMC*/   /* maximum number of the time slices */
 #define NTICKS     8    /* the number of ticks in one timing slice */
 #define TIME2TICKS 4000 /* conversion factor from FADC250 integral time to 4ns ticks */
 
@@ -61,6 +61,16 @@
 #define PC_DALITZ_MAX (ABC+ABC/50) /* +2% */
 
 
+
+/* FT */
+
+#define FT_CALO_SEED_THRESHOLD 20
+#define FT_HODO_HIT_THRESHOLD 20
+#define FT_CALO_DT 10
+#define FT_HODO_DT 10
+
+
+
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -77,8 +87,9 @@ int trigbank_close();
 
 void eclib(unsigned int *bufptr, uint16_t threshold[3], uint16_t nframes, uint16_t dipfactor, uint16_t dalitzmin, uint16_t dalitzmax, uint16_t nstripmax);
 void pclib(unsigned int *bufptr, uint16_t threshold[3], uint16_t nframes, uint16_t dipfactor, uint16_t dalitzmin, uint16_t dalitzmax, uint16_t nstripmax);
-void htcclib(uint32_t *bufptr, uint16_t threshold[3], uint16_t nframes);
+void htcclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_);
 void ftoflib(uint32_t *bufptr, uint16_t threshold[3], uint16_t nframes);
+void ftlib(uint32_t *bufptr, uint16_t calo_seed_threshold, uint16_t hodo_hit_threshold, uint16_t calo_dt, uint16_t hodo_dt);
 
 #ifdef	__cplusplus
 }
