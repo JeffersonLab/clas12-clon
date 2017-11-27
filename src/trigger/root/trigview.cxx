@@ -31,7 +31,7 @@
 
 #include "trigger.h"
 
-#define USE_PCAL
+//#define USE_PCAL
 #define FULLSIZE 800.
 
 #include "ecalview.c"

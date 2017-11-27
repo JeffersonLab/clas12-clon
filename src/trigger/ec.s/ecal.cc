@@ -143,7 +143,7 @@ ecal(ap_uint<16> threshold[3], nframe_t nframes, ap_uint<4> dipfactor, ap_uint<1
   ecstrip_out(str[2], s_strip1_w);  
   /*does not exist in hardware*/
 
-  ecpeak1(threshold[0], dipfactor, 0, s_strip1_u, s_first_u, s_middle_u, s_last_u);
+  ecpeak1(threshold[0], dipfactor, nstripmax, s_strip1_u, s_first_u, s_middle_u, s_last_u);
   ecpeak2(threshold[1], s_strip2_u, s_first_u, s_middle_u, s_last_u, s_peak0strip_u);
   ecpeakzerosuppress(s_peak0strip_u, s_peak0max_u);
   ecpeaksort(s_peak0max_u, s_peak0_u);
@@ -157,7 +157,7 @@ ecal(ap_uint<16> threshold[3], nframe_t nframes, ap_uint<4> dipfactor, ap_uint<1
   ecpeakcoord(1, s_peak0_v, s_peak_v);
   ecpeakfanout(s_peak_v, s_peak1_v, s_peak2_v, peak_scaler_inc_v);
 
-  ecpeak1(threshold[0], dipfactor, 0, s_strip1_w, s_first_w, s_middle_w, s_last_w);
+  ecpeak1(threshold[0], dipfactor, nstripmax, s_strip1_w, s_first_w, s_middle_w, s_last_w);
   ecpeak2(threshold[1], s_strip2_w, s_first_w, s_middle_w, s_last_w, s_peak0strip_w);
   ecpeakzerosuppress(s_peak0strip_w, s_peak0max_w);
   ecpeaksort(s_peak0max_w, s_peak0_w);
