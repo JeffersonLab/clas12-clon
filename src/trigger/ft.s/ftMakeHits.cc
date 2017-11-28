@@ -30,6 +30,9 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 		hls::stream<FTAllHit_t> &s_hits) {
 
 	int ch, slot, idx, nslots;
+#ifdef DEBUG
+	int xx, yy;
+#endif
 	ap_uint< FTHIT_CAL_ENERGY_BITS> energy;
 	ap_uint< FTHIT_CAL_TIME_BITS> time;
 
@@ -58,8 +61,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 		slot = (isl <= 7 ? isl + 3 : isl + 5);
 		idx = getCaloIdxFromCrateSlotChannel(ADCFT1_ROC_ID, slot, ch);
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 		if (idx >= 0) {
 			allHits[idx].cal_e = energy;
@@ -76,8 +81,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 		ch = 2;
 		energy = fadcs.e2;
@@ -89,8 +96,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 		ch = 3;
 		energy = fadcs.e3;
@@ -102,8 +111,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 
 		ch = 4;
@@ -116,8 +127,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 
 		ch = 5;
@@ -130,8 +143,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 
 		ch = 6;
@@ -144,8 +159,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 
 		ch = 7;
@@ -158,8 +175,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 
 		ch = 8;
@@ -172,8 +191,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 
 		ch = 9;
@@ -186,8 +207,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 
 		ch = 10;
@@ -200,8 +223,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 		ch = 11;
 		energy = fadcs.e11;
@@ -213,8 +238,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 
 		ch = 12;
@@ -227,8 +254,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 		ch = 13;
 		energy = fadcs.e13;
@@ -240,8 +269,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 
 		ch = 14;
@@ -254,8 +285,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 
 		ch = 15;
@@ -268,8 +301,10 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_t = time;
 		}
 #ifdef DEBUG
-		if (energy > 0)
-			printf("slot %i ch %i idx= %i time= %i energy=%i \n", slot, ch, idx, (int) time, (int) energy);
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft1 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
 #endif
 
 	}
@@ -290,7 +325,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 1;
 		energy = fadcs.e1;
 		time = fadcs.t1;
@@ -300,7 +340,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 2;
 		energy = fadcs.e2;
 		time = fadcs.t2;
@@ -310,7 +355,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 3;
 		energy = fadcs.e3;
 		time = fadcs.t3;
@@ -320,7 +370,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 4;
 		energy = fadcs.e4;
 		time = fadcs.t4;
@@ -330,7 +385,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 5;
 		energy = fadcs.e5;
 		time = fadcs.t5;
@@ -340,7 +400,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 6;
 		energy = fadcs.e6;
 		time = fadcs.t6;
@@ -350,7 +415,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 7;
 		energy = fadcs.e7;
 		time = fadcs.t7;
@@ -360,7 +430,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 8;
 		energy = fadcs.e8;
 		time = fadcs.t8;
@@ -370,7 +445,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 9;
 		energy = fadcs.e9;
 		time = fadcs.t9;
@@ -380,7 +460,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 10;
 		energy = fadcs.e10;
 		time = fadcs.t10;
@@ -390,7 +475,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 11;
 		energy = fadcs.e11;
 		time = fadcs.t11;
@@ -400,7 +490,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 12;
 		energy = fadcs.e12;
 		time = fadcs.t12;
@@ -410,7 +505,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 13;
 		energy = fadcs.e13;
 		time = fadcs.t13;
@@ -420,7 +520,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 14;
 		energy = fadcs.e14;
 		time = fadcs.t14;
@@ -430,7 +535,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
-
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 		ch = 15;
 		energy = fadcs.e15;
 		time = fadcs.t15;
@@ -440,6 +550,12 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 			allHits[idx].cal_e = energy;
 			allHits[idx].cal_t = time;
 		}
+#ifdef DEBUG
+		if (energy > 0) {
+			getCaloXYfromIdx(idx, xx, yy);
+			printf("x-->%i (%i) y-->%i (%i) adcft2 slot %i ch %i idx=%i time=%i energy=%i \n", xx,getXRecfromXVTP(xx), yy,getYRecfromYVTP(yy), slot, ch, idx, (int) time, (int) energy);
+		}
+#endif
 	}
 
 	nslots = 15;
@@ -524,7 +640,8 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 		for (int iy = FT_MIN_Y; iy <= FT_MAX_Y; iy++) {
 
 			/*Get Calo data*/
-			idx = getCaloIdxFromXY(ix, iy);
+			idx = getCaloIdxFromXY(ix, iy); //
+
 			if (idx >= 0) {
 				hits.hits[ix][iy].cal_e = allHits[idx].cal_e;
 				hits.hits[ix][iy].cal_t = allHits[idx].cal_t;

@@ -42,8 +42,8 @@ void ftSelectClusters(hls::stream<FTAllCluster_t> &s_allClusters, hls::stream<FT
 		if (clusters.valid[ii]) {
 
 #ifdef DEBUG
-			printf("ftSelectClusters e: %d t: %d x: %d y: %d n: %d \n", (uint) clusters.clusters[ii].e, (uint) clusters.clusters[ii].t,
-					(uint) clusters.clusters[ii].x, (uint) clusters.clusters[ii].y, (uint) clusters.clusters[ii].n);
+			printf("ftSelectClusters e: %d t: %d x: (%d) %d y: %d (%d)n: %d \n", (uint) clusters.clusters[ii].e, (uint) clusters.clusters[ii].t,
+					(uint) clusters.clusters[ii].x,getXRecfromXVTP(clusters.clusters[ii].x), (uint) clusters.clusters[ii].y,getYRecfromYVTP(clusters.clusters[ii].y), (uint) clusters.clusters[ii].n);
 			fflush(stdout);
 #endif
 

@@ -14,7 +14,7 @@
  * See ft_pkg.vhd
  * Crate - slot - channel - id - x - y - hodo_sector - hodo_component - hodo_l1_slot - hodo_l1_channel - hodo_l2_slot - hodo_l2_channel
  */
-static int ftFullMap[FT_CRYSTAL_NUM][12] { { 70, 3, 0, 143, 11, 6, 6, 17, 7, 1, 7, 13 }, { 70, 3, 1, 121, 11, 5, 6, 11, 7, 0, 7, 15 }, { 70,
+static int ftFullMap[FT_CRYSTAL_NUM][12] = { { 70, 3, 0, 143, 11, 6, 6, 17, 7, 1, 7, 13 }, { 70, 3, 1, 121, 11, 5, 6, 11, 7, 0, 7, 15 }, { 70,
 		3, 2, 99, 11, 4, 6, 11, 7, 0, 7, 15 }, { 70, 3, 3, 77, 11, 3, 6, 7, 9, 2, 9, 10 }, { 70, 3, 4, 55, 11, 2, 6, 7, 9, 2, 9, 10 }, { 70,
 		3, 5, 11, 11, 0, 6, 3, 9, 7, 9, 15 }, { 70, 3, 6, 33, 11, 1, 6, 3, 9, 7, 9, 15 }, { 70, 3, 7, 144, 12, 6, 6, 18, 7, 2, 7, 14 }, {
 		70, 3, 8, 122, 12, 5, 6, 11, 7, 0, 7, 15 }, { 70, 3, 9, 100, 12, 4, 6, 11, 7, 0, 7, 15 },
@@ -149,6 +149,10 @@ int getMatchingHodoSlot(int xx, int yy, int layer);
 int getCaloIdxFromXY(int xx, int yy);
 int getCaloIdxFromCrateSlotChannel(int crate, int slot, int channel);
 int getROCFromXY(int xx, int yy);
+void getCaloXYfromIdx(int idx,int &xx,int &yy);
+/*Just for debugging*/
+int getXRecfromXVTP(int xvtp);
+int getYRecfromYVTP(int yvtp);
 
 
 #endif /* FTTRANS_H_ */

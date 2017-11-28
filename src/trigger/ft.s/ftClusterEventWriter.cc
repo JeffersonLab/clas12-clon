@@ -14,9 +14,7 @@
 #include "ftlib.h"
 #include "fttrans.h"
 
-
 #define DEBUG
-
 
 /*
  Since no further operations are foreseen on data - this goes to evio bank as described in clonbanks.xml
@@ -27,7 +25,7 @@
  0(13,10)        "NHITS"
  0(9,5)          "COORDY"
  0(4,0)          "COORDX"
- 1(25,11)        "ENERGY"
+ 1(25,11)        "ENERGY"    ---> A.C. IN VHDL IT IS 1(16,29)
  1(10,0)         "TIME"
 
  *
@@ -60,7 +58,8 @@ void ftClusterEventWriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdat
 	eventdata_t eventdata;
 	trig_t trig = trig_stream.read();
 #ifdef DEBUG
-	printf("ftClusterEventWriter was called -->INPUT s_clustersEVIO.size() is: %d, OUTPUT event_stream.size() is: %d \n",s_clustersEVIO.size(), event_stream.size());
+	printf("ftClusterEventWriter was called -->INPUT s_clustersEVIO.size() is: %d, OUTPUT event_stream.size() is: %d \n", s_clustersEVIO.size(),
+			event_stream.size());
 	fflush(stdout);
 #endif
 	while (!s_clustersEVIO.empty()) {
@@ -70,36 +69,39 @@ void ftClusterEventWriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdat
 		printf("rocID: %d Energy: %d \n", (int) clusters.rocID, (int) clusters.e);
 		fflush(stdout);
 #endif
-		if ((int) clusters.e > 0) {
-			eventdata.end = 0;
-			eventdata.data(31, 31) = 1;
-			/*Code here roc id just for now! it should be  0x17: 0x7 + 0x10 bit 31*/
-			if (clusters.rocID == 0) { //roc-70
-				eventdata.data(30, 27) = 0;
-			} else if (clusters.rocID == 1) { //roc-71
-				eventdata.data(30, 27) = 1;
-			} else {
-				eventdata.data(30, 27) = 2; //should never happen!
-			}
-			eventdata.data(26, 16) = 0;
-			eventdata.data(15, 15) = clusters.h2;
-			eventdata.data(14, 14) = clusters.h1;
-			eventdata.data(13, 10) = clusters.n;
-			eventdata.data(9, 5) = clusters.y;
-			eventdata.data(4, 0) = clusters.x;
-			event_stream.write(eventdata);
+		//if ((int) clusters.e > 0) { /*Does nothing since clusters.e is an uint!
 
-			eventdata.end = 0;
-			eventdata.data(31, 26) = 0;
-			eventdata.data(25, 11) = clusters.e; /*15 bits, but vhdl seems 14?*/
-			eventdata.data(0, 10) = clusters.t; /*11 bits is OK: 3 fine (0..7 for position within window) and 8 coarse (0..255)*/
-			event_stream.write(eventdata);
-#ifdef DEBUG
-			printf("ftClusterEventWriter: wrote to event stream [%d] \n",event_stream.size());
-			printf("e: %d t: %d x: %d y: %d n: %d \n",(uint)clusters.e,(uint)clusters.t,(uint)clusters.x,(uint)clusters.y,(uint)clusters.n);
-			fflush(stdout);
-#endif
+		eventdata.end = 0;
+		eventdata.data(31, 31) = 1;
+		/*Code here roc id just for now! it should be  0x17: 0x7 + 0x10 bit 31*/
+		if (clusters.rocID == 0) { //roc-70
+			eventdata.data(30, 27) = 0;
+		} else if (clusters.rocID == 1) { //roc-71
+			eventdata.data(30, 27) = 1;
+		} else {
+			eventdata.data(30, 27) = 2; //should never happen!
 		}
+		eventdata.data(26, 16) = 0;
+		eventdata.data(15, 15) = clusters.h2;
+		eventdata.data(14, 14) = clusters.h1;
+		eventdata.data(13, 10) = clusters.n;
+		eventdata.data(9, 5) = clusters.y;
+		eventdata.data(4, 0) = clusters.x;
+		event_stream.write(eventdata);
+
+		eventdata.end = 0;
+		eventdata.data(31, 30) = 0;
+		//	eventdata.data(25, 11) = clusters.e; /*15 bits, but vhdl seems 14?*/
+		eventdata.data(29, 16) = clusters.e;
+		eventdata.data(15, 11) = 0;
+		eventdata.data(10, 0) = clusters.t; /*11 bits is OK: 3 fine (0..7 for position within window) and 8 coarse (0..255)*/
+		event_stream.write(eventdata);
+#ifdef DEBUG
+		printf("ftClusterEventWriter: wrote to event stream [%d] \n", event_stream.size());
+		printf("e: %d t: %d x: %d (%d) y: %d (%d) n: %d \n", (uint) clusters.e, (uint) clusters.t, (uint) clusters.x,getXRecfromXVTP(clusters.x),(uint) clusters.y,getYRecfromYVTP(clusters.y), (uint) clusters.n);
+		fflush(stdout);
+#endif
+		//	}
 	}
 
 	eventdata.data = 0xFFFFFFFF;
