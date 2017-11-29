@@ -86,6 +86,9 @@ ft(ap_uint<13> calo_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, ap_u
 {
 
 
+
+
+
 	hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS];
 	hls::stream<FTAllHit_t> s_hits;
 	hls::stream<FTAllCluster_t> s_ALLclusters;

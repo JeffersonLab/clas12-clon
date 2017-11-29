@@ -15,7 +15,7 @@
 #include "fttrans.h"
 
 //#define DEBUG
-#define DEBUG2
+//#define DEBUG2
 
 ap_uint<FTCLUSTER_CAL_N_BITS> sum_hits(bool hits[3][3]) {
 	ap_uint<FTCLUSTER_CAL_N_BITS> ret = 0;
@@ -30,18 +30,17 @@ ap_uint<FTCLUSTER_CAL_N_BITS> sum_hits(bool hits[3][3]) {
 
 bool hit_coinc(ap_uint<4> t_seed, ap_uint<4> t_hit, ap_uint<4> dt) {
 	bool ret = false;
-	ap_uint<4> diff;
+	ap_uint<4> diff = 0xf;
 	if (t_seed <= t_hit) {
 		diff = t_hit - t_seed;
-		if (diff <= dt) {
-			ret = true;
-		}
-	} else if (t_seed > t_hit) {
+	} else {
 		diff = t_seed - t_hit;
-		if (diff <= dt) {
-			ret = true;
-		}
 	}
+
+	if (diff <= dt) {
+		ret = true;
+	}
+
 	return ret;
 }
 
@@ -124,6 +123,32 @@ void doClustering(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_uin
 			}
 		}
 	}
+
+#ifdef DEBUG2
+	printf("doClustering 0 dt: %i \n",(unsigned int)calo_dt);
+	printf("doClustering1 ene: %i %i %i %i %i %i %i %i %i \n", (unsigned int) energy[0][0], (unsigned int) energy[0][1], (unsigned int) energy[0][2],
+			(unsigned int) energy[1][0], (unsigned int) energy[1][1], (unsigned int) energy[1][2], (unsigned int) energy[2][0], (unsigned int) energy[2][1],
+			(unsigned int) energy[2][2]);
+	printf("doClustering1 hits: %i %i %i %i %i %i %i %i %i \n", (unsigned int) hits[0][0], (unsigned int) hits[0][1], (unsigned int) hits[0][2],
+			(unsigned int) hits[1][0], (unsigned int) hits[1][1], (unsigned int) hits[1][2], (unsigned int) hits[2][0], (unsigned int) hits[2][1],
+			(unsigned int) hits[2][2]);
+	printf("doClustering2 this_data t: %i %i %i %i %i %i %i %i %i \n", (unsigned int) this_data.hits[0][0].cal_t, (unsigned int) this_data.hits[0][1].cal_t,
+			(unsigned int) this_data.hits[0][2].cal_t, (unsigned int) this_data.hits[1][0].cal_t, (unsigned int) this_data.hits[1][1].cal_t,
+			(unsigned int) this_data.hits[1][2].cal_t, (unsigned int) this_data.hits[2][0].cal_t, (unsigned int) this_data.hits[2][1].cal_t,
+			(unsigned int) this_data.hits[2][2].cal_t);
+	printf("doClustering2 this_data e: %i %i %i %i %i %i %i %i %i \n", (unsigned int) this_data.hits[0][0].cal_e, (unsigned int) this_data.hits[0][1].cal_e,
+			(unsigned int) this_data.hits[0][2].cal_e, (unsigned int) this_data.hits[1][0].cal_e, (unsigned int) this_data.hits[1][1].cal_e,
+			(unsigned int) this_data.hits[1][2].cal_e, (unsigned int) this_data.hits[2][0].cal_e, (unsigned int) this_data.hits[2][1].cal_e,
+			(unsigned int) this_data.hits[2][2].cal_e);
+	printf("doClustering3 prev_data t: %i %i %i %i %i %i %i %i %i \n", (unsigned int) prev_data.hits[0][0].cal_t, (unsigned int) prev_data.hits[0][1].cal_t,
+			(unsigned int) prev_data.hits[0][2].cal_t, (unsigned int) prev_data.hits[1][0].cal_t, (unsigned int) prev_data.hits[1][1].cal_t,
+			(unsigned int) prev_data.hits[1][2].cal_t, (unsigned int) prev_data.hits[2][0].cal_t, (unsigned int) prev_data.hits[2][1].cal_t,
+			(unsigned int) prev_data.hits[2][2].cal_t);
+	printf("doClustering3 prev_data e: %i %i %i %i %i %i %i %i %i \n", (unsigned int) prev_data.hits[0][0].cal_e, (unsigned int) prev_data.hits[0][1].cal_e,
+			(unsigned int) prev_data.hits[0][2].cal_e, (unsigned int) prev_data.hits[1][0].cal_e, (unsigned int) prev_data.hits[1][1].cal_e,
+			(unsigned int) prev_data.hits[1][2].cal_e, (unsigned int) prev_data.hits[2][0].cal_e, (unsigned int) prev_data.hits[2][1].cal_e,
+			(unsigned int) prev_data.hits[2][2].cal_e);
+#endif
 
 	cluster.t = (frame_cnt << 3) + ((cluster.t - 4) & 0x7);
 	ene_tmp = energy[0][0] + energy[0][1] + energy[0][2] + energy[1][0] + energy[1][1] + energy[1][2] + energy[2][0] + energy[2][1] + energy[2][2];
@@ -218,9 +243,22 @@ void ftMakeClusters(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_u
 			this_data.hits[ix][iy].cal_t += 8;
 			this_data.hits[ix][iy].hodo_l1_t += 8;
 			this_data.hits[ix][iy].hodo_l2_t += 8;
-#ifdef DEBUG
-			printf("ftMakeClusters ix->%i iy->%i frame_cnt:%i \n", ix, iy, (uint) frame_count);
+
+#ifdef DEBUG2
+			if (this_data.hits[ix][iy].cal_e > 0) {
+				printf("ftMakeCaloClusters  ix->%i (%i) iy->%i (%i) t->%i e->%i \n", ix, getXRecfromXVTP(ix), iy, getYRecfromYVTP(iy),
+						(unsigned int) this_data.hits[ix][iy].cal_t, (unsigned int) this_data.hits[ix][iy].cal_e);
+			}
 #endif
+		}
+	}
+
+	for (int ix = FT_MIN_X; ix <= FT_MAX_X; ix++) { //from MIN to MAX included
+		for (int iy = FT_MIN_Y; iy <= FT_MAX_Y; iy++) {
+			/*Check if this channel exists*/
+			idx = getCaloIdxFromXY(ix, iy);
+			if (idx == -1)
+				continue;
 			/*Here, it means the hit exists. If so, get the relevant data for clustering*/
 			for (int ii = -1; ii <= 1; ii++) {
 				for (int jj = -1; jj <= 1; jj++) {
@@ -256,8 +294,8 @@ void ftMakeClusters(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_u
 
 #ifdef DEBUG2
 			if (clusters.valid[idx]) {
-				printf("ftMakeClusters valid: frame_count: %i, ix->%i (%i) iy->%i (%i) time->%i ene->%i n->%i \n",(uint)frame_count, ix, getXRecfromXVTP(ix),iy,getYRecfromYVTP(iy), (uint) clusters.clusters[idx].t,
-						(uint) clusters.clusters[idx].e, (uint) clusters.clusters[idx].n);
+				printf("ftMakeClusters valid: frame_count: %i, dt: %i, ix->%i (%i) iy->%i (%i) time->%i ene->%i n->%i \n", (uint) frame_count,(uint) calo_dt, ix, getXRecfromXVTP(ix),
+						iy, getYRecfromYVTP(iy), (uint) clusters.clusters[idx].t, (uint) clusters.clusters[idx].e, (uint) clusters.clusters[idx].n);
 			}
 #endif
 

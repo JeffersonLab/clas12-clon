@@ -29,7 +29,7 @@ using namespace std;
 #define MAX(a,b)    (a > b ? a : b)
 #define MIN(a,b)    (a < b ? a : b)
 
-#define DEBUG_0
+//#define DEBUG_0
 //define DEBUG_3
 
 static int nslots[NDET] = { 7, 7, 14, 12, 14, 3, 12, 0, 0, 11, 10, 15 };

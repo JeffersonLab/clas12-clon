@@ -88,8 +88,10 @@ void ftlib(uint32_t *bufptr, uint16_t calo_seed_threshold_, uint16_t hodo_hit_th
 
 	ap_uint<13> calo_seed_threshold = calo_seed_threshold_;
 	ap_uint<13> hodo_hit_threshold = hodo_hit_threshold_;
-	ap_uint<3> calo_dt = calo_dt_;
-	ap_uint<3> hodo_dt = hodo_dt_;
+
+	/*Timinig is performed in units of 4*ns, and maximum coinc. possible is  +/-7clks, i.e. +- 28 ns*/
+	ap_uint<3> calo_dt = calo_dt_/4;
+	ap_uint<3> hodo_dt = hodo_dt_/4;
 
 	hls::stream<fadc_16ch_t> s_fadcs_ft1[NFADCS]; //ROC-70 FT-Cal1 
 	hls::stream<fadc_16ch_t> s_fadcs_ft2[NFADCS]; //ROC-71 FT-Cal2 
@@ -142,6 +144,7 @@ void ftlib(uint32_t *bufptr, uint16_t calo_seed_threshold_, uint16_t hodo_hit_th
 	for (it = 0; it < MAXTIMES; it++) {
 		printf("ftlib: timing slice = %d\n", it);
 		fflush(stdout);
+
 
 		/* FPGA section - not to be syntethized on FPGA, rather to simulate that code*/
 		ft(calo_seed_threshold, calo_dt, hodo_dt, hodo_hit_threshold, s_fadcs_ft1, s_fadcs_ft2, s_fadcs_ft3, s_clusters, /*buf_ram,n_clusters*/
