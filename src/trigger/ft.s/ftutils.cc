@@ -7,6 +7,7 @@
 
 #include "fttrans.h"
 #include "fttypes.h"
+
 int getCaloIdxFromCrateSlotChannel(int crate, int slot, int channel) {
 	int cr, sl, ch;
 	for (int ii = 0; ii < FT_CRYSTAL_NUM; ii++) {
@@ -24,7 +25,7 @@ int getCaloIdxFromXY(int xx, int yy) {
 	for (int ii = 0; ii < FT_CRYSTAL_NUM; ii++) {
 		x = ftFullMap[ii][4];
 		y = ftFullMap[ii][5];
-		if ((x == xx) && (y = yy))
+		if ((x == xx) && (y == yy))
 			return ii;
 	}
 	return -1;
@@ -36,11 +37,17 @@ int getROCFromXY(int xx, int yy) {
 		x = ftFullMap[ii][4];
 		y = ftFullMap[ii][5];
 		roc = ftFullMap[ii][0];
-		if ((x == xx) && (y = yy))
+		if ((x == xx) && (y == yy))
 			return roc;
 	}
 	return -1;
 }
+
+void getCaloXYfromIdx(int idx,int &xx,int &yy){
+	xx = ftFullMap[idx][4];
+	yy = ftFullMap[idx][5];
+}
+
 
 int getMatchingHodoSlot(int xx, int yy, int layer) {
 	int x, y;
@@ -49,7 +56,7 @@ int getMatchingHodoSlot(int xx, int yy, int layer) {
 	for (int ii = 0; ii < FT_CRYSTAL_NUM; ii++) {
 		x = ftFullMap[ii][4];
 		y = ftFullMap[ii][5];
-		if ((x == xx) && (y = yy)) {
+		if ((x == xx) && (y == yy)) {
 			if (layer == 1)
 				return ftFullMap[ii][8];
 			else
@@ -65,7 +72,7 @@ int getMatchingHodoChannel(int xx, int yy, int layer) {
 	for (int ii = 0; ii < FT_CRYSTAL_NUM; ii++) {
 		x = ftFullMap[ii][4];
 		y = ftFullMap[ii][5];
-		if ((x == xx) && (y = yy)) {
+		if ((x == xx) && (y == yy)) {
 			if (layer == 1)
 				return ftFullMap[ii][9];
 			else
@@ -73,6 +80,20 @@ int getMatchingHodoChannel(int xx, int yy, int layer) {
 		}
 	}
 	return -1;
+}
+
+/*These are 2 usefull methods for printing during debug, given VTP's x-y system return calorimeter x-y system*/
+int getXRecfromXVTP(int xvtp){
+	int ret=0;
+	if (xvtp<=10) ret=(xvtp-11);
+	else ret=(xvtp-10);
+	return ret;
+}
+int getYRecfromYVTP(int yvtp){
+	int ret=0;
+	if (yvtp<=10) ret=(yvtp-11);
+	else ret=(yvtp-10);
+	return ret;
 }
 
 void copyFTHit(FTHit_t &source, FTHit_t &dest) {
