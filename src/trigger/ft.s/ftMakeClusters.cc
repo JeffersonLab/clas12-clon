@@ -14,6 +14,12 @@
 #include "ftlib.h"
 #include "fttrans.h"
 
+
+#ifndef _SYNTHESIS_
+	extern ap_uint<8> frame_cnt;
+#endif
+
+
 //#define DEBUG
 //#define DEBUG2
 
@@ -45,7 +51,7 @@ bool hit_coinc(ap_uint<4> t_seed, ap_uint<4> t_hit, ap_uint<4> dt) {
 }
 
 /*Mimics ft_cluster.vhdl*/
-void doClustering(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, ap_uint<8> frame_cnt, FT3by3Hit_t &prev_data,
+void doClustering(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, FT3by3Hit_t &prev_data,
 		FT3by3Hit_t &this_data, FTCluster_t &cluster, ap_uint<1> &valid) {
 	bool hits[3][3] = { 0 };
 
@@ -208,7 +214,6 @@ void ftMakeClusters(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_u
 	int idx;
 	int roc;
 
-	static ap_uint<8> frame_count(0);
 
 	static FTAllHit_t this_data = { 0 }; //init all 0
 	static FTAllHit_t prev_data = { 0 }; //init all 0
@@ -232,6 +237,8 @@ void ftMakeClusters(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_u
 	}
 	/*read one time slice*/
 	this_data = s_fthits.read();
+
+
 
 	for (int ix = FT_MIN_X; ix <= FT_MAX_X; ix++) { //from MIN to MAX included
 		for (int iy = FT_MIN_Y; iy <= FT_MAX_Y; iy++) {
@@ -287,14 +294,14 @@ void ftMakeClusters(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_u
 			}
 
 			/*Here do the clustering */
-			doClustering(cluster_seed_threshold, calo_dt, hodo_dt, frame_count, prev_data_for_clustering, this_data_for_clustering, clusters.clusters[idx],
+			doClustering(cluster_seed_threshold, calo_dt, hodo_dt, prev_data_for_clustering, this_data_for_clustering, clusters.clusters[idx],
 					clusters.valid[idx]);
 			clusters.clusters[idx].x = ix;
 			clusters.clusters[idx].y = iy;
 
 #ifdef DEBUG2
 			if (clusters.valid[idx]) {
-				printf("ftMakeClusters valid: frame_count: %i, dt: %i, ix->%i (%i) iy->%i (%i) time->%i ene->%i n->%i \n", (uint) frame_count,(uint) calo_dt, ix, getXRecfromXVTP(ix),
+				printf("ftMakeClusters valid: frame_count: %i, dt: %i, ix->%i (%i) iy->%i (%i) time->%i ene->%i n->%i \n", (uint) frame_cnt,(uint) calo_dt, ix, getXRecfromXVTP(ix),
 						iy, getYRecfromYVTP(iy), (uint) clusters.clusters[idx].t, (uint) clusters.clusters[idx].e, (uint) clusters.clusters[idx].n);
 			}
 #endif
@@ -305,7 +312,7 @@ void ftMakeClusters(ap_uint<13> cluster_seed_threshold, ap_uint<3> calo_dt, ap_u
 		}
 	}
 
-	frame_count++;
+
 	s_clusters.write(clusters);
 
 }

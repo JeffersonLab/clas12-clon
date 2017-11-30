@@ -675,7 +675,7 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
       if(bufout1[0]>0) {printf("writing V\n");trigbank_write(bufout1);}
       if(bufout2[0]>0) {printf("writing W\n");trigbank_write(bufout2);}
       if(bufout3[0]>0) {printf("writing H\n");trigbank_write(bufout3);}
-      trigbank_close();
+      trigbank_close(bufout0[0]+bufout1[0]+bufout2[0]+bufout3[0]);
 	}
 
 

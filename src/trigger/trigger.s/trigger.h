@@ -83,7 +83,7 @@ void fadcs_to_onestream(int nslot, hls::stream<fadc_16ch_t> s_fadc_in[NFADCS], h
 
 int trigbank_open(uint32_t *bufptr, int fragtag, int banktag, int iev, unsigned long long timestamp);
 int trigbank_write(uint32_t *data);
-int trigbank_close();
+int trigbank_close(int nwords);
 
 void eclib(unsigned int *bufptr, uint16_t threshold[3], uint16_t nframes, uint16_t dipfactor, uint16_t dalitzmin, uint16_t dalitzmax, uint16_t nstripmax);
 void pclib(unsigned int *bufptr, uint16_t threshold[3], uint16_t nframes, uint16_t dipfactor, uint16_t dalitzmin, uint16_t dalitzmax, uint16_t nstripmax);

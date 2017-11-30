@@ -30,7 +30,7 @@ using namespace std;
 #define MIN(a,b)    (a < b ? a : b)
 
 //#define DEBUG_0
-//define DEBUG_3
+//#define DEBUG_3
 
 static int nslots[NDET] = { 7, 7, 14, 12, 14, 3, 12, 0, 0, 11, 10, 15 };
 static int slot2isl[NDET][22] = { -1, -1, -1, 0, 1, 2, 3, 4, 5, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* ECAL_IN slots: 3-9 */

@@ -14,7 +14,10 @@
 #include "ftlib.h"
 #include "fttrans.h"
 
-#define DEBUG
+/*A.C. this is the effective way to measure cluster timing wrt the beginning of the window!*/
+
+
+//#define DEBUG
 
 /*This is the function that makes the FT hits - doing a geometrical coincidence between crystal, hodo L1, hodo L2
  * Inputs:
@@ -52,6 +55,7 @@ void ftMakeHits(hls::stream<fadc_16ch_t> s_ft1[NFADCS], hls::stream<fadc_16ch_t>
 	/*adcft1*/
 	nslots = 11;
 	ch = 0;
+
 	for (int isl = 0; isl < nslots; isl++) {
 		fadcs = s_ft1[isl].read();
 

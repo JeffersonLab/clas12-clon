@@ -25,7 +25,7 @@
  0(13,10)        "NHITS"
  0(9,5)          "COORDY"
  0(4,0)          "COORDX"
- 1(25,11)        "ENERGY"    ---> A.C. IN VHDL IT IS 1(16,29)
+ 1(29,16)        "ENERGY"    ---> A.C. IN VHDL IT IS 1(29,16)
  1(10,0)         "TIME"
 
  *
@@ -53,8 +53,7 @@
  } cluster_ram_t;
  */
 
-void ftClusterEventWriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream,
-/*cluster_ram_t buf_ram_read[FT_MAX_CLUSTERS][256], ap_uint<8> n_clusters[256]*/hls::stream<FTCluster_t> &s_clustersEVIO) {
+void ftClusterEventWriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, hls::stream<FTCluster_t> &s_clustersEVIO) {
 	eventdata_t eventdata;
 	trig_t trig = trig_stream.read();
 #ifdef DEBUG
@@ -94,11 +93,12 @@ void ftClusterEventWriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdat
 		//	eventdata.data(25, 11) = clusters.e; /*15 bits, but vhdl seems 14?*/
 		eventdata.data(29, 16) = clusters.e;
 		eventdata.data(15, 11) = 0;
-		eventdata.data(10, 0) = clusters.t; /*11 bits is OK: 3 fine (0..7 for position within window) and 8 coarse (0..255)*/
+		eventdata.data(10, 0) = clusters.t; /*11 bits is OK: 3 fine (0..7 for position within window) and 8 coarse (0..255) Units are CLOCK TICKS (4ns each)*/
 		event_stream.write(eventdata);
 #ifdef DEBUG
 		printf("ftClusterEventWriter: wrote to event stream [%d] \n", event_stream.size());
-		printf("e: %d t: %d x: %d (%d) y: %d (%d) n: %d \n", (uint) clusters.e, (uint) clusters.t, (uint) clusters.x,getXRecfromXVTP(clusters.x),(uint) clusters.y,getYRecfromYVTP(clusters.y), (uint) clusters.n);
+		printf("e: %d t: %d x: %d (%d) y: %d (%d) n: %d \n", (uint) clusters.e, (uint) clusters.t, (uint) clusters.x, getXRecfromXVTP(clusters.x),
+				(uint) clusters.y, getYRecfromYVTP(clusters.y), (uint) clusters.n);
 		fflush(stdout);
 #endif
 		//	}

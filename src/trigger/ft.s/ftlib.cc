@@ -21,7 +21,7 @@ void ftClusterEventReader(hls::stream<eventdata_t> &event_stream, FTCluster_t cl
 	uint32_t data_end = 0, word_first = 0, tag = 0, inst = 0, view = 0, data = 0, it = 0;
 	uint32_t *bufptr1 = bufoutADCFT1 + 1, *bufptr2 = bufoutADCFT2 + 1;
 	uint32_t **bufptr;
-	int i = 0;
+
 	ap_uint<1> ROC;
 	bool present = false;
 #ifdef DEBUG 
@@ -76,7 +76,6 @@ void ftClusterEventReader(hls::stream<eventdata_t> &event_stream, FTCluster_t cl
 		*(*bufptr) = eventdata.data; /*Write to output*/
 		(*bufptr)++; /*increment the pointer*/
 		data_end = eventdata.end;
-		i++;
 	}
 }
 void ftlib(uint32_t *bufptr, uint16_t calo_seed_threshold_, uint16_t hodo_hit_threshold_, uint16_t calo_dt_, uint16_t hodo_dt_) {
@@ -90,8 +89,8 @@ void ftlib(uint32_t *bufptr, uint16_t calo_seed_threshold_, uint16_t hodo_hit_th
 	ap_uint<13> hodo_hit_threshold = hodo_hit_threshold_;
 
 	/*Timinig is performed in units of 4*ns, and maximum coinc. possible is  +/-7clks, i.e. +- 28 ns*/
-	ap_uint<3> calo_dt = calo_dt_/4;
-	ap_uint<3> hodo_dt = hodo_dt_/4;
+	ap_uint<3> calo_dt = calo_dt_ / 4;
+	ap_uint<3> hodo_dt = hodo_dt_ / 4;
 
 	hls::stream<fadc_16ch_t> s_fadcs_ft1[NFADCS]; //ROC-70 FT-Cal1 
 	hls::stream<fadc_16ch_t> s_fadcs_ft2[NFADCS]; //ROC-71 FT-Cal2 
@@ -145,7 +144,6 @@ void ftlib(uint32_t *bufptr, uint16_t calo_seed_threshold_, uint16_t hodo_hit_th
 		printf("ftlib: timing slice = %d\n", it);
 		fflush(stdout);
 
-
 		/* FPGA section - not to be syntethized on FPGA, rather to simulate that code*/
 		ft(calo_seed_threshold, calo_dt, hodo_dt, hodo_hit_threshold, s_fadcs_ft1, s_fadcs_ft2, s_fadcs_ft3, s_clusters, /*buf_ram,n_clusters*/
 		s_clustersEVIO);
@@ -174,13 +172,37 @@ void ftlib(uint32_t *bufptr, uint16_t calo_seed_threshold_, uint16_t hodo_hit_th
 
 	if (bufoutADCFT1[0] > 0) {
 		trigbank_open(bufptr, 970, banktag, iev, timestamp); /*A.C. 970 is temporary*/
+
+		bufoutADCFT1[bufoutADCFT1[0] + 1] = 0xfadc0001;
+		bufoutADCFT1[0] = bufoutADCFT1[0] + 1;
+
 		trigbank_write(bufoutADCFT1);
-		trigbank_close();
+		trigbank_close(bufoutADCFT1[0]);
 	}
 	if (bufoutADCFT2[0] > 0) {
 		trigbank_open(bufptr, 971, banktag, iev, timestamp);/*A.C. 970 is temporary*/
 		trigbank_write(bufoutADCFT2);
-		trigbank_close();
+		int tmp = 0;
+		for (int i = 29750; i < 29795; i++) {
+			if ((bufptr[i] == 0xb8000607)) {
+				tmp = 1;
+			}
+			if (tmp)
+				printf("BEFORE wrote[%d]: 0x%08x\n", i, bufptr[i]);
+		}
+
+		trigbank_close(bufoutADCFT2[0]);
+
+
+
+		for (int i = 29750; i < 29795; i++) {
+			if ((bufptr[i] == 0xb8000607)) {
+				tmp = 1;
+			}
+			if (tmp)
+				printf("AFTER wrote[%d]: 0x%08x\n", i, bufptr[i]);
+		}
+
 	}
 
 #if 0 
