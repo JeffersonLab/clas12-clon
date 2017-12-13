@@ -136,7 +136,7 @@ hls::stream<eventdata_t> event_stream;
     int banktag = 0xe122;
     trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
     trigbank_write(bufout);
-    trigbank_close();
+    trigbank_close(bufout[0]);
   }
 
   trig.t_start += MAXTIMES*8; /* in preparation for next event, step up MAXTIMES*32ns in 4ns ticks */

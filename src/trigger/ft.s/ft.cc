@@ -67,6 +67,10 @@ using namespace std;
 #include "ft1trans.h"
 #include "ft2trans.h"
 
+#ifndef _SYNTHESIS_
+ap_uint<8> frame_cnt(0);
+#endif
+
 /*This is the function that should be "as close as possible" to the one
  * implemented by Ben on FPGA.
  * Input data: streams of fadc hits from 3 crates
@@ -79,12 +83,9 @@ using namespace std;
  *  -  HODO_DT for match Calo-hodo (3 bits) 	- fcal_per.vhd
  *  -  HIT_THR for Hodoscope (13 bits) 			- fthodo_per.vhd
  */
-void
-ft(ap_uint<13> calo_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, ap_uint<13> hodo_hit_threshold,
-		hls::stream<fadc_16ch_t> s_ft1[NFADCS],hls::stream<fadc_16ch_t> s_ft2[NFADCS],hls::stream<fadc_16ch_t> s_ft3[NFADCS],
-		hls::stream<FTCluster_t> &s_clustersOUT, /*cluster_ram_t cluster_ram[FT_MAX_CLUSTERS][256],ap_uint<8> nClusters[256]*/hls::stream<FTCluster_t> &s_clustersEVIO)
-{
-
+void ft(ap_uint<13> calo_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, ap_uint<13> hodo_hit_threshold, hls::stream<fadc_16ch_t> s_ft1[NFADCS],
+		hls::stream<fadc_16ch_t> s_ft2[NFADCS], hls::stream<fadc_16ch_t> s_ft3[NFADCS], hls::stream<FTCluster_t> &s_clustersOUT, /*cluster_ram_t cluster_ram[FT_MAX_CLUSTERS][256],ap_uint<8> nClusters[256]*/
+		hls::stream<FTCluster_t> &s_clustersEVIO) {
 
 	hls::stream<FTHODOHits_16ch_t> s_hodoHits[NFADCS];
 	hls::stream<FTAllHit_t> s_hits;
@@ -98,25 +99,36 @@ ft(ap_uint<13> calo_seed_threshold, ap_uint<3> calo_dt, ap_uint<3> hodo_dt, ap_u
 	 * s_ft3 is read for all slots - and all channels report in s_hodoHits
 	 * See: fthodo_per.vhd
 	 */
-	ftHodoDiscriminate(hodo_hit_threshold,s_ft3,s_hodoHits);
+	ftHodoDiscriminate(hodo_hit_threshold, s_ft3, s_hodoHits);
 
 	/*This function takes all hits from all ft-cal fadcs - ft1 and ft2 -
 	 * and matches them with ftHodoHits.
 	 * See: ft_channel_mapper.vhd
 	 */
-	ftMakeHits(s_ft1,s_ft2,s_hodoHits,s_hits);
+	ftMakeHits(s_ft1, s_ft2, s_hodoHits, s_hits);
 
 	/*This functions makes the clusters - ALL of them are reported*/
-	ftMakeClusters(calo_seed_threshold,calo_dt,hodo_dt,s_hits,s_ALLclusters);
+	ftMakeClusters(calo_seed_threshold, calo_dt, hodo_dt, s_hits, s_ALLclusters);
 
 	/*This function reports to the s_clusters stream just those having valid==1*/
 	/*VERY IMPORTANT: up to here, all the read-write operations to streams were fixed in number.
 	 *Here, if I just write to the s_clusters stream the GOOD clusters, this number of operations will
 	 *be different event by event
 	 */
-	ftSelectClusters(s_ALLclusters,s_clusters);
+	ftSelectClusters(s_ALLclusters, s_clusters);
 
 	/*Copy s_clusters to s_clustersOUT and s_clusters2*/
-	ftClusterFanout(s_clusters,s_clustersOUT,s_clustersEVIO);
+	ftClusterFanout(s_clusters, s_clustersOUT, s_clustersEVIO);
 	/*Both are full now, and the number of elements vary event by event. s_clusters is empty - it has been fully read*/
+
+	/*A.C.-> the way I use to measure time wrt beginning of time window is to check, after s_ft1/s_ft2/s_ft3 have been read, if they're empty.
+	 * If so, it means this event is over, and we reset frame_count to 0
+	 */
+#ifndef _SYNTHESIS_
+	if (s_ft1[0].empty()) {
+		frame_cnt = 0;
+	} else {
+		frame_cnt++;
+	}
+#endif
 }
