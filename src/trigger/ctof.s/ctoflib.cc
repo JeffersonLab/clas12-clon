@@ -149,7 +149,7 @@ ctoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
       int banktag = 0xe122;
       trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
       trigbank_write(bufout);
-      trigbank_close();
+      trigbank_close(bufout[0]);
 	}
 
 

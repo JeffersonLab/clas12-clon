@@ -129,7 +129,7 @@ setenv CLASSPATH "$CLASSPATH":"$IMPORT_JAR/imaginary.jar"
 setenv QCAFRAMEWORK $CLON/src/epicsqt1.1.2_hide/ca_framework
 
 #ccdb setting
-setenv CCDB_HOME /usr/local/src/ccdb
+#setenv CCDB_HOME /usr/local/src/ccdb
 
 #rcdb setting
 setenv RCDB_HOME /usr/local/src/rcdb
