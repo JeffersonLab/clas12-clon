@@ -49,6 +49,7 @@ endif
 
 
 LIBNAMES = $(CLON)/src/epicsutil/$(OSTYPE_MACHINE)/lib/libepicsutil.a
+LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libcodautil.a
 LIBNAMES += $(CLON)/src/clonutil/$(OSTYPE_MACHINE)/lib/libclonutil.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a

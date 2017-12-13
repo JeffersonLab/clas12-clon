@@ -13,7 +13,7 @@ class MessageActionEPICS : public MessageAction {
   private:
 
     static const int NFORMATS=1;
-    std::string formats[NFORMATS] = {"epics"};
+    std::string formats[NFORMATS] = {"evio2et"};
     int formatid;
 
     int status, ii;
@@ -73,13 +73,14 @@ class MessageActionEPICS : public MessageAction {
 
     int check(std::string fmt)
     {
-	  printf("checkEPICS: fmt >%s<\n",fmt.c_str());
+	  /*printf("checkEPICS: fmt >%s<\n",fmt.c_str());*/
       for(int i=0; i<NFORMATS; i++)
 	  {
         std::string f = formats[i];
         if( !strncmp(f.c_str(),fmt.c_str(),strlen(f.c_str())) )
 		{
           formatid = i;
+          if(debug) printf("FOUND fmt >%s<\n",fmt.c_str());
           return(1);
 		}
 	  }

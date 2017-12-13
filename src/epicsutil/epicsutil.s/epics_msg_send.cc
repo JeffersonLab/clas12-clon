@@ -58,7 +58,7 @@ epics_msg_sender_init(char *application, char *unique_id)
   
   // post startup message
   temp << "Process startup: ipc_epics_msg starting in " << application << ends;
-  status = insert_msg("ipc_epics_msg","online",unique_id,"status",0,"START",0,temp.str());
+  //status = insert_msg("ipc_epics_msg","online",unique_id,"status",0,"START",0,temp.str());
 
   // flush output to log files, etc
   fflush(NULL);

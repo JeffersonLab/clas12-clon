@@ -2,13 +2,15 @@
 /* run_log_comment.cc */
 
 /*
- Usage: run_log_comment -a clasprod [-s clashps] [-fix] [-debug]
+ Usage: run_log_comment -a clasrun [-s clashps] [-fix] [-debug]
 */
 
 // for posix
 #define _POSIX_SOURCE_ 1
 #define __EXTENSIONS__
 
+#define USE_RCDB
+#define USE_ACTIVEMQ
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,6 +27,14 @@ using namespace std;
 // for ipc
 #include "ipc_lib.h"
 
+#ifdef USE_RCDB
+
+#include "RCDB/WritingConnection.h"
+
+#include "json/json.hpp"
+using json = nlohmann::json;
+
+#endif
 
 
 /* motif */
@@ -475,8 +485,37 @@ void button_callback (Widget w, XtPointer client_data, XtPointer call_data)
 
 
 
-/* create sql request */
+#ifdef USE_RCDB
 
+void
+create_sql(strstream &rlb)
+{
+  int i;
+  strstream message;
+  int status;
+
+  if(ignore_run=='Y') status = 1;
+  else                status = 0;
+
+  /* construct json manually */
+
+  message << "[{\"name\":\"run_log\",\"run_number\":"<<run_number<<",\"status\":"<<status<<"";
+
+  for(i=0; i<nlabels; i++)
+  {
+    message << ",\""<<dbnames[i]<<"\":\""<<vals[i]<<"\"";
+  }
+
+  message <<"}]";
+
+  //cout<<endl<<message.str()<<endl<<endl;
+
+  rlb << message.str();
+}
+
+#else
+
+/* create sql request */
 void
 create_sql(strstream &rlb)
 {
@@ -516,6 +555,8 @@ create_sql(strstream &rlb)
 
   return;
 }
+#endif
+
 
 
 /* send message to 'dbrouter' */
@@ -527,8 +568,9 @@ insert_into_database(const char *entry)
   {
     printf("run_log_comment: QUERY >%s<\n",entry);
 
+#ifdef USE_ACTIVEMQ
     server << clrm << "json" << (char *)entry << endm;
-
+#else
 	/*
     // disable gmd timeout
     T_OPTION opt = TutOptionLookup((T_STR)"Server_Delivery_Timeout");
@@ -546,6 +588,8 @@ insert_into_database(const char *entry)
     server.Flush();
     dbr_check((double) gmd_time);
 	*/
+#endif
+
   }
 
   return;

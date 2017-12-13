@@ -25,18 +25,18 @@ using namespace std;
 #include <iomanip>
 #include <fstream>
 
-#include <rtworks/ipc.h>
+/*#include <rtworks/ipc.h>*/
 #include <stdio.h>
 #include <time.h>
+
+
+#define USE_ACTIVEMQ
 
 #include <dbrouter.h>
 
 
 // for mysql
 static MYSQL *dbhandle = NULL;
-
-
-#define USE_ACTIVEMQ
 
 
 

@@ -53,7 +53,7 @@ using json = nlohmann::json;
 
 #endif
 
-
+#include "codautil.h"
 
 #ifdef USE_ACTIVEMQ
 
@@ -380,15 +380,22 @@ get_epics_data()
   printf("run_log_begin: fname >%s<\n",fname);
   nepics = epics_parse_config_file(getenv("CLON_PARMS"), fname, MAXEPICS, epics);
 
-  printf("get_epics_data: nepics = %d\n",nepics);
+  //printf("get_epics_data: nepics = %d\n",nepics);
   for(i=0; i<nepics; i++)
   {
-    printf("get_epics_data: [%d] str >%s< >%s< >%s<\n",i,epics[i].name,epics[i].chan,epics[i].get);
+    //printf("get_epics_data: [%d] str >%s< >%s< >%s<\n",i,epics[i].name,epics[i].chan,epics[i].get);
     epics_chan[i] = epics[i].chan;
     db_name[i] = epics[i].name;
   }
 	
   result = getepics(nepics, epics_chan, epics_val);
+
+
+  printf("getepics returned %d\n",result);
+  for(i=0; i<nepics; i++)
+  {
+    printf("[%2d] >%s< >%s< >%f<\n",i,db_name[i],epics_chan[i],epics_val[i]);
+  }
 
   return;
 }
@@ -411,64 +418,81 @@ create_sql(strstream &rlb)
   const char *comma = ",", *prime = "'";
 
 
+  /* redo this part !!! have to get values by names somehow ...*/
 
+    float beam_current = epics_val[0];
+    float beam_energy = epics_val[1];
+    float torus_scale = epics_val[2];
+    float solenoid_scale = epics_val[3];
+    float target_position = 0.4;
 
-    int32_t event_count = 12345;
+    int32_t event_count = 12745;
     float events_rate = 98765.32;
     int32_t temperature = 78;
-    float beam_energy = 7.095;
     float test = 1234567890.123;
-    float beam_current = 10.;
-    float torus_scale = 0.75;
-    float solenoid_scale = 0.6;
     string daq_trigger = "trigger_file_name";
-    float target_position = 0.4;
     string daq_comment = "this run is junk";
-    struct tm run_start_time;
-    struct tm run_end_time;
     bool is_valid_run_end = 0;
     int32_t status = 0;
 
-    run_start_time.tm_year = 2016 - 1900;
+  /* redo this part !!! */
+
+
+
+    struct tm *run_start_time;
+    struct tm *run_end_time;
+
+    time_t rawtime;
+    time (&rawtime);
+
+    run_start_time = localtime(&rawtime);
+    run_end_time = localtime(&rawtime);
+
+
+	/*
+    run_start_time.tm_year = 2017 - 1900;
     run_start_time.tm_mon = 1;
     run_start_time.tm_mday = 4;
     run_start_time.tm_hour = 02;
     run_start_time.tm_min = 30;
-    run_start_time.tm_sec = 38;
+    run_start_time.tm_sec = 48;
     run_start_time.tm_isdst = 0;
 
 
-    run_end_time.tm_year = 2016 - 1900;
+    run_end_time.tm_year = 2017 - 1900;
     run_end_time.tm_mon = 1;
     run_end_time.tm_mday = 4;
     run_end_time.tm_hour = 04;
     run_end_time.tm_min = 25;
     run_end_time.tm_sec = 10;
     run_end_time.tm_isdst = 0;
+	*/
 
     std::vector<int> c_vector{1, 2, 3, 4};
 
 
+    run = get_run_number(expid, session);
+    printf("run=%d\n",run);
 
 
-run=999; /*TEMPORARY*/
+
 
     json j0 = {
 	        {"name","run_log"},
             {"run_number", run},
             {"event_count", event_count},
             {"events_rate", events_rate},
-            {"temperature", temperature},
+            //{"temperature", temperature},
             {"beam_energy", beam_energy},
-            {"test", test},
+            //{"test", test},
             {"beam_current", beam_current},
-            {"torus_scale", torus_scale},
-            {"solenoid_scale", solenoid_scale},
+            {"torus_current", torus_scale},
+            {"solenoid_current", solenoid_scale},
             {"daq_trigger", daq_trigger},
-            {"target_position", target_position},
+            //{"target_position", target_position},
             {"daq_comment", daq_comment},
-            {"run_start_time", StringUtils::GetFormattedTime(run_start_time)},
-            {"run_end_time", StringUtils::GetFormattedTime(run_end_time)},
+            {"run_start_time", StringUtils::GetFormattedTime(*run_start_time)},
+            {"run_end_time", StringUtils::GetFormattedTime(*run_end_time)},
             {"is_valid_run_end", is_valid_run_end},
             {"status", status}
         };
@@ -484,7 +508,7 @@ run=999; /*TEMPORARY*/
             {"list",        {1, 0, true}},
             {"object",      {{"currency", "USD"}, {"value", 42.99}}},
             {"c_vector", c_vector},
-            {"start_time", StringUtils::GetFormattedTime(run_start_time)}
+            {"start_time", StringUtils::GetFormattedTime(*run_start_time)}
         };
 
 	json j3;

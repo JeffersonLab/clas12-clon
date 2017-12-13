@@ -65,7 +65,8 @@ LIBNAMES += $(SYSLIBS)
 #-------------------
 # customize targets
 #-------------------
-install: install_lib install_bin install_java
+install: install_lib
+# install_bin install_java
 	rm -rf tmp
 	mkdir tmp
 	cp $(MAIN).s/*.h tmp

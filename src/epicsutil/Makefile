@@ -52,15 +52,16 @@ endif
 
 
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
-##LIBNAMES += $(CLON)/src/clonutil/$(OSTYPE_MACHINE)/lib/libclonutil.a
+LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libcodautil.a
+LIBNAMES += $(CLON)/src/clonutil/$(OSTYPE_MACHINE)/lib/libclonutil.a
 
 ## activemq
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
 
-#vtp#LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libcas.a
-#vtp#LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libca.a
-#vtp#LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libgdd.a
-#vtp#LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libCom.a
+LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libcas.a
+LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libca.a
+LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libgdd.a
+LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libCom.a
 
 ## activemq
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")

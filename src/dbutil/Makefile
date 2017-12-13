@@ -22,9 +22,9 @@ include $(CLON)/src/Makefile.include
 #RCDB
 CLON_FLAGS += -std=c++11 -DRCDB_MYSQL -I/usr/include/mysql -I$(RCDB_HOME)/cpp/include
 
-CLON_FLAGS += -Imain -I$(CODA)/common/include -I$(CLON)/common/include \
-				-I$(RTHOME)/include \
-				-I$(IPC_HOME)/src/main -I$(CODA)/src/ipc/ipc.s
+CLON_FLAGS += -Imain -Idbutil.s \
+				-I$(CODA)/common/include -I$(CLON)/common/include \
+				-I$(IPC_HOME)/src/main 
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   CLON_FLAGS += -I/usr/local/include/apr-1
@@ -32,10 +32,10 @@ else
   CLON_FLAGS += -I/usr/include/apr-1
 endif
 
-JFLAGS = -classpath ./:$(CLON)/common/jar/clonutil.jar:$(IMPORT_JAR)/klg.jar:$(IMPORT_JAR)/symclass.zip:$(IMPORT_JAR)/symbeans.jar:$(IMPORT_JAR)/ss.jar
+##JFLAGS = -classpath ./:$(CLON)/common/jar/clonutil.jar:$(IMPORT_JAR)/klg.jar:$(IMPORT_JAR)/symclass.zip:$(IMPORT_JAR)/symbeans.jar:$(IMPORT_JAR)/ss.jar
 
 
-LIBNAMES += $(CLON)/src/clonutil/$(OSTYPE_MACHINE)/lib/libclonutil.a
+LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libcodautil.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
 
@@ -66,7 +66,8 @@ LIBNAMES += $(SYSLIBS)
 #-------------------
 # customize targets
 #-------------------
-install: install_bin install_java
+install: install_bin
+# install_java
 #	rm -rf tmp
 #	mkdir tmp
 #	cp $(MAIN).s/*.h tmp

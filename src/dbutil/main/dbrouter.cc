@@ -66,13 +66,13 @@ using namespace std;
 
 #include <string>
 #include <iostream>
-
+#include <iomanip> 
 
 #ifdef USE_ACTIVEMQ
 
 #include "ipc_lib.h"
 #include "MessageActionControl.h"
-#include "MessageActionJSON.h"
+#include "MessageActionRUNLOG.h"
 
 #define T_STR (char *)
 
@@ -219,9 +219,9 @@ main(int argc, char **argv)
   // connect to ipc server
   server.init(getenv("EXPID"), NULL, NULL, "*", NULL, "*");
 
-  MessageActionControl   *control = new MessageActionControl((char *)"dbrouter",debug);
+  //MessageActionControl   *control = new MessageActionControl((char *)"dbrouter",debug);
   MessageActionJSON         *json = new MessageActionJSON();
-  server.addActionListener(control);
+  //server.addActionListener(control);
   server.addActionListener(json);
 
 #else
@@ -295,7 +295,7 @@ main(int argc, char **argv)
   // post startup message
   sprintf(temp,"Process startup:   %15s  in application:  %s",uniq_name,application);
   printf("insert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msg - begin\n");
-  status = insert_msg("dbrouter","dbrouter",uniq_name,"status",0,"START",0,temp);
+  //status = insert_msg("dbrouter","dbrouter",uniq_name,"status",0,"START",0,temp);
   printf("insert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msginsert_msg - end\n");
 
   
@@ -337,7 +337,7 @@ main(int argc, char **argv)
 
 
 
-    done = control->getDone();
+    //done = control->getDone();
     //printf("done=%d\n",done);
   }
 
