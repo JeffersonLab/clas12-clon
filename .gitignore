@@ -30,5 +30,5 @@ src/trigger/root
 src/trigger/root_dc
 #a.c. following
 src/trigger/Makefile
-src/Makefile.include
+##src/Makefile.include
 src/ipc_moved_to_coda
