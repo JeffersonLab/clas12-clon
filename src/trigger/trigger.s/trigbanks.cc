@@ -27,7 +27,9 @@ static uint8_t *b08out_save;
 
 static int fragnum;
 
-int trigbank_open(uint32_t *bufptr, int fragtag, int banktag, int iev, unsigned long long timestamp) {
+int
+trigbank_open(uint32_t *bufptr, int fragtag, int banktag, int iev, unsigned long long timestamp)
+{
 	GET_PUT_INIT;
 	int banknum = BANKNUM;
 	int ind,
@@ -116,7 +118,9 @@ int trigbank_open(uint32_t *bufptr, int fragtag, int banktag, int iev, unsigned 
 	return (0);
 }
 
-int trigbank_write(uint32_t *data) {
+int
+trigbank_write(uint32_t *data)
+{
 	GET_PUT_INIT
 	;
 
@@ -137,7 +141,10 @@ int trigbank_write(uint32_t *data) {
 	return (0);
 }
 
-int trigbank_close(int nwords) {
+int
+trigbank_close(int nwords)
+{
+  int ret;
 	uint32_t word;
 	GET_PUT_INIT;
 
@@ -150,15 +157,20 @@ int trigbank_close(int nwords) {
 	b08out = b08out_save;
 
 	nwords = nwords + 5; /*We wrote also blkhdr, blktlr evthdr, trgtime(2 words)*/
-	nwords = nwords -1; /*A.C. this is in data*/
+	nwords = nwords - 1; /*A.C. this is in data*/
 	word = (0x11 << 27) + (nwords & 0x3FFFFF);
 
 	PUT32(word);
 	b08out_save = b08out;
 
-	return (evCloseBank(bufptr_save, fragtag_save, fragnum, banktag_save, BANKNUM, b08out_save));
+	printf("11\n");fflush(stdout);
+    ret = evCloseBank(bufptr_save, fragtag_save, fragnum, banktag_save, BANKNUM, b08out_save);
+	printf("12\n");fflush(stdout);
+	return (ret);
 }
 
-int trigbank_read() {
+int
+trigbank_read()
+{
 	return (0);
 }

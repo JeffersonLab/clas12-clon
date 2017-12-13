@@ -136,6 +136,10 @@ typedef struct trigecpeak
   ap_uint<NBIT_COORD> coord;
   ap_uint<16> energy;
   ap_uint<16> time;
+#ifndef __SYNTHESIS__
+  ap_uint<7>  strip1;
+  ap_uint<7>  stripn;
+#endif
 
 } TrigECPeak;
 
@@ -146,6 +150,10 @@ typedef struct trigechit
   ap_uint<NBIT_COORD> coord[3];
   ap_uint<16> energy;
   ap_uint<16> time;
+#ifndef __SYNTHESIS__
+  ap_uint<6>  ind;               /* original hit index before sorting - can be used to link with peaks */
+  ap_uint<16> enpeak[3];         /* u/v/w energy [48] - for drawing purposes */
+#endif
 
 } TrigECHit;
 
@@ -409,8 +417,8 @@ void echit_out(ECHit hit[NHIT], hls::stream<ECHit> &s_hits);
 void ecal(ap_uint<16> threshold[3], nframe_t nframes, ap_uint<4> dipfactor, ap_uint<12> dalitzmin, ap_uint<12> dalitzmax, ap_uint<4> nstripmax,
           hls::stream<fadc_4ch_t> (s_fadc_words)[NFADCS], hls::stream<ECHit> &s_hits, peak_ram_t buf_ram_u[NPEAK][256], peak_ram_t buf_ram_v[NPEAK][256],
           peak_ram_t buf_ram_w[NPEAK][256], hit_ram_t buf_ram[NHIT][256]);
-void ecpeakeventreader(hls::stream<eventdata_t> &event_stream, ECPeak peak[NPEAK], uint32_t *bufout);
-void echiteventreader(hls::stream<eventdata_t> &event_stream, ECHit hit[NHIT], uint32_t *bufout);
+int  ecpeakeventreader(hls::stream<eventdata_t> &event_stream, TrigECPeak peak[NPEAK], uint32_t *bufout);
+int  echiteventreader(hls::stream<eventdata_t> &event_stream, TrigECHit hit[NHIT], uint32_t *bufout);
 
 /*FPGA*/
 void ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADCS], hls::stream<ECStrip_s> s_strip_u[NF1], hls::stream<ECStrip_s> s_strip_v[NF1], hls::stream<ECStrip_s> s_strip_w[NF1]);

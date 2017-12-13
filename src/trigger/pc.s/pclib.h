@@ -42,6 +42,9 @@ extern "C" {
 #define NHIT      PHIT
 
 
+/* define maximum peaks and hits in entire time interval; MAXTIMES defined in trigger.h */
+#define NPEAKS (NPEAK*MAXTIMES)
+#define NHITS (NHIT*MAXTIMES)
 
 
 

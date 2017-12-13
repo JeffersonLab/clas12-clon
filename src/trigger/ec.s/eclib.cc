@@ -132,8 +132,8 @@ echit_in(hls::stream<ECHit> &s_hits, ECHit hit[NHIT])
 
 
 
-void
-ecpeakeventreader(hls::stream<eventdata_t> &event_stream, ECPeak peak[NPEAK], uint32_t *bufout)
+int
+ecpeakeventreader(hls::stream<eventdata_t> &event_stream, TrigECPeak peak[NPEAKS], uint32_t *bufout)
 {
   eventdata_t eventdata;
   uint32_t data_end=0, word_first=0, tag=0, inst=0, view=0, it=0, *bufptr = bufout+1; /* reserve length word */
@@ -154,9 +154,19 @@ ecpeakeventreader(hls::stream<eventdata_t> &event_stream, ECPeak peak[NPEAK], ui
     data_end = eventdata.end;              /* 0 for all words except last one when it is 1 */
     word_first = eventdata.data(31,31);    /* 1 for the first word in peak, 0 for followings */
     tag = eventdata.data(30,27);           /* must be 'ECPEAK_TAG' */
-	/*printf("ecpeakeventreader[it=%d i=%d]: tag=%d\n",it,i,tag);*/
     inst = eventdata.data(26,26);          /* instance */
     view = eventdata.data(25,24);          /* view */
+	it = eventdata.data(23,16);
+	/*printf("ecpeakeventreader[it=%d i=%d]: tag=%d\n",it,i,tag);*/
+
+	/* check i range */
+    if(i>=NPEAKS)
+	{
+      printf("ecpeakeventreader: WARN: i=%d - return\n",i);fflush(stdout);
+      return(i);
+	}
+
+    peak[i].time = it;
     peak[i].strip1 = eventdata.data(13,7); /* first strip in peak (not in hardware) */
     peak[i].stripn = eventdata.data(6,0);  /* the number of strips in peak (not in hardware) */
 
@@ -170,13 +180,15 @@ ecpeakeventreader(hls::stream<eventdata_t> &event_stream, ECPeak peak[NPEAK], ui
     i++;
   }
 
-  for(int j=i; j<NPEAK; j++) peak[j].energy = 0;
+  for(int j=i; j<NPEAKS; j++) peak[j].energy = 0;
+
+  return(i);
 }
 
 
 
-void
-echiteventreader(hls::stream<eventdata_t> &event_stream, ECHit hit[NHIT], uint32_t *bufout)
+int
+echiteventreader(hls::stream<eventdata_t> &event_stream, TrigECHit hit[NHITS], uint32_t *bufout)
 {
   eventdata_t eventdata;
   uint32_t data_end=0, word_first=0, tag=0, inst=0, view=0, it=0, *bufptr = bufout+1, nw;
@@ -197,8 +209,17 @@ echiteventreader(hls::stream<eventdata_t> &event_stream, ECHit hit[NHIT], uint32
     data_end = eventdata.end;           /* 0 for all words except last one when it is 1 */
     word_first = eventdata.data(31,31); /* 1 for the first word in hit, 0 for followings */
     tag = eventdata.data(30,27); /* must be 'ECHIT_TAG' */
-	/*printf("echiteventreader[it=%d i=%d]: tag=%d\n",it,i,tag);*/
     inst = eventdata.data(26,26); /* instance */
+	it = eventdata.data(23,16);
+	/*printf("echiteventreader[it=%d i=%d]: tag=%d\n",it,i,tag);*/
+
+	/* check i range */
+    if(i>=NHITS)
+	{
+      printf("echiteventreader: WARN: i=%d - return\n",i);fflush(stdout);
+      return(i);
+	}
+
     hit[i].energy = eventdata.data(15,0);
 
     if(event_stream.empty()) {printf("echiteventreader: EMPTY STREAM 2\n");break;}
@@ -226,7 +247,9 @@ echiteventreader(hls::stream<eventdata_t> &event_stream, ECHit hit[NHIT], uint32
     i++;
   }
 
-  for(int j=i; j<NHIT; j++) hit[j].energy = 0;
+  for(int j=i; j<NHITS; j++) hit[j].energy = 0;
+
+  return(i);
 }
 
 
@@ -512,7 +535,6 @@ return(ind);
 
 
 
-
 static ECStrip strall[6][MAXTIMES][3][NSTRIP];
 void
 ec_get_str_all(int sec, ECStrip strip[MAXTIMES][3][NSTRIP])
@@ -546,9 +568,9 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
   hls::stream<fadc_4ch_t> s_fadc_words[NFADCS];
   hls::stream<ECHit> s_hits;
 
-  ECPeak peak[3][NPEAK];
-  ECHit hit[NHIT];
-  ECHit hit_tmp;
+  int npeaks[3];
+  TrigECPeak peak[3][NPEAKS];
+  TrigECHit hit[NHITS];
 
   peak_ram_t buf_ram_u[NPEAK][256];
   peak_ram_t buf_ram_v[NPEAK][256];
@@ -556,6 +578,7 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
   hit_ram_t buf_ram[NHIT][256];
   hls::stream<trig_t> trig_stream[4];
   hls::stream<eventdata_t> event_stream[4];
+  ECHit hit_tmp;
 
 #ifdef USE_PCAL
   int detector = PCAL;
@@ -564,6 +587,8 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
   int detector = /*ECIN*/ECAL;
   int nslot = /*7*/14;
 #endif
+
+  printf("eclib start\n");fflush(stdout);
 
   for(sec=0; sec<NSECTOR; sec++)
   {
@@ -620,6 +645,8 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
     } /* it */
 
 
+
+
     /* done processing data, now we will extract results */
 
     /* move data from buf_ram to event_stream in according to trig_stream */
@@ -629,21 +656,21 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
     echiteventwriter(0, trig_stream[3], event_stream[3], buf_ram);
 
 
-
     /* extract peaks */
-	ecpeakeventreader(event_stream[0], peak[0], bufout0);
-    ecpeakeventreader(event_stream[1], peak[1], bufout1);
-    ecpeakeventreader(event_stream[2], peak[2], bufout2);
+	npeaks[0] = ecpeakeventreader(event_stream[0], peak[0], bufout0);
+    npeaks[1] = ecpeakeventreader(event_stream[1], peak[1], bufout1);
+    npeaks[2] = ecpeakeventreader(event_stream[2], peak[2], bufout2);
 #ifdef DEBUG_0
-    for(ii=0; ii<NPEAK; ii++) if(peak[0][ii].energy>0) printf("U peak[%d]\n",ii);
-    for(ii=0; ii<NPEAK; ii++) if(peak[1][ii].energy>0) printf("V peak[%d]\n",ii);
-    for(ii=0; ii<NPEAK; ii++) if(peak[2][ii].energy>0) printf("W peak[%d]\n",ii);
+    for(ii=0; ii<npeaks[0]; ii++) if(peak[0][ii].energy>0) printf("U peak[%d]\n",ii);
+    for(ii=0; ii<npeaks[1]; ii++) if(peak[1][ii].energy>0) printf("V peak[%d]\n",ii);
+    for(ii=0; ii<npeaks[2]; ii++) if(peak[2][ii].energy>0) printf("W peak[%d]\n",ii);
 #endif
 
-    /* extract hits */
-    nhits=0;
-    echiteventreader(event_stream[3], hit, bufout3);
-    for(ii=0; ii<NHIT; ii++)
+
+
+   /* extract hits */
+    nhits = echiteventreader(event_stream[3], hit, bufout3);
+    for(ii=0; ii<nhits; ii++)
 	{
       if(hit[ii].energy>0)
 	  {
@@ -678,10 +705,15 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
       trigbank_close(bufout0[0]+bufout1[0]+bufout2[0]+bufout3[0]);
 	}
 
+  printf("13\n");fflush(stdout);
 
     for(int i=0; i<4; i++) trig[i].t_start += MAXTIMES*8; /* in preparation for next event, step up MAXTIMES*32ns in 4ns ticks */
 
+  printf("14\n");fflush(stdout);
+
   } /* sec */
+
+  printf("eclib end\n");fflush(stdout);
 
   return;
 }

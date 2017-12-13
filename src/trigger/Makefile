@@ -23,6 +23,8 @@ include $(CLON)/src/Makefile.include
 #CFLAGS = -g
 #CXXFLAGS = -g
 
+CLON_FLAGS += -std=c++11
+
 CLON_FLAGS += -I./$(MAIN).s \
 			-I./ec.s -I./pc.s -I./dc.s -I./htcc.s -I./ft.s -I./ftof.s -I./ctof.s \
 			-I$(CODA)/common/include \
@@ -31,11 +33,11 @@ CLON_FLAGS += -I./$(MAIN).s \
 
 ##CLON_FLAGS += -DDEBUG
 
-ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+#ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
   CLON_FLAGS += -I/apps/Xilinx/Vivado_HLS/2015.4/include
-else
-  CLON_FLAGS += -I/apps/Xilinx/Vivado_HLS/2013.2/include
-endif
+#else
+#  CLON_FLAGS += -I/apps/Xilinx/Vivado_HLS/2013.2/include
+#endif
 
 
 ##ccdb
