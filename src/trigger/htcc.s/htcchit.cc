@@ -154,6 +154,8 @@ return:
 
  */
 
+#define SINGLES
+
 
 /* 1.96/39/1/0%/0%/(15739)2%/(8352)2% II=1 */
 
@@ -222,6 +224,15 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
   cout<<"htcchit: dmask=0x"<<hex<<dmask<<dec<<endl;
 #endif
 
+
+
+
+
+#ifdef SINGLES
+
+  output = dmask;
+
+#else
 
   /* clusters energy sums */
 
@@ -351,6 +362,13 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
 #endif
 
   output = dmask & cmask;
+
+
+#endif /*SINGLES*/
+
+
+
+
 
 #ifdef DEBUG
   cout<<"htcchit: output="<<hex<<output<<dec<<endl<<endl;
