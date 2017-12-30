@@ -277,6 +277,7 @@ main(int argc,char **argv)
       last_channel = now;
     }
 
+#if 0
     /* scalers */
     if(no_scalers==0)
     {
@@ -287,6 +288,7 @@ main(int argc,char **argv)
 	    last_scaler=now; 
       }
     }
+#endif
 
     /* use precise clock */
     clock_gettime(CLOCK_REALTIME,&current);

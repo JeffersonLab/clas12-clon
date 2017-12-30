@@ -28,6 +28,9 @@
 #define _POSIX_SOURCE_ 1
 #define __EXTENSIONS__
 
+//#define USE_RCDB
+//#define USE_ACTIVEMQ
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,6 +50,14 @@ using namespace std;
 #include "ipc_lib.h"
 #include "MessageActionControl.h"
 
+#ifdef USE_RCDB
+
+#include "RCDB/WritingConnection.h"
+
+#include "json/json.hpp"
+using json = nlohmann::json;
+
+#endif
 
 
 // flags to inhibit event recording, etc.
@@ -237,6 +248,82 @@ main(int argc,char **argv)
 //----------------------------------------------------------------
 
 
+#ifdef USE_RCDB
+
+void
+collect_data(strstream &sql, int recover, char *recovery_filename)
+{
+  long nevt, nlng, nerr;
+  const char *comma = ",", *prime = "'";
+  int i, status;
+  time_t eortime = start;
+  char tablename[256];
+
+  // read ER run file summary info and sum up stats
+  nfile  = 0;
+  nevent = 0;
+  ndata  = 0;
+  nerror = 0;
+
+  tm *tstruct = localtime(&eortime);
+  strftime(end_date,25,"%Y-%m-%d %H:%M:%S",tstruct);
+
+  // read scalers from archive file
+  get_scaler_data();
+
+  sprintf(tablename,"%s_%s_log_end",expid,session);
+
+
+
+  /*
+  // create sql string
+  sql.setf(ios::showpoint);
+  sql << "insert into " << tablename << " ("
+      << "run_number, end_date, end_ok, coda_config, trig_config, data_file, nfile, ndata, nevent, nerror,"
+      << "clock, clock_live, fcup, fcup_live";
+  for(i=1; i<=6; i++) sql << comma << "trig_event_bit" << i;
+
+  sql << ") values ("
+      << run_number
+      << comma << prime << end_date << prime;
+  if(recover==0) {sql << ",'Y'";} else {sql << ",'N'";}
+  sql << comma << prime << config << prime
+      << comma << prime << conffile << prime
+      << comma << prime << datafile << prime
+      << comma << nfile << comma << ndata << comma << nevent << comma << nerror
+      << comma << (long)clock_all << comma << (long)clock_live
+      << comma << (long)fcup_all  << comma << (long)fcup_live;
+
+  for(i=0; i<6; i++) sql << comma << (long)trig_event[i];
+
+  sql << ")" << ends;
+  */
+
+
+  /* construct json manually */
+
+  sql << "[{\"name\":\"run_log\",\"run_number\":"<<run_number<<",\"status\":"<<status<<"";
+
+  for(i=0; i<nlabels; i++)
+  {
+    sql << ",\""<<dbnames[i]<<"\":\""<<vals[i]<<"\"";
+  }
+
+  sql <<"}]" << ends;
+
+  
+
+  // print sql string
+  if(debug==0)
+  {
+    cout << "\nsql for run " << run_number << " is:\n\n" << sql.str() << endl << endl;
+  }
+
+  return;
+}
+
+#else
+
 void
 collect_data(strstream &sql, int recover, char *recovery_filename)
 {
@@ -291,6 +378,9 @@ collect_data(strstream &sql, int recover, char *recovery_filename)
 
   return;
 }
+
+#endif
+
 
 //--------------------------------------------------------------------------
 

@@ -17,7 +17,7 @@
 //#define USE_PCAL
 //#define USE_HTCC
 //#define USE_FTOF
-//#define USE_FT
+#define USE_FT //A.C. uncommented to have FT code
 using namespace std;
 
 #if 0

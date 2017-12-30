@@ -424,14 +424,14 @@ create_sql(strstream &rlb)
     float beam_energy = epics_val[1];
     float torus_scale = epics_val[2];
     float solenoid_scale = epics_val[3];
-    float target_position = 0.4;
+    float target_position = 0.0;
 
-    int32_t event_count = 12745;
-    float events_rate = 98765.32;
-    int32_t temperature = 78;
-    float test = 1234567890.123;
+    int32_t event_count = 0;
+    float events_rate = 0.0;
+    int32_t temperature = 0;
+    float test = 0.0;
     string daq_trigger = "trigger_file_name";
-    string daq_comment = "this run is junk";
+    //string daq_comment = "this run is junk";
     bool is_valid_run_end = 0;
     int32_t status = 0;
 
@@ -474,7 +474,7 @@ create_sql(strstream &rlb)
     run = get_run_number(expid, session);
     printf("run=%d\n",run);
 
-
+	daq_trigger = get_daq_config(expid,"PROD");
 
 
     json j0 = {
@@ -488,9 +488,9 @@ create_sql(strstream &rlb)
             {"beam_current", beam_current},
             {"torus_current", torus_scale},
             {"solenoid_current", solenoid_scale},
-            {"daq_trigger", daq_trigger},
+            {"daq_config", daq_trigger},
             //{"target_position", target_position},
-            {"daq_comment", daq_comment},
+            //{"daq_comment", daq_comment}, // will come from run_log_comment BEFORE us, we do not want to overwrite it
             {"run_start_time", StringUtils::GetFormattedTime(*run_start_time)},
             {"run_end_time", StringUtils::GetFormattedTime(*run_end_time)},
             {"is_valid_run_end", is_valid_run_end},

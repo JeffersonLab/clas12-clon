@@ -120,9 +120,10 @@ void ftlib(uint32_t *bufptr, uint16_t calo_seed_threshold_, uint16_t hodo_hit_th
 	detector = FT1;
 	nslots = 11;
 	ret = fadcs(bufptr, 0, 0, detector, s_fadcs_ft1, 0, 0, &iev, &timestamp);
-	if (ret <= 0)
-		return;
-
+	if (ret <= 0){
+	  printf("ftlib.cc returns %i on adcft1 \n",ret);
+	  return;
+	}
 	detector = FT2;
 	nslots = 10;
 	ret = fadcs(bufptr, 0, 0, detector, s_fadcs_ft2, 0, 0, &iev, &timestamp);
@@ -170,103 +171,20 @@ void ftlib(uint32_t *bufptr, uint16_t calo_seed_threshold_, uint16_t hodo_hit_th
 
 	int banktag = 0xe122;
 
+
+	printf("ftlib.cc: %i %i \n",bufoutADCFT1[0],bufoutADCFT2[0]);
 	if (bufoutADCFT1[0] > 0) {
-		trigbank_open(bufptr, 970, banktag, iev, timestamp); /*A.C. 970 is temporary*/
-
-		bufoutADCFT1[bufoutADCFT1[0] + 1] = 0xfadc0001;
-		bufoutADCFT1[0] = bufoutADCFT1[0] + 1;
-
+	  trigbank_open(bufptr, 970, banktag, iev, timestamp); /*A.C. 970 is temporary*/
 		trigbank_write(bufoutADCFT1);
 		trigbank_close(bufoutADCFT1[0]);
 	}
 	if (bufoutADCFT2[0] > 0) {
 		trigbank_open(bufptr, 971, banktag, iev, timestamp);/*A.C. 970 is temporary*/
 		trigbank_write(bufoutADCFT2);
-		int tmp = 0;
-		for (int i = 29750; i < 29795; i++) {
-			if ((bufptr[i] == 0xb8000607)) {
-				tmp = 1;
-			}
-			if (tmp)
-				printf("BEFORE wrote[%d]: 0x%08x\n", i, bufptr[i]);
-		}
-
-		trigbank_close(bufoutADCFT2[0]);
-
-
-
-		for (int i = 29750; i < 29795; i++) {
-			if ((bufptr[i] == 0xb8000607)) {
-				tmp = 1;
-			}
-			if (tmp)
-				printf("AFTER wrote[%d]: 0x%08x\n", i, bufptr[i]);
-		}
-
+       		trigbank_close(bufoutADCFT2[0]);
 	}
 
-#if 0 
-	if (dataPresent)
-	{
-		int ind, ind_data;
-		uint32_t word;
-		int fragtag;
-
-		fragtag = 0; /*->WHAT SHOULD I USE?*/
-
-		int fragnum = 0;
-		int banktyp = 1;
-
-		int banktag = 0xe122; //VTP Hadrware Data 
-		int banknum = 255; /*real data have event number in block, usually from 0 to 39*/
-
-		ind = evLinkFrag(bufptr, fragtag, fragnum);
-		if (ind <= 0) {
-			printf("Fragment %d does not exist - create one\n", fragtag);
-			ind = evOpenFrag(bufptr, fragtag, fragnum);
-			if (ind <= 0) {
-				printf("ERROR: cannot create fragment %d - exit\n", fragtag);
-				exit(0);
-			} else
-			printf("Created fragment fragtag=%d fragnum=%d\n", fragtag, fragnum);
-		}
-
-		ret = evOpenBank(bufptr, fragtag, fragnum, banktag, banknum, banktyp, "", &ind_data);
-		printf("evOpenBank returns = %d, ind_data=%d (fragtag=%d, fragnum=%d, banktag=%d, banknum=%d)\n", ret, ind_data, fragtag, fragnum,
-				banktag, banknum);
-		b08out = (unsigned char *) &bufptr[ind_data];
-
-		/*0x12 - event header*/
-		word = (0x12 << 27) + (iev & 0x3FFFFF);
-		PUT32(word);
-
-		/*0x13 - time stamp*/
-		word = (timestamp >> 24) & 0xFFFFFF; /* OR OPPOSITE ??? */
-		printf("word1=0x%06x\n", word);
-		fflush(stdout);
-		word = (0x13 << 27) + word;
-		PUT32(word);
-
-		word = timestamp & 0xFFFFFF; /* OR OPPOSITE ??? */
-		printf("word2=0x%06x\n", word);
-		fflush(stdout);
-		PUT32(word);
-
-		/*0x17 - ft cluster*/
-
-		for (int ii = 0; ii < ( FT_WORDS_PER_CLUSTER * FT_MAX_CLUSTERS * MAXTIMES + 1); ii++) {
-			if (bufout[ii] == 0xFFFFFFFF)
-			break;
-			printf("bufout3[%d]=0x%08x\n", ii, bufout[ii]);
-			fflush(stdout);
-			PUT32(bufout[ii]);
-		}
-
-		printf("evClose() reached\n");
-		fflush(stdout);
-		evCloseBank(bufptr, fragtag, fragnum, banktag, banknum, b08out);
-	}
-#endif 
+ 
 
 	trig.t_start += MAXTIMES * 8; /* in preparation for next event, step up MAXTIMES*32ns in 4ns ticks */
 }

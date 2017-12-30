@@ -316,7 +316,6 @@ main (int argc, char *argv[])
 	  }
 	}
 
-
     /* When user hits return, print the label+value of text_w */
     XtAddCallback (text[i], XmNactivateCallback, print_result, 
                             (XtPointer) labels[i]);
@@ -491,7 +490,6 @@ void
 create_sql(strstream &rlb)
 {
   int i;
-  strstream message;
   int status;
 
   if(ignore_run=='Y') status = 1;
@@ -499,18 +497,14 @@ create_sql(strstream &rlb)
 
   /* construct json manually */
 
-  message << "[{\"name\":\"run_log\",\"run_number\":"<<run_number<<",\"status\":"<<status<<"";
+  rlb << "[{\"name\":\"run_log\",\"run_number\":"<<run_number<<",\"status\":"<<status<<"";
 
   for(i=0; i<nlabels; i++)
   {
-    message << ",\""<<dbnames[i]<<"\":\""<<vals[i]<<"\"";
+    rlb << ",\""<<dbnames[i]<<"\":\""<<vals[i]<<"\"";
   }
 
-  message <<"}]";
-
-  //cout<<endl<<message.str()<<endl<<endl;
-
-  rlb << message.str();
+  rlb <<"}]" << ends;
 }
 
 #else
