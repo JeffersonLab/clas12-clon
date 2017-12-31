@@ -23,7 +23,7 @@ using namespace std;
 
 
 
-//#define DEBUG
+#define DEBUG
 
 
 #define MAX(a,b)    (a > b ? a : b)
@@ -186,90 +186,30 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
 
   /* clusters energy sums */
 
-  for(i=0; i<11; i++)
+  for(i=0; i<NCLSTR; i++) clusters[i] = 0;
+  for(i=0; i<NCLSTR; i++)
   {
-    ii = i*4;
-	clusters[i]  = d[ii];
-	clusters[i] += d[ii+4];
-	clusters[i] += d[ii+1];
-	clusters[i] += d[ii+5];
+    for(ii=0; ii<4; ii++)
+	{
+      clusters[i] += d[cl2d[i][ii]];
+	}
   }
-  clusters[11]  = d[0];
-  clusters[11] += d[1];
-  clusters[11] += d[44];
-  clusters[11] += d[45];
-
-  for(i=12; i<23; i++)
-  {
-    ii = (i-12)*4 + 1;
-	clusters[i]  = d[ii];
-	clusters[i] += d[ii+4];
-	clusters[i] += d[ii+1];
-	clusters[i] += d[ii+5];
-  }
-  clusters[23]  = d[1];
-  clusters[23] += d[2];
-  clusters[23] += d[45];
-  clusters[23] += d[46];
-
-  for(i=24; i<35; i++)
-  {
-    ii = (i-24)*4 + 2;
-	clusters[i]  = d[ii];
-	clusters[i] += d[ii+4];
-	clusters[i] += d[ii+1];
-	clusters[i] += d[ii+5];
-  }
-  clusters[35]  = d[2];
-  clusters[35] += d[3];
-  clusters[35] += d[46];
-  clusters[35] += d[47];
 
 
   /* clusters multiplicity */
 
-  for(i=0; i<NCLSTR; i++) mult[i]=0;
-  for(i=0; i<11; i++)
+  for(i=0; i<NCLSTR; i++) mult[i] = 0;
+  for(i=0; i<NCLSTR; i++)
   {
-    ii = i*4;
-	if(d[ii  ] >= strip_threshold) mult[i] ++;
-	if(d[ii+4] >= strip_threshold) mult[i] ++;
-	if(d[ii+1] >= strip_threshold) mult[i] ++;
-	if(d[ii+5] >= strip_threshold) mult[i] ++;
+    for(ii=0; ii<4; ii++)
+	{
+	  if(d[cl2d[i][ii]] >= strip_threshold) mult[i] ++;
+	}
   }
-  if(d[ 0] >= strip_threshold) mult[11] ++;
-  if(d[ 1] >= strip_threshold) mult[11] ++;
-  if(d[44] >= strip_threshold) mult[11] ++;
-  if(d[45] >= strip_threshold) mult[11] ++;
-
-  for(i=12; i<23; i++)
-  {
-    ii = (i-12)*4 + 1;
-	if(d[ii  ] >= strip_threshold) mult[i] ++;
-	if(d[ii+4] >= strip_threshold) mult[i] ++;
-	if(d[ii+1] >= strip_threshold) mult[i] ++;
-	if(d[ii+5] >= strip_threshold) mult[i] ++;
-  }
-  if(d[ 1] >= strip_threshold) mult[23] ++;
-  if(d[ 2] >= strip_threshold) mult[23] ++;
-  if(d[45] >= strip_threshold) mult[23] ++;
-  if(d[46] >= strip_threshold) mult[23] ++;
-
-  for(i=24; i<35; i++)
-  {
-    ii = (i-24)*4 + 2;
-	if(d[ii ] >= strip_threshold) mult[i] ++;
-	if(d[ii+4] >= strip_threshold) mult[i] ++;
-	if(d[ii+1] >= strip_threshold) mult[i] ++;
-	if(d[ii+5] >= strip_threshold) mult[i] ++;
-  }
-  if(d[ 2] >= strip_threshold) mult[35] ++;
-  if(d[ 3] >= strip_threshold) mult[35] ++;
-  if(d[46] >= strip_threshold) mult[35] ++;
-  if(d[47] >= strip_threshold) mult[35] ++;
 
 
   /* trigger solution */
+
   maskEnergy = 0;
   maskMult = 0;
   for(i=0; i<NCLSTR; i++)
