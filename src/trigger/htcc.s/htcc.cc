@@ -23,7 +23,7 @@ htcc(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_2ch_t> s_fadc_
 {
   ap_uint<16> strip_threshold = threshold[0];
   ap_uint<16> mult_threshold = threshold[1];
-  ap_uint<16> cluster_threshold = threshold[3];
+  ap_uint<16> cluster_threshold = threshold[2];
 
   hls::stream<HTCCStrip_s> s_strip0[NSTREAMS1];
   hls::stream<HTCCStrip_s> s_strip[NSTREAMS1];

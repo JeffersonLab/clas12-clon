@@ -6,7 +6,6 @@
  strip[][].time   - strip time (ns)
  */
 
-//#define DEBUG_0
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,6 +29,7 @@ using namespace std;
 #define MIN(a,b)    (a < b ? a : b)
 
 //#define DEBUG_0
+//#define DEBUG_1
 //#define DEBUG_3
 
 static int nslots[NDET] = { 7, 7, 14, 12, 14, 3, 12, 0, 0, 11, 10, 15 };
@@ -63,12 +63,13 @@ static int fragtags[NDET][18] = { 1, 7, 13, 19, 25, 31, 0, 0, 0, 0, 0, 0, 0, 0, 
 };
 
 static float ped[NDET][21][16]; /* pedestals */
-static float tet[NDET][21][16]; /* threshold */
+static int   tet[NDET][21][16]; /* threshold */
 static float gain[NDET][21][16]; /* gain */
 static int nsa[NDET][21]; /* NSA */
 static int nsb[NDET][21]; /* NSB */
 
-int fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS], int dtimestamp, int dpulsetime,
+int
+fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS], int dtimestamp, int dpulsetime,
 		int *iev, unsigned long long *timestamp) {
 	int i, j, k, ind, nhits, error, ii, jj, nbytes, ind_data, nn, mm, isample, isam1, isam2;
 	int summing_in_progress;
@@ -212,7 +213,7 @@ int fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls:
 
 			if (!strncmp(ch, "FADC250_ALLCH_GAIN", 18)) {
 #ifdef DEBUG_3
-				printf("===> peds\n");fflush(stdout);
+				printf("===> gain\n");fflush(stdout);
 #endif
 				sscanf(ch, "%*s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f", &ff[0], &ff[1], &ff[2], &ff[3], &ff[4], &ff[5], &ff[6], &ff[7], &ff[8],
 						&ff[9], &ff[10], &ff[11], &ff[12], &ff[13], &ff[14], &ff[15]);
@@ -236,7 +237,7 @@ int fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls:
 				for (chan = 0; chan < 16; chan++) {
 					tet[det][slot][chan] = dd[chan];
 #ifdef DEBUG_3
-					printf("tet[%d][%d][%d]=%f\n",det,slot,chan,tet[det][slot][chan]);fflush(stdout);
+					printf("tet[%d][%d][%d]=%d\n",det,slot,chan,tet[det][slot][chan]);fflush(stdout);
 #endif
 
 				}
@@ -326,10 +327,20 @@ int fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls:
 
 						isample = -1;
 						pulse_integral = 0;
-						while (mm < nsamples) {
-							if ((datasaved[mm] > (int) ped[det][slot][chan] + tet[det][slot][chan])
-									&& (datasaved[mm - 1] <= (int) ped[det][slot][chan] + tet[det][slot][chan])) {
+						while (mm < nsamples)
+                        {
+#ifdef DEBUG_1
+						  printf("[%d] data=%d , ped=%d, tet=%d, ped+tet=%d\n",
+								 mm,datasaved[mm],(int)ped[det][slot][chan],tet[det][slot][chan],
+                                 (int)ped[det][slot][chan]+tet[det][slot][chan]);
+#endif
+						  if ( (datasaved[mm] > (int)ped[det][slot][chan] + tet[det][slot][chan])
+							  && (datasaved[mm - 1] <= (int)ped[det][slot][chan] + tet[det][slot][chan]) )
+                            {
 								isample = mm;
+#ifdef DEBUG_1
+								printf("found isample=%d\n",isample);
+#endif
 								break;
 							}
 							mm++;
@@ -498,7 +509,8 @@ int fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls:
 
 /* following functions converts 32ns-clocked FADC data into 8ns, 4ns etc -clocked streams, in according to different detectors requirements */
 
-void fadcs_32ns_to_8ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_4ch_t> &s_fadc_out) {
+void
+fadcs_32ns_to_8ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_4ch_t> &s_fadc_out) {
 	fadc_16ch_t fadcs_in;
 	fadc_4ch_t fadcs_out;
 
@@ -545,7 +557,8 @@ void fadcs_32ns_to_8ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_4ch
 	s_fadc_out.write(fadcs_out);
 }
 
-void fadcs_32ns_to_4ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_2ch_t> &s_fadc_out) {
+void
+fadcs_32ns_to_4ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_2ch_t> &s_fadc_out) {
 	fadc_16ch_t fadcs_in;
 	fadc_2ch_t fadcs_out;
 
@@ -600,7 +613,8 @@ void fadcs_32ns_to_4ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_2ch
 	s_fadc_out.write(fadcs_out);
 }
 
-void fadcs_to_onestream(int nslot, hls::stream<fadc_16ch_t> s_fadc_in[NFADCS], hls::stream<fadc_256ch_t> &s_fadc_out) {
+void
+fadcs_to_onestream(int nslot, hls::stream<fadc_16ch_t> s_fadc_in[NFADCS], hls::stream<fadc_256ch_t> &s_fadc_out) {
 	fadc_16ch_t fadcs_in;
 	fadc_256ch_t fadcs_out;
 

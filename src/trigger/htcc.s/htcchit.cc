@@ -33,95 +33,45 @@ using namespace std;
 
 /*xc7vx550tffg1158-1*/
 
-/*BAD
 static ap_uint<6> cl2d[NCLSTR][4] = {
-  0, 1, 12,13,
-  1, 2, 13,14,
-  2, 3, 14,15,
-  3, 4, 15,16,
-  4, 5, 16,17,
-  5, 6, 17,18,
-  6, 7, 18,19,
-  7, 8, 19,20,
-  8, 9, 20,21,
-  9, 10,21,22,
-  10,11,22,23,
-  11, 0,23,12,
+  0, 4, 1, 5,  /* cluster 00 */
+  4, 8, 5, 9,  /* cluster 01 */
+  8, 12,9, 13, /* cluster 02 */
+  12,16,13,17, /* cluster 03 */
+  16,20,17,21, /* cluster 04 */
+  20,24,21,25, /* cluster 05 */
+  24,28,25,29, /* cluster 06 */
+  28,32,29,33, /* cluster 07 */
+  32,36,33,37, /* cluster 08 */
+  36,40,37,41, /* cluster 09 */
+  40,44,41,45, /* cluster 10 */
+  44,0, 45,1,  /* cluster 11 */
 
-  12,13,24,25,
-  13,14,25,26,
-  14,15,26,27,
-  15,16,27,28,
-  16,17,28,29,
-  17,18,29,30,
-  18,19,30,31,
-  19,20,31,32,
-  20,21,32,33,
-  21,22,33,34,
-  22,23,34,35,
-  23,12,35,24,
+  1, 5, 2, 6,  /* cluster 12 */
+  5, 9, 6, 10, /* cluster 13 */
+  9, 13,10,14, /* cluster 14 */
+  13,17,14,18, /* cluster 15 */
+  17,21,18,22, /* cluster 16 */
+  21,25,22,26, /* cluster 17 */
+  25,29,26,30, /* cluster 18 */
+  29,33,30,34, /* cluster 19 */
+  33,37,34,38, /* cluster 20 */
+  37,41,38,42, /* cluster 21 */
+  41,45,42,46, /* cluster 22 */
+  45,1, 46,2,  /* cluster 23 */
 
-  24,25,36,37,
-  25,26,37,38,
-  26,27,38,39,
-  27,28,39,40,
-  28,29,40,41,
-  29,30,41,42,
-  30,31,42,43,
-  31,32,43,44,
-  32,33,44,45,
-  33,34,45,46,
-  34,35,46,47,
-  35,24,47,36
-};
-
-BAD:
-   S1    S2    S3    S4    S5    S6
-  0  1  2  3  4  5  6  7  8  9 10 11
- 12 13 14 15 16 17 18 19 20 21 22 23
- 24 25 26 27 28 29 30 31 32 33 34 35
- 36 37 38 39 40 41 42 43 44 45 46 47
-*/
-
-static ap_uint<6> cl2d[NCLSTR][4] = {
-  0, 4, 1, 5,
-  4, 8, 5, 9,
-  8, 12,9, 13,
-  12,16,13,17,
-  16,20,17,21,
-  20,24,21,25,
-  24,28,25,29,
-  28,32,29,33,
-  32,36,33,37,
-  36,40,37,41,
-  40,44,41,45,
-  44,0, 45,1,
-
-  1, 5, 2, 6,
-  5, 9, 6, 10,
-  9, 13,10,14,
-  13,17,14,18,
-  17,21,18,22,
-  21,25,22,26,
-  25,29,26,30,
-  29,33,30,34,
-  33,37,34,38,
-  37,41,38,42,
-  41,45,42,46,
-  45,1, 46,2,
-
-  2, 6, 3, 7,
-  6, 10,7, 11,
-  10,14,11,15,
-  14,18,15,19,
-  18,22,19,23,
-  22,26,23,27,
-  26,30,27,31,
-  30,34,31,35,
-  34,38,35,39,
-  38,42,39,43,
-  42,46,43,47,
-  46,2 ,47,3
+  2, 6, 3, 7,  /* cluster 24 */
+  6, 10,7, 11, /* cluster 25 */
+  10,14,11,15, /* cluster 26 */
+  14,18,15,19, /* cluster 27 */
+  18,22,19,23, /* cluster 28 */
+  22,26,23,27, /* cluster 29 */
+  26,30,27,31, /* cluster 30 */
+  30,34,31,35, /* cluster 31 */
+  34,38,35,39, /* cluster 32 */
+  38,42,39,43, /* cluster 33 */
+  42,46,43,47, /* cluster 34 */
+  46,2 ,47,3   /* cluster 35 */
 };
 
 /* High Threshold Cherenkov Counter:
@@ -154,7 +104,7 @@ return:
 
  */
 
-#define SINGLES
+//#define SINGLES
 
 
 /* 1.96/39/1/0%/0%/(15739)2%/(8352)2% II=1 */
@@ -179,7 +129,7 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
   ap_uint<NCHAN> dmask;
   ap_uint<NCHAN> cmask;
 
-  int i;
+  int i, ii;
   ap_uint<NCLSTR> maskEnergy, maskMult, mask;
 
   ap_uint<13> d[NCHAN];
@@ -221,7 +171,7 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
 	}
   }
 #ifdef DEBUG
-  cout<<"htcchit: dmask=0x"<<hex<<dmask<<dec<<endl;
+  cout<<"htcchit: dmask="<<hex<<dmask<<dec<<endl;
 #endif
 
 
@@ -238,39 +188,42 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
 
   for(i=0; i<11; i++)
   {
-	clusters[i]  = d[i];
-	clusters[i] += d[i+1];
-	clusters[i] += d[i+12];
-	clusters[i] += d[i+13];
+    ii = i*4;
+	clusters[i]  = d[ii];
+	clusters[i] += d[ii+4];
+	clusters[i] += d[ii+1];
+	clusters[i] += d[ii+5];
   }
-  clusters[11]  = d[11];
-  clusters[11] += d[12];
-  clusters[11] += d[23];
-  clusters[11] += d[0];
+  clusters[11]  = d[0];
+  clusters[11] += d[1];
+  clusters[11] += d[44];
+  clusters[11] += d[45];
 
   for(i=12; i<23; i++)
   {
-	clusters[i]  = d[i];
-	clusters[i] += d[i+1];
-	clusters[i] += d[i+12];
-	clusters[i] += d[i+13];
+    ii = (i-12)*4 + 1;
+	clusters[i]  = d[ii];
+	clusters[i] += d[ii+4];
+	clusters[i] += d[ii+1];
+	clusters[i] += d[ii+5];
   }
-  clusters[23]  = d[23];
-  clusters[23] += d[24];
-  clusters[23] += d[35];
-  clusters[23] += d[12];
+  clusters[23]  = d[1];
+  clusters[23] += d[2];
+  clusters[23] += d[45];
+  clusters[23] += d[46];
 
   for(i=24; i<35; i++)
   {
-	clusters[i]  = d[i];
-	clusters[i] += d[i+1];
-	clusters[i] += d[i+12];
-	clusters[i] += d[i+13];
+    ii = (i-24)*4 + 2;
+	clusters[i]  = d[ii];
+	clusters[i] += d[ii+4];
+	clusters[i] += d[ii+1];
+	clusters[i] += d[ii+5];
   }
-  clusters[35]  = d[35];
-  clusters[35] += d[36];
+  clusters[35]  = d[2];
+  clusters[35] += d[3];
+  clusters[35] += d[46];
   clusters[35] += d[47];
-  clusters[35] += d[24];
 
 
   /* clusters multiplicity */
@@ -278,39 +231,42 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
   for(i=0; i<NCLSTR; i++) mult[i]=0;
   for(i=0; i<11; i++)
   {
-	if(d[i   ] >= strip_threshold) mult[i] ++;
-	if(d[i+ 1] >= strip_threshold) mult[i] ++;
-	if(d[i+12] >= strip_threshold) mult[i] ++;
-	if(d[i+13] >= strip_threshold) mult[i] ++;
+    ii = i*4;
+	if(d[ii  ] >= strip_threshold) mult[i] ++;
+	if(d[ii+4] >= strip_threshold) mult[i] ++;
+	if(d[ii+1] >= strip_threshold) mult[i] ++;
+	if(d[ii+5] >= strip_threshold) mult[i] ++;
   }
-  if(d[11] >= strip_threshold) mult[11] ++;
-  if(d[12] >= strip_threshold) mult[11] ++;
-  if(d[23] >= strip_threshold) mult[11] ++;
   if(d[ 0] >= strip_threshold) mult[11] ++;
+  if(d[ 1] >= strip_threshold) mult[11] ++;
+  if(d[44] >= strip_threshold) mult[11] ++;
+  if(d[45] >= strip_threshold) mult[11] ++;
 
   for(i=12; i<23; i++)
   {
-	if(d[i   ] >= strip_threshold) mult[i] ++;
-	if(d[i+ 1] >= strip_threshold) mult[i] ++;
-	if(d[i+12] >= strip_threshold) mult[i] ++;
-	if(d[i+13] >= strip_threshold) mult[i] ++;
+    ii = (i-12)*4 + 1;
+	if(d[ii  ] >= strip_threshold) mult[i] ++;
+	if(d[ii+4] >= strip_threshold) mult[i] ++;
+	if(d[ii+1] >= strip_threshold) mult[i] ++;
+	if(d[ii+5] >= strip_threshold) mult[i] ++;
   }
-  if(d[23] >= strip_threshold) mult[23] ++;
-  if(d[24] >= strip_threshold) mult[23] ++;
-  if(d[35] >= strip_threshold) mult[23] ++;
-  if(d[12] >= strip_threshold) mult[23] ++;
+  if(d[ 1] >= strip_threshold) mult[23] ++;
+  if(d[ 2] >= strip_threshold) mult[23] ++;
+  if(d[45] >= strip_threshold) mult[23] ++;
+  if(d[46] >= strip_threshold) mult[23] ++;
 
   for(i=24; i<35; i++)
   {
-	if(d[i   ] >= strip_threshold) mult[i] ++;
-	if(d[i+ 1] >= strip_threshold) mult[i] ++;
-	if(d[i+12] >= strip_threshold) mult[i] ++;
-	if(d[i+13] >= strip_threshold) mult[i] ++;
+    ii = (i-24)*4 + 2;
+	if(d[ii ] >= strip_threshold) mult[i] ++;
+	if(d[ii+4] >= strip_threshold) mult[i] ++;
+	if(d[ii+1] >= strip_threshold) mult[i] ++;
+	if(d[ii+5] >= strip_threshold) mult[i] ++;
   }
-  if(d[35] >= strip_threshold) mult[35] ++;
-  if(d[36] >= strip_threshold) mult[35] ++;
+  if(d[ 2] >= strip_threshold) mult[35] ++;
+  if(d[ 3] >= strip_threshold) mult[35] ++;
+  if(d[46] >= strip_threshold) mult[35] ++;
   if(d[47] >= strip_threshold) mult[35] ++;
-  if(d[24] >= strip_threshold) mult[35] ++;
 
 
   /* trigger solution */
@@ -335,9 +291,9 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
   }
   mask = maskEnergy & maskMult;
 #ifdef DEBUG
-  cout<<"htcchit: maskEnergy=0x"<<hex<<maskEnergy<<dec<<endl;
-  cout<<"htcchit:   maskMult=0x"<<hex<<maskMult<<dec<<endl;
-  cout<<"htcchit:       mask=0x"<<hex<<mask<<dec<<endl;
+  cout<<"htcchit: maskEnergy="<<hex<<maskEnergy<<dec<<endl;
+  cout<<"htcchit:   maskMult="<<hex<<maskMult<<dec<<endl;
+  cout<<"htcchit:       mask="<<hex<<mask<<dec<<endl;
 #endif
 
   cmask = 0;
@@ -371,6 +327,9 @@ htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> clu
 
 
 #ifdef DEBUG
+  cout<<endl;
+  cout<<"htcchit:  dmask="<<hex<<dmask<<dec<<endl;
+  cout<<"htcchit:  cmask="<<hex<<cmask<<dec<<endl;
   cout<<"htcchit: output="<<hex<<output<<dec<<endl<<endl;
 #endif
 

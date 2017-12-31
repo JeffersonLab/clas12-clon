@@ -103,6 +103,9 @@ hls::stream<eventdata_t> event_stream;
   int sec = 0;
   int nslot = 3;
 
+#ifdef DEBUG
+  cout<<"htcclib: threshold="<<threshold[0]<<" "<<threshold[1]<<" "<<threshold[2]<<endl;
+#endif
 
   ret = fadcs(bufptr, threshold[0], sec, detector, s_fadcs, 0, 0, &iev, &timestamp);
   if(ret<=0) return;

@@ -13,11 +13,12 @@
 #include <vector>
 #include <memory>
 
-#define USE_ECAL
+//#define USE_ECAL
 //#define USE_PCAL
-//#define USE_HTCC
+#define USE_HTCC
 //#define USE_FTOF
-#define USE_FT //A.C. uncommented to have FT code
+//#define USE_FT //A.C. uncommented to have FT code
+
 using namespace std;
 
 #if 0
@@ -78,9 +79,9 @@ unsigned int buf[MAXBUF];
 unsigned int *bufptr;
 
 /* 0,1,2 - segfauil on event 905; 3 and more - Ok */
-#define SKIPEVENTS 0
+#define SKIPEVENTS 11
 
-#define MAXEVENTS 1000
+#define MAXEVENTS 20
 
 int main(int argc, char **argv) {
 	int run = 11; /* sergey: was told to use 11, do not know why .. */
