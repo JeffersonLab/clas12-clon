@@ -19,13 +19,15 @@ using namespace std;
 #include "ftoflib.h"
 
 #define TRANSLATE(ch_m) \
-      energy = fadcs.fadc[isl].e##ch_m; \
-      chan = ch_m; \
-      lay    = adclayer[isl][chan] - 1; \
-      str    = adcstrip[isl][chan] - 1; \
-      lr     = adclr[isl][chan] - 1; \
-      timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].t##ch_m) : 8); /* error in '?' without (uint16_t) ...*/ \
-      if(lay==0) timetmp[lr][str] = timexxx
+  energy = fadcs.fadc[isl].e##ch_m; \
+  chan = ch_m; \
+  lay    = adclayer[isl][chan] - 1; \
+  str    = adcstrip[isl][chan] - 1; \
+  lr     = adclr[isl][chan] - 1; \
+  timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].t##ch_m) : 8); /* error in '?' without (uint16_t) ...*/ \
+  if(lay==0) timetmp[lr][str] = timexxx; \
+  /*if(lay==0 && energy>0) cout<<"ftofstrips: energy[lay="<<lay<<"][str="<<str<<"][lr="<<lr<<"]="<<energy<<endl; \
+	if(lay==0) cout<<"ftofstrips: timetmp[lr="<<lr<<"][str="<<str<<"]="<<timetmp[lr][str]<<endl*/
 
 
 /* 1.96/16/8/0%/0%/~0%(638)/~0%(519) II=8 */
@@ -58,7 +60,7 @@ ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, FTOF
 
 
 #ifdef DEBUG
-  printf("== ftofstrips starts ==\n");fflush(stdout);
+  printf("== ftofstrips starts: strip_threshold=%d ==\n",(uint16_t)strip_threshold);fflush(stdout);
 #endif
 
 
@@ -114,6 +116,10 @@ ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, FTOF
 
     s_strip[j].outL = out[0];
     s_strip[j].outR = out[1];
+#ifdef DEBUG
+    cout<<"ftofstrips: outL["<<j<<"]="<<hex<<s_strip[j].outL<<dec<<endl;
+    cout<<"ftofstrips: outR["<<j<<"]="<<hex<<s_strip[j].outR<<dec<<endl;
+#endif
   }
 
 

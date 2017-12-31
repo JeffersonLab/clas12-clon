@@ -23,7 +23,7 @@ using namespace std;
 
 
 
-//#define DEBUG
+#define DEBUG
 
 
 #define MAX(a,b)    (a > b ? a : b)
@@ -47,6 +47,14 @@ ftofhit(nframe_t nframes, FTOFStrip_s s_strip[NH_READS], FTOFHit s_hit[NH_READS]
 
   ap_uint<NSTRIP> output[NH_READS];
 
+#ifdef DEBUG
+  for(int j=0; j<NH_READS; j++)
+  {
+    cout<<"ftofhit: s_strip["<<j<<"].outL="<<hex<<s_strip[j].outL<<dec<<endl;
+    cout<<"ftofhit: s_strip["<<j<<"].outR="<<hex<<s_strip[j].outR<<dec<<endl;
+  }
+#endif
+
   /* shift old data 8 elements to the right */
   for(int i=15; i>=0; i--)
   {
@@ -63,6 +71,13 @@ ftofhit(nframe_t nframes, FTOFStrip_s s_strip[NH_READS], FTOFHit s_hit[NH_READS]
   }
 
 
+#ifdef DEBUG
+  for(int i=NPIPE; i>=0; i--)
+  {
+    cout<<"ftofhit: outL[pipe="<<i<<"]="<<hex<<outL[i]<<dec<<endl;
+    cout<<"ftofhit: outR[pipe="<<i<<"]="<<hex<<outR[i]<<dec<<endl;
+  }
+#endif
 
 
 
@@ -70,13 +85,17 @@ ftofhit(nframe_t nframes, FTOFStrip_s s_strip[NH_READS], FTOFHit s_hit[NH_READS]
 
   for(int i=8; i<16; i++) /* take middle interval left PMTs, and compare with +-(NPER/2) right PMTs */
   {
-    for(int j=i-(NPER/2); j<=i+(NPER/2); j++) output[i-8] = outL[i] & outR[j];
+    output[i-8] = 0;
+    for(int j=i-(NPER/2); j<=i+(NPER/2); j++) output[i-8] |= outL[i] & outR[j];
   }
 
 
   /* send trigger solution */
   for(int j=0; j<NH_READS; j++)
   {
+#ifdef DEBUG
+    cout<<"ftofhit: output["<<j<<"]="<<hex<<output[j]<<dec<<endl;
+#endif
     s_hit[j].output = output[j];
   }
 }

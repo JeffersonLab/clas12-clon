@@ -24,12 +24,6 @@ using namespace std;
 #define MAX(a,b)    (a > b ? a : b)
 #define MIN(a,b)    (a < b ? a : b)
 
-static float ped[21][16]; /* pedestals */
-static float tet[21][16]; /* threshold */
-static float gain[21][16]; /* gain */
-static int nsa[21]; /* NSA */
-static int nsb[21]; /* NSB */
-
 
 void
 htcchiteventreader(hls::stream<eventdata_t> &event_stream, HTCCHit &hit, uint32_t *bufout)
