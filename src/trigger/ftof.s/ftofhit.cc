@@ -48,10 +48,11 @@ ftofhit(nframe_t nframes, FTOFStrip_s s_strip[NH_READS], FTOFHit s_hit[NH_READS]
   ap_uint<NSTRIP> output[NH_READS];
 
 #ifdef DEBUG
+  printf("== ftofhit start ==\n");
   for(int j=0; j<NH_READS; j++)
   {
-    cout<<"ftofhit: s_strip["<<j<<"].outL="<<hex<<s_strip[j].outL<<dec<<endl;
-    cout<<"ftofhit: s_strip["<<j<<"].outR="<<hex<<s_strip[j].outR<<dec<<endl;
+    if(s_strip[j].outL>0) cout<<"ftofhit: s_strip["<<j<<"].outL="<<hex<<s_strip[j].outL<<dec<<endl;
+    if(s_strip[j].outR>0) cout<<"ftofhit: s_strip["<<j<<"].outR="<<hex<<s_strip[j].outR<<dec<<endl;
   }
 #endif
 
@@ -72,29 +73,44 @@ ftofhit(nframe_t nframes, FTOFStrip_s s_strip[NH_READS], FTOFHit s_hit[NH_READS]
 
 
 #ifdef DEBUG
-  for(int i=NPIPE; i>=0; i--)
+  for(int i=NPIPE-1; i>=0; i--)
   {
-    cout<<"ftofhit: outL[pipe="<<i<<"]="<<hex<<outL[i]<<dec<<endl;
-    cout<<"ftofhit: outR[pipe="<<i<<"]="<<hex<<outR[i]<<dec<<endl;
+    if(outL[i]>0) cout<<"ftofhit: outL[pipe="<<i<<"]="<<hex<<outL[i]<<dec<<endl;
+    if(outR[i]>0) cout<<"ftofhit: outR[pipe="<<i<<"]="<<hex<<outR[i]<<dec<<endl;
   }
 #endif
 
 
 
-  /* check for left-right coincidence withing 'nframes' interval */
+  /* check for left-right coincidence within 'nframes' interval */
 
+
+#if 1
+  if(nframes>NPER) nframes = NPER;
+  for(int i=8; i<16; i++) /* take middle interval left PMTs, and compare with +-nframes right PMTs */
+  {
+    output[i-8] = 0;
+    for(int j=i-NPER; j<=i+NPER; j++)
+	{
+      if(j<(i-nframes)) continue;
+      if(j>(i+nframes)) continue;
+      output[i-8] |= outL[i] & outR[j];
+	}
+  }
+#else
   for(int i=8; i<16; i++) /* take middle interval left PMTs, and compare with +-(NPER/2) right PMTs */
   {
     output[i-8] = 0;
     for(int j=i-(NPER/2); j<=i+(NPER/2); j++) output[i-8] |= outL[i] & outR[j];
   }
+#endif
 
 
   /* send trigger solution */
   for(int j=0; j<NH_READS; j++)
   {
 #ifdef DEBUG
-    cout<<"ftofhit: output["<<j<<"]="<<hex<<output[j]<<dec<<endl;
+    if(output[j]>0) cout<<"ftofhit: output["<<j<<"]="<<hex<<output[j]<<dec<<endl;
 #endif
     s_hit[j].output = output[j];
   }
