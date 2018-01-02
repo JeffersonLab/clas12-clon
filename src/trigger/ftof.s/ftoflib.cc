@@ -101,7 +101,7 @@ ftoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
   unsigned long long timestamp;
 
   ap_uint<16> threshold[3] = {threshold_[0], threshold_[1], threshold_[2]};
-  nframe_t nframes = 1;
+  nframe_t nframes = nframes_;
 
   hls::stream<fadc_16ch_t> s_fadc_words[NSLOT];
   hls::stream<fadc_256ch_t> s_fadcs;

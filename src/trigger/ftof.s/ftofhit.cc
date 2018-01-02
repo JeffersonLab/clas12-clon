@@ -23,7 +23,7 @@ using namespace std;
 
 
 
-#define DEBUG
+//#define DEBUG
 
 
 #define MAX(a,b)    (a > b ? a : b)

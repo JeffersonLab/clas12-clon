@@ -13,11 +13,11 @@
 #include <vector>
 #include <memory>
 
-//#define USE_ECAL
-//#define USE_PCAL
-//#define USE_HTCC
+#define USE_ECAL
+#define USE_PCAL
+#define USE_HTCC
 #define USE_FTOF
-//#define USE_FT //A.C. uncommented to have FT code
+#define USE_FT //A.C. uncommented to have FT code
 
 using namespace std;
 
@@ -66,7 +66,7 @@ static uint16_t htcc_threshold[3] = { 1, 1, 3 };
 static uint16_t htcc_nframes = 0;
 
 static uint16_t ftof_threshold[3] = { 1, 1, 3 };
-static uint16_t ftof_nframes = 0;
+static uint16_t ftof_nframes = 4;
 
 static uint16_t ft_threshold[3] = { 1, 1, 3 };
 static uint16_t calo_seed_threshold = FT_CALO_SEED_THRESHOLD;
