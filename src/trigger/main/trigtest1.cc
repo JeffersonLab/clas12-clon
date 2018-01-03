@@ -164,6 +164,12 @@ int main(int argc, char **argv) {
 
 	maxevents = MAXEVENTS;
 
+	if( argc >= 3 ){
+	  maxevents = atoi(argv[2]);
+	  cout<<"Number of events to process is "<<maxevents<<endl;
+	}
+
+
 	iev = 0;
 	while (iev < maxevents) {
 		iev++;
