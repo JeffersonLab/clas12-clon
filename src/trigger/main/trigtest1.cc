@@ -48,11 +48,11 @@ string create_connection_string()
 
 #include "trigger.h"
 
-static uint16_t ec_threshold[3] = { 1, 1, 3 };
-static uint16_t ec_nframes = 0;
-static uint16_t ec_dipfactor = EC_STRIP_DIP_FACTOR;
-static uint16_t ec_dalitzmin = EC_DALITZ_MIN;
-static uint16_t ec_dalitzmax = EC_DALITZ_MAX;
+static uint16_t ec_threshold[3] = {50,80,150};
+static uint16_t ec_nframes = 3;
+static uint16_t ec_dipfactor = 1/*EC_STRIP_DIP_FACTOR*/;
+static uint16_t ec_dalitzmin = (69<<3)/*EC_DALITZ_MIN*/;
+static uint16_t ec_dalitzmax = (74<<3)/*EC_DALITZ_MAX*/;
 static uint16_t ec_nstripmax = 0;
 
 static uint16_t pc_threshold[3] = { 1, 1, 3 };
@@ -79,9 +79,9 @@ unsigned int buf[MAXBUF];
 unsigned int *bufptr;
 
 /* 0,1,2 - segfauil on event 905; 3 and more - Ok */
-#define SKIPEVENTS 11
+#define SKIPEVENTS 0
 
-#define MAXEVENTS 20
+#define MAXEVENTS 200
 
 int main(int argc, char **argv) {
 	int run = 11; /* sergey: was told to use 11, do not know why .. */

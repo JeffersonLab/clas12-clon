@@ -188,14 +188,23 @@ ecpeak2(ap_uint<16> peak_threshold, hls::stream<ECStrip_s> s_strip2[NF1],
     if(first[i])
 	{
       OPEN_PEAK;
+#ifdef DEBUG
+cout<<"OPEN_PEAK: first["<<i<<"] = "<<first[i]<<endl;
+#endif
 	}
     if(middle[i])
 	{
       FILL_PEAK;
+#ifdef DEBUG
+cout<<"FILL_PEAK: middle["<<i<<"] = "<<middle[i]<<endl;
+#endif
 	}
     if(last[i])
 	{
       CLOSE_PEAK;
+#ifdef DEBUG
+cout<<"CLOSE_PEAK: last["<<i<<"] = "<<last[i]<<endl;
+#endif
 	}
   }
 

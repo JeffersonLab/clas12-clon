@@ -28,8 +28,8 @@
 #define _POSIX_SOURCE_ 1
 #define __EXTENSIONS__
 
-//#define USE_RCDB
-//#define USE_ACTIVEMQ
+#define USE_RCDB
+#define USE_ACTIVEMQ
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,6 +56,15 @@ using namespace std;
 
 #include "json/json.hpp"
 using json = nlohmann::json;
+
+#define MAXLABELS 16
+int nlabels; /* the number of lines in .cfg file */
+char *labels[MAXLABELS];
+char *dbnames[MAXLABELS];
+char *values[MAXLABELS];
+char *actions[MAXLABELS];
+
+char vals[MAXLABELS][256];
 
 #endif
 
@@ -176,7 +185,9 @@ main(int argc,char **argv)
     }
 
     //dbr_init(uniq_dgrp,application,id_string);
-	server.init(getenv("EXPID"), NULL, NULL, (char *)"run_log_end");
+    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", (char *)"run_log_end");
+    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+    server.Open();
   }
 
 
@@ -236,7 +247,7 @@ main(int argc,char **argv)
   {
     //if(no_dbr==0) dbr_check((double) gmd_time);
     //dbr_close();
-    server.close();
+    server.Close();
   }
   
 
@@ -458,7 +469,7 @@ insert_into_ipc(char *sql)
   if(no_dbr==0)
   {
 
-    server << clrm << "json" << (char *)sql << endm;
+    server << clrm << "runlog" << (char *)sql << endm;
 
 
 	/*

@@ -217,12 +217,14 @@ main(int argc, char **argv)
 
 #ifdef USE_ACTIVEMQ
   // connect to ipc server
-  server.init(getenv("EXPID"), NULL, NULL, "*", NULL, "*");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+  server.Open();
 
-  //MessageActionControl   *control = new MessageActionControl((char *)"dbrouter",debug);
+  MessageActionControl   *control = new MessageActionControl((char *)"dbrouter",debug);
   MessageActionJSON         *json = new MessageActionJSON();
-  //server.addActionListener(control);
-  server.addActionListener(json);
+  server.AddCallback(control);
+  server.AddCallback(json);
 
 #else
 /*********************************************************/
@@ -990,7 +992,7 @@ dbrouter_done(void)
 
 #ifdef USE_ACTIVEMQ
   // close ipc connection
-  server.close(); 
+  server.Close(); 
 #else
   // close ipc connection
   ipc_close();

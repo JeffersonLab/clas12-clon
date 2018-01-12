@@ -46,7 +46,9 @@ epics_msg_receiver_init(char *application)
   ipc_set_quit_callback(quit_callback);
   */
 
-  status = server.init(getenv("EXPID"), NULL, NULL, (char *)"epics_msg_recv", NULL, "*");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", (char *)"epics_msg_recv");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+  status = server.Open();
   if(status<0)
   {
     cerr << "\n?Unable to connect to server...probably duplicate unique id\n"
@@ -56,7 +58,7 @@ epics_msg_receiver_init(char *application)
   }
 
   MessageActionEPICS  *epics = new MessageActionEPICS();
-  server.addActionListener(epics);
+  server.AddCallback(epics);
 
   while(1)
   {
@@ -81,7 +83,7 @@ epics_msg_receiver_init(char *application)
   }
   */
 
-  server.close();
+  server.Close();
 
   return(0);
 }

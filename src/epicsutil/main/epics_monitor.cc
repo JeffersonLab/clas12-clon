@@ -60,6 +60,7 @@ static int nConn = 0;                                     /* Number of connected
 #include <pthread.h>
 
 #include "ipc_lib.h"
+#include "MessageActionControl.h"
 #include "MessageActionEPICS.h"
 
 // misc
@@ -196,13 +197,18 @@ main(int argc,char **argv)
   sprintf(dest,"evt_bosbank/%s",session);
 
 
-  status = server.init(getenv("EXPID"), NULL, NULL, "epics_monitor", NULL, "*");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", (char *)"epics_monitor");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+  status = server.Open();
   if(status<0) {
     cerr << "\n?Unable to connect to server...probably duplicate unique id\n"
 	 << "   ...check for another epics_monitor  using ipc_info\n"
 	 << "   ...only one connection allowed!" << endl << endl;
     exit(EXIT_FAILURE);
   }
+
+  MessageActionControl   *control = new MessageActionControl((char *)"epics_monitor",debug);
+  server.AddCallback(control);
 
 
   // set ipc parameters and connect to ipc system
@@ -246,7 +252,7 @@ main(int argc,char **argv)
 
 
   MessageActionEPICS *epics = new MessageActionEPICS();
-  server.addActionListener(epics);
+  server.AddCallback(epics);
   //pthread_create(&t1,NULL,ipc_thread,(void*)NULL);
 
 
@@ -314,7 +320,7 @@ main(int argc,char **argv)
   /*status = insert_msg("epics_monitor","online",unique_id,"status",0,"STOP",0,temp2.str());*/
   
   // done...clean up
-  server.close();
+  server.Close();
 
   exit(EXIT_SUCCESS);
 }

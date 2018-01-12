@@ -17,7 +17,7 @@ class MessageActionJSON : public MessageAction {
   private:
 
     static const int NFORMATS=1;
-    std::string formats[NFORMATS] = {"json"};
+    std::string formats[NFORMATS] = {"runlog"};
     int formatid;
 
     int debug;

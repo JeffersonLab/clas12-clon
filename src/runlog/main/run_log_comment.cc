@@ -463,14 +463,16 @@ void button_callback (Widget w, XtPointer client_data, XtPointer call_data)
   {
     // connect to server
     //dbr_init(uniq_subj,application,id_string);
-	server.init(getenv("EXPID"), NULL, NULL, (char *)"run_log_comment");
+    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", (char *)"run_log_comment");
+    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+    server.Open();
 
     // ship to database router
     insert_into_database(rlb_string.str());
 
     // close ipc connection
     //dbr_close();
-    server.close();
+    server.Close();
   }
   else
   {
@@ -563,7 +565,7 @@ insert_into_database(const char *entry)
     printf("run_log_comment: QUERY >%s<\n",entry);
 
 #ifdef USE_ACTIVEMQ
-    server << clrm << "json" << (char *)entry << endm;
+    server << clrm << "runlog" << (char *)entry << endm;
 #else
 	/*
     // disable gmd timeout

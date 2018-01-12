@@ -41,7 +41,7 @@ using namespace std;
 //#define DEBUG
 //#define DEBUG_0
 //#define DEBUG_1
-//#define DEBUG_2 /* hardware trigger info */
+#define DEBUG_2 /* hardware trigger info */
 //#define DEBUG_3
 
 
@@ -264,9 +264,9 @@ echiteventreader(hls::stream<eventdata_t> &event_stream, TrigECHit hit[NHITS], u
 
 
 int
-ectrig(unsigned int *bufptr, int sec, int npeak[NVIEW], TrigECPeak peak[NVIEW][NPEAKMAX], int *nhit, TrigECHit hit[NHIT])
+ectrig(unsigned int *bufptr, int sec, int npeak[NVIEW], TrigECPeak peak[NVIEW][NPEAKMAX], int *nhit, TrigECHit hit[NHIT], int sim)
 {
-  int i, j, k, ind, nhits, npeaks, instance, view, str, layer, error, ii, nbytes, ind_data, nn, mm;
+  int i, j, k, ind, nhits, npeaks, instance, view, str, layer, error, ii, nbytes, ind_data, nn, mm, bank1, bank2;
   int energy;
   long long timestamp, timestamp_old;
   GET_PUT_INIT;
@@ -301,18 +301,29 @@ ectrig(unsigned int *bufptr, int sec, int npeak[NVIEW], TrigECPeak peak[NVIEW][N
 
 
 #ifdef USE_PCAL
-  fragtag = 60107+sec;
+  fragtag = 107+sec;
 #else
-  fragtag = 60101+sec;
+  fragtag = 101+sec;
 #endif
   fragnum = -1;
   banktag = 0xe122;
-  banknum = 255;
+  bank1 = 0;
+  bank2 = 40;
+
+  if(sim)
+  {
+    fragtag += 60000;
+    bank1=255;
+    bank2=256;
+  }
+
+  for(banknum=bank1; banknum<bank2; banknum++)
+  {
 
   if((ind = evLinkBank(bufptr, fragtag, fragnum, banktag, banknum, &nbytes, &ind_data)) <= 0)
   {
-    printf("cannot find bank tag=0x%04x num=%d in fragtag=%d fragnum=%d (trigger)\n",banktag,banknum,fragtag,fragnum);
-    return(0);
+    /*printf("cannot find bank tag=0x%04x num=%d in fragtag=%d fragnum=%d (trigger)\n",banktag,banknum,fragtag,fragnum);*/
+    continue;
   }
 #ifdef DEBUG_2
   printf("\n\n== ecal/pcal trigger bank: ind=%d ind_data=%d\n",ind, ind_data);
@@ -332,7 +343,7 @@ ectrig(unsigned int *bufptr, int sec, int npeak[NVIEW], TrigECPeak peak[NVIEW][N
     last_val = val;
     GET32(val);
 #ifdef DEBUG_2
-    printf("data=0x%08x\n",data);
+    //printf("data=0x%08x\n",data);
 #endif
     
     if(val & 0x80000000)
@@ -465,10 +476,10 @@ ectrig(unsigned int *bufptr, int sec, int npeak[NVIEW], TrigECPeak peak[NVIEW][N
         break;
     }
 #ifdef DEBUG_2
-        printf("\n\n");
+        printf("\n");
 #endif
   }
-
+  }
 
 
 return(ind);
@@ -550,7 +561,7 @@ void
 eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipfactor_, uint16_t dalitzmin_, uint16_t dalitzmax_, uint16_t nstripmax_)
 {
   GET_PUT_INIT;
-  int ii, it, ret, sec, uvw, npsble;
+  int ii, jj, it, ret, sec, uvw, npsble;
   uint8_t nhits;
   uint32_t bufout0[256], bufout1[256], bufout2[256], bufout3[256];
   int iev;
@@ -592,6 +603,59 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 
   for(sec=0; sec<NSECTOR; sec++)
   {
+
+
+
+
+
+
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+	{
+    /*trig data*/
+    static int npeaks_trig[NVIEW]; 
+    static TrigECPeak peaks_trig[NVIEW][NPEAKMAX];
+    static int nhits_trig;
+    static TrigECHit hits_trig[NHIT];
+    /*trig data*/
+
+    printf("CALLING ectrig, sec=%d\n",sec);
+
+    ret = ectrig(bufptr, sec, npeaks_trig, peaks_trig, &nhits_trig, hits_trig, 0);
+    if(ret>0)
+	{
+      for(ii=0; ii<NVIEW; ii++)
+      {
+        for(jj=0; jj<npeaks_trig[ii]; jj++)
+	    {
+          cout<<"TRIG PEAK ["<<+ii<<"]["<<+jj<<"]:  coord="<<peaks_trig[ii][jj].coord<<"   energy="<<peaks_trig[ii][jj].energy<<"   time="<<peaks_trig[ii][jj].time<<endl;
+	    }
+      }
+
+      {
+        for(jj=0; jj<nhits_trig; jj++)
+	    {
+          cout<<"TRIG HIT ["<<+jj<<"]: coord="<<hits_trig[jj].coord[0]<<" "<<hits_trig[jj].coord[1]<<" "<<hits_trig[jj].coord[2]<<"   energy="<<hits_trig[jj].energy<<"   time="<<hits_trig[jj].time<<endl;
+	    }
+      }
+      cout<<endl;
+	}
+	}
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+
+
+
+
+
+
+
+
+
+
+
 #ifdef DEBUG_0
 #ifdef USE_PCAL
 	cout<<"pclib: sec1="<<sec<<endl;
@@ -710,6 +774,46 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
     for(int i=0; i<4; i++) trig[i].t_start += MAXTIMES*8; /* in preparation for next event, step up MAXTIMES*32ns in 4ns ticks */
 
   printf("14\n");fflush(stdout);
+
+
+
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+	{
+    /*trig data*/
+    static int npeaks_trig[NVIEW]; 
+    static TrigECPeak peaks_trig[NVIEW][NPEAKMAX];
+    static int nhits_trig;
+    static TrigECHit hits_trig[NHIT];
+    /*trig data*/
+
+    printf("CALLING ectrig, sec=%d\n",sec);
+
+    ret = ectrig(bufptr, sec, npeaks_trig, peaks_trig, &nhits_trig, hits_trig, 1);
+    if(ret>0)
+	{
+      for(ii=0; ii<NVIEW; ii++)
+      {
+        for(jj=0; jj<npeaks_trig[ii]; jj++)
+	    {
+          cout<<"TRIG PEAK ["<<+ii<<"]["<<+jj<<"]:  coord="<<peaks_trig[ii][jj].coord<<"   energy="<<peaks_trig[ii][jj].energy<<"   time="<<peaks_trig[ii][jj].time<<endl;
+	    }
+      }
+
+      {
+        for(jj=0; jj<nhits_trig; jj++)
+	    {
+          cout<<"TRIG HIT ["<<+jj<<"]: coord="<<hits_trig[jj].coord[0]<<" "<<hits_trig[jj].coord[1]<<" "<<hits_trig[jj].coord[2]<<"   energy="<<hits_trig[jj].energy<<"   time="<<hits_trig[jj].time<<endl;
+	    }
+      }
+      cout<<endl;
+	}
+	}
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+    /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
+
 
   } /* sec */
 

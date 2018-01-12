@@ -44,23 +44,36 @@ ec_first_and_last(ap_uint<16> strip_threshold, ap_uint<4> strip_dip_factor,
   /* found first */
   energy0 = en_m1;
   energy1 = en_m1 + (en_m1>>strip_dip_factor);
-
+#ifdef DEBUG
+    cout<<"      INPUTS: "<<+strip_threshold<<" "<<+en_m2<<" "<<+en_m1<<" "<<+en_0<<" "<<+en_p1<<endl;
+#endif
+#ifdef DEBUG
+    cout<<"   LOOKING_FOR_FIRST: "<<+energy0<<" "<<+energy1<<endl;
+#endif
   if((en_m1<=strip_threshold && en_0>strip_threshold) ||
      (energy0>strip_threshold && en_m2>energy0 && energy1<en_0) ||
 	 (energy0>strip_threshold && en_m2>energy1 && energy0<en_0))
   {
+#ifdef DEBUG
+    cout<<"FOUND_FIRST"<<endl;
+#endif
     first_last[0] = 1;
   }
 
   /* found last */
   energy0 = en_0;
   energy1 = en_0 + (en_0>>strip_dip_factor);
-
+#ifdef DEBUG
+    cout<<"   LOOKING_FOR_LAST: "<<+energy0<<" "<<+energy1<<endl;
+#endif
   if((en_0>strip_threshold && en_p1<=strip_threshold) ||
      (energy0>strip_threshold && en_m1>energy0 && energy1<en_p1) ||
      (energy0>strip_threshold && en_m1>energy1 && energy0<en_p1))
   {
     first_last[1] = 1;
+#ifdef DEBUG
+    cout<<"FOUND_LAST"<<endl;
+#endif
   }
 
 }
@@ -156,10 +169,26 @@ ecpeak1(ap_uint<16> strip_threshold, ap_uint<4> strip_dip_factor, ap_uint<4> nst
 	  fifo = s_strip1[i-b1[j]].read();
       energy[i*2+2] = fifo.energy0;
       energy[i*2+3] = fifo.energy1;
+#ifdef DEBUG
+      cout<<"-> energy["<<i*2+2<<"]="<<energy[i*2+2]<<endl;
+      cout<<"-> energy["<<i*2+3<<"]="<<energy[i*2+3]<<endl;
+#endif
     }
+
+#if 1
+  }
+  for(int j=0; j<NH_READS; j++)
+  {
+#endif
 
     for(int i=b2[j]; i<=e2[j]; i++)
     {
+#ifdef DEBUG
+      cout<<"=> energy["<<i-2<<"]="<<energy[i-2]<<endl;
+      cout<<"=> energy["<<i-1<<"]="<<energy[i-1]<<endl;
+      cout<<"=> energy["<<i<<"]="<<energy[i]<<endl;
+      cout<<"=> energy["<<i+1<<"]="<<energy[i+1]<<endl;
+#endif
 	  /*sergey: using strip_threshold=0 here, because it is applied already in ecstrips.cc*/
       ec_first_and_last(0/*strip_threshold*/, strip_dip_factor, energy[i-2], energy[i-1], energy[i], energy[i+1], first_last);
       first[i] = first_last[0];

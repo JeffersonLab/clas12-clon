@@ -71,7 +71,7 @@ static int nsb[NDET][21]; /* NSB */
 int
 fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS], int dtimestamp, int dpulsetime,
 		int *iev, unsigned long long *timestamp) {
-	int i, j, k, ind, nhits, error, ii, jj, nbytes, ind_data, nn, mm, isample, isam1, isam2;
+  int i, j, k, ind, nhits, error, ii, jj, nbytes, ind_data, nn, mm, isample, isam1, isam2, itmp, ievent;
 	int summing_in_progress;
 	int datasaved[1000];
 	int energy, it;
@@ -141,6 +141,49 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 			fadcs[i][isl].t15 = 0;
 		}
 	}
+
+
+
+
+
+
+
+
+	/************************************/
+    /* read event number from head bank */
+
+	fragtag = 37;
+    fragnum = -1;
+    banktag = 0xe10a;
+    banknum = 0;
+
+    ind = 0;
+    for(banknum=0; banknum<40; banknum++)
+    {
+      /*printf("looking for %d %d  - 0x%04x %d\n",fragtag, fragnum, banktag, banknum);*/
+      ind = evLinkBank(bufptr, fragtag, fragnum, banktag, banknum, &nbytes, &ind_data);
+      if(ind>0) break;
+    }
+
+    if(ind<=0)
+	{
+      printf("ERROR: cannot find head bank\n");
+	}
+	else
+	{
+      b08 = (unsigned char *) &bufptr[ind_data];
+      GET32(itmp);
+      GET32(ievent);
+      printf("Event number = %d =====================================================================================\n",ievent);
+
+	  if(ievent>/*11189566*/1967427) exit(0);
+	}
+
+
+
+
+
+
 
 	/*************************/
 	/* pedestal nsa, nsb etc */
@@ -313,7 +356,7 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 
 #ifdef DEBUG_0
 						printf("data[sl=%2d][ch=%2d]:",slot,chan);
-						for(mm=40; mm<100/*69*/; mm++)
+						for(mm=0; mm<100/*69*/; mm++)
 						{
 							printf(" [%2d]%4d,",mm,datasaved[mm]);
 						}
@@ -329,7 +372,7 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 						pulse_integral = 0;
 						while (mm < nsamples)
                         {
-#ifdef DEBUG_1
+#ifdef DEBUG_0
 						  printf("[%d] data=%d , ped=%d, tet=%d, ped+tet=%d\n",
 								 mm,datasaved[mm],(int)ped[det][slot][chan],tet[det][slot][chan],
                                  (int)ped[det][slot][chan]+tet[det][slot][chan]);
@@ -338,7 +381,7 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 							  && (datasaved[mm - 1] <= (int)ped[det][slot][chan] + tet[det][slot][chan]) )
                             {
 								isample = mm;
-#ifdef DEBUG_1
+#ifdef DEBUG_0
 								printf("found isample=%d\n",isample);
 #endif
 								break;
@@ -372,7 +415,7 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 							ptime = isample;
 
 							/*MANUALLY SET SHIFT - CHANGE IF NEEDED !!!*/
-							ptime += 2; /* correspond to the difference in timestamps between VTP and FADCs (FADC is bigger) */
+							//ptime += 2; /* correspond to the difference in timestamps between VTP and FADCs (FADC is bigger) */
 							/*MANUALLY SET SHIFT - CHANGE IF NEEDED !!!*/
 
 							offset += dtimestamp;
@@ -403,8 +446,8 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 
 						/* now we have pulse - put it in array fadcs[time_slice][slot][channel] */
 						ee = pulse_integral & 0x1FFF;
-#ifdef DEBUG_0
-						cout<<"fadcs: ee="<<ee<<", itime="<<itime<<", isl="<<isl<<", it="<<it<<", tt="<<tt<<endl;
+#ifdef DEBUG_1
+						cout<<"fadcs: ee="<<ee<<", itime="<<itime<<", isl="<<isl<<", chan="<<chan<<", it="<<it<<", tt="<<tt<<endl;
 #endif
 						/*A.C. changed to check over a float (fsum-fped)
 						 since ee is uint and thus always >=0
