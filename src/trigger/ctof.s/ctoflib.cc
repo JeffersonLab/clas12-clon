@@ -20,18 +20,12 @@ using namespace std;
 #include "trigger.h"
 
 
-#define DEBUG_0
-#define DEBUG_3
+//#define DEBUG_0
+//#define DEBUG_3
 
 
 #define MAX(a,b)    (a > b ? a : b)
 #define MIN(a,b)    (a < b ? a : b)
-
-static float ped[21][16]; /* pedestals */
-static float tet[21][16]; /* threshold */
-static float gain[21][16]; /* gain */
-static int nsa[21]; /* NSA */
-static int nsb[21]; /* NSB */
 
 
 void
@@ -63,7 +57,7 @@ ctofhiteventreader(hls::stream<eventdata3_t> &event_stream, CTOFHit_8slices &hit
     j = eventdata.data[0](18,16); /* 3 lowest bits of timing */
 
     *bufptr++ = eventdata.data[1];
-	hit.output[j](61,31) = eventdata.data[1](30,0);
+	hit.output[j](47,31) = eventdata.data[1](16,0);
 
     *bufptr++ = eventdata.data[2];
 	hit.output[j](30,0) = eventdata.data[2](30,0);
@@ -102,7 +96,7 @@ ctoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
   unsigned long long timestamp;
 
   ap_uint<16> threshold[3] = {threshold_[0], threshold_[1], threshold_[2]};
-  nframe_t nframes = 1;
+  nframe_t nframes = nframes_;
 
   hls::stream<fadc_16ch_t> s_fadc_words[NSLOT];
   hls::stream<fadc_256ch_t> s_fadcs;
@@ -140,9 +134,9 @@ ctoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
     ctof_buf_ram_to_event_buf_ram(buf_ram, event_buf_ram);
     ctofhiteventwriter(trig_stream, event_stream, event_buf_ram);
     ctofhiteventreader(event_stream, hit, bufout);
-
-    for(int i=0; i<bufout[0]; i++) printf("bufout[%d]=0x%08x\n",i,bufout[i]);
-
+#ifdef DEBUG
+    for(int i=0; i<=bufout[0]; i++) printf("CTOF bufout[%d]=0x%08x\n",i,bufout[i]);
+#endif
     if(bufout[0]>0) /*bufout contains something */
 	{
       int fragtag = 60093;

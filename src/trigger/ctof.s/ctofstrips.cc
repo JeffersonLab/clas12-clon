@@ -56,7 +56,7 @@ ctofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CTOF
 
 
 #ifdef DEBUG
-  printf("== ctofstrips starts ==\n");fflush(stdout);
+  printf("== ctofstrips starts: strip_threshold=%d ==\n",(uint16_t)strip_threshold);fflush(stdout);
 #endif
 
 
@@ -112,6 +112,10 @@ ctofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CTOF
 
     s_strip[j].outL = out[0];
     s_strip[j].outR = out[1];
+#ifdef DEBUG
+    cout<<"ctofstrips: outL["<<j<<"]="<<hex<<s_strip[j].outL<<dec<<endl;
+    cout<<"ctofstrips: outR["<<j<<"]="<<hex<<s_strip[j].outR<<dec<<endl;
+#endif
   }
 
 
