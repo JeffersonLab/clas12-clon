@@ -227,6 +227,7 @@ ctofhit(nframe_t nframes, CTOFStrip_s s_strip[NH_READS], CTOFHit s_hit[NH_READS]
     if(output[j]>0) cout<<"ftofhit: output["<<j<<"]="<<hex<<output[j]<<dec<<endl;
 #endif
     s_hit[j].output = output[j];
+    s_hit[j].standalone = 0;
   }
 
 #endif

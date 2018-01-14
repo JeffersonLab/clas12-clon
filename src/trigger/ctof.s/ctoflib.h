@@ -35,9 +35,7 @@ extern "C" {
 typedef ap_uint<6> nframe_t;
 
 
-//#ifdef COSMIC
 #define NSTANDALONEBITS 16
-//#endif
 
 
 #define NLR 2 /* the number of 'left-rights' */
@@ -52,17 +50,13 @@ typedef struct ctofstrip_s
 typedef struct ctofhit
 {
   ap_uint<NSTRIP> output;
-//#ifdef COSMIC
   ap_uint<NSTANDALONEBITS> standalone;
-//#endif
 } CTOFHit;
 
 typedef struct
 {
   ap_uint<NSTRIP> output[NPER];
-//#ifdef COSMIC
   ap_uint<NSTANDALONEBITS> standalone[NPER];
-//#endif
 } CTOFHit_8slices;
 
 
@@ -77,17 +71,13 @@ typedef struct
 typedef struct
 {
   ap_uint<NSTRIP> output[NPER];
-//#ifdef COSMIC
   ap_uint<NSTANDALONEBITS> standalone[NPER];
-//#endif
 } hit_ram_t;
 
 typedef struct
 {
   ap_uint<NSTRIP> output;
-//#ifdef COSMIC
   ap_uint<NSTANDALONEBITS> standalone;
-//#endif
 } event_ram_t;
 /* will be asymetric ram in vhdl */
 

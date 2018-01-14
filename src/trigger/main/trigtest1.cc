@@ -13,12 +13,12 @@
 #include <vector>
 #include <memory>
 
-#define USE_ECAL
-#define USE_PCAL
-#define USE_HTCC
-#define USE_FTOF
+//#define USE_ECAL
+//#define USE_PCAL
+//#define USE_HTCC
+//#define USE_FTOF
 #define USE_CTOF
-#define USE_FT //A.C. uncommented to have FT code
+//#define USE_FT //A.C. uncommented to have FT code
 
 using namespace std;
 

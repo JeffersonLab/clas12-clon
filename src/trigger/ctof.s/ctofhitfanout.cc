@@ -37,22 +37,14 @@ ctofhitfanout(CTOFHit hitin[NH_READS], hls::stream<CTOFHit_8slices> &s_hits, CTO
   for(int i=0; i<NH_READS; i++)
   {
     hit.output[i] = hitin[i].output;
-#ifdef COSMIC
     hit.standalone[i] = hitin[i].standalone;
-#else
-    hit.standalone[i] = 0;
-#endif
 
     scaler[i] = 0;
     if(hit.output[i] != 0) scaler[i] = 1;
     //else                 scaler[i] = 0;
 
     hitout[i].output = hit.output[i];
-#ifdef COSMIC
     hitout[i].standalone = hit.standalone[i];
-#else
-    hitout[i].standalone = 0;
-#endif
   }
 
   s_hits.write(hit);

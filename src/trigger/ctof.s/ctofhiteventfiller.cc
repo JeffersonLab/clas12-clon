@@ -32,9 +32,7 @@ ctofhiteventfiller(CTOFHit s_hitin[NH_READS], hit_ram_t buf_ram[512])
   for(int i=0; i<NH_READS; i++)
   {
     buf_ram[itime].output[i] = s_hitin[i].output;
-//#ifdef COSMIC
     buf_ram[itime].standalone[i] = s_hitin[i].standalone;
-//#endif
   }
 
   itime ++;
