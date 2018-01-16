@@ -46,7 +46,7 @@ cndhiteventreader(hls::stream<eventdata3_t> &event_stream, CNDHit_8slices &hit, 
     if(eventdata.end == 1) /* 0 for all words except last one when it is 1 */
     {
       bufout[0] = bufptr - bufout - 1;
-      printf("cndhiteventreader: END_OF_DATA\n");
+      //printf("cndhiteventreader: END_OF_DATA\n");
       break;
     }
 
@@ -100,8 +100,8 @@ cndlib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
 
   hls::stream<fadc_16ch_t> s_fadc_words[NSLOT];
   hls::stream<fadc_256ch_t> s_fadcs;
-  hls::stream<CNDHit_8slices> s_hits;
-  CNDHit_8slices hit_tmp;
+  hls::stream<CNDOut_8slices> s_hits;
+  CNDOut_8slices hit_tmp;
   volatile ap_uint<1> hit_scaler_inc;
 
   hls::stream<trig_t> trig_stream;

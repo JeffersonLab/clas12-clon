@@ -47,7 +47,7 @@ ctofhiteventreader(hls::stream<eventdata3_t> &event_stream, CTOFHit_8slices &hit
     if(eventdata.end == 1) /* 0 for all words except last one when it is 1 */
     {
       bufout[0] = bufptr - bufout - 1;
-      printf("ctofhiteventreader: END_OF_DATA\n");
+      //printf("ctofhiteventreader: END_OF_DATA\n");
       break;
     }
 
@@ -100,8 +100,8 @@ ctoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
 
   hls::stream<fadc_16ch_t> s_fadc_words[NSLOT];
   hls::stream<fadc_256ch_t> s_fadcs;
-  hls::stream<CTOFHit_8slices> s_hits;
-  CTOFHit_8slices hit_tmp;
+  hls::stream<CTOFOut_8slices> s_hits;
+  CTOFOut_8slices hit_tmp;
   volatile ap_uint<1> hit_scaler_inc;
 
   hls::stream<trig_t> trig_stream;

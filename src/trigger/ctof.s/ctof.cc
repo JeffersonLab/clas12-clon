@@ -16,7 +16,7 @@ using namespace std;
 #include "hls_fadc_sum.h"
 
 void
-ctof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<CTOFHit_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512])
+ctof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<CTOFOut_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512])
 {
 #pragma HLS INTERFACE ap_stable port=threshold
 #pragma HLS ARRAY_PARTITION variable=threshold dim=1
