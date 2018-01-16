@@ -52,7 +52,8 @@ cndhiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata3_t> &e
       eventdata.data[0](31,31)  = 1;
       eventdata.data[0](30,27)  = CNDHIT_TAG;
       eventdata.data[0](26,16)  = addr - start_addr;  /*8 bits*/
-      eventdata.data[0](15,0)   = 0;
+      eventdata.data[0](15,10)  = 0;
+      eventdata.data[0](9,0)    = buf_ram_val.output(71,62); /*10 bits*/
       //event_stream.write(eventdata);
 #ifdef DEBUG
 	  std::cout<<"cndhiteventwriter: write1="<<eventdata.data<<endl;

@@ -37,14 +37,12 @@ cndhitfanout(CNDHit hitin[NH_READS], hls::stream<CNDHit_8slices> &s_hits, CNDHit
   for(int i=0; i<NH_READS; i++)
   {
     hit.output[i] = hitin[i].output;
-    hit.standalone[i] = hitin[i].standalone;
 
     scaler[i] = 0;
     if(hit.output[i] != 0) scaler[i] = 1;
     //else                 scaler[i] = 0;
 
     hitout[i].output = hit.output[i];
-    hitout[i].standalone = hit.standalone[i];
   }
 
   s_hits.write(hit);

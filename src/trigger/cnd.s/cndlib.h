@@ -14,13 +14,11 @@ extern "C" {
 
 #define NSECTOR 1
 
-#define NSLOT 6
+#define NSLOT 9
 
-#define NSTRIP 48
+#define NSTRIP 72
 
-#define NCHAN 48
 #define NHIT NSTRIP
-
 
 #define NH_READS  8   /* the number of reads-write for streams, AND the number of 4ns intervals inside 32ns interval */
 
@@ -30,8 +28,6 @@ extern "C" {
 #define NPER 8
 typedef ap_uint<6> nframe_t;
 
-
-#define NSTANDALONEBITS 16
 
 
 #define NLR 2 /* the number of 'left-rights' */
@@ -46,13 +42,11 @@ typedef struct cndstrip_s
 typedef struct cndhit
 {
   ap_uint<NSTRIP> output;
-  ap_uint<NSTANDALONEBITS> standalone;
 } CNDHit;
 
 typedef struct
 {
   ap_uint<NSTRIP> output[NPER];
-  ap_uint<NSTANDALONEBITS> standalone[NPER];
 } CNDHit_8slices;
 
 

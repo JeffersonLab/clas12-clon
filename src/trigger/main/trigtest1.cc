@@ -13,12 +13,13 @@
 #include <vector>
 #include <memory>
 
-//#define USE_ECAL
-//#define USE_PCAL
-//#define USE_HTCC
-//#define USE_FTOF
+#define USE_ECAL
+#define USE_PCAL
+#define USE_HTCC
+#define USE_FTOF
 #define USE_CTOF
-//#define USE_FT //A.C. uncommented to have FT code
+#define USE_CND
+#define USE_FT //A.C. uncommented to have FT code
 
 using namespace std;
 
@@ -71,6 +72,9 @@ static uint16_t ftof_nframes = 4;
 
 static uint16_t ctof_threshold[3] = { 1, 1, 3 };
 static uint16_t ctof_nframes = 4;
+
+static uint16_t cnd_threshold[3] = { 1, 1, 3 };
+static uint16_t cnd_nframes = 4;
 
 static uint16_t ft_threshold[3] = { 1, 1, 3 };
 static uint16_t calo_seed_threshold = FT_CALO_SEED_THRESHOLD;
@@ -204,6 +208,10 @@ int main(int argc, char **argv) {
 
 #ifdef USE_CTOF
 		ctoflib(bufptr, ctof_threshold, ctof_nframes);
+#endif
+
+#ifdef USE_CND
+		cndlib(bufptr, cnd_threshold, cnd_nframes);
 #endif
 
 #ifdef USE_HTCC
