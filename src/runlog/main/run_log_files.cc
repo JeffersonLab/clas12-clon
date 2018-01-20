@@ -128,7 +128,9 @@ main(int argc, char **argv)
   if(debug==0)
   {
 	//dbr_init(uniq_dgrp,application,"run log files");
-    server.init(getenv("EXPID"), NULL, NULL, (char *)"run_log_files");
+    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", (char *)"run_log_files");
+    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+    server.Open();
 
   }
 
@@ -272,7 +274,7 @@ main(int argc, char **argv)
   if(debug==0)
   {
     //dbr_close();
-    server.close();
+    server.Close();
   }
 
   // done

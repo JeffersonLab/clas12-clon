@@ -13,11 +13,18 @@
 #include <vector>
 #include <memory>
 
-#define USE_ECAL
-#define USE_PCAL
-#define USE_HTCC
-#define USE_FTOF
-#define USE_FT //A.C. uncommented to have FT code
+
+/*******************************/
+/* uncomment desired detectors */ 
+//#define USE_ECAL
+//#define USE_PCAL
+//#define USE_HTCC
+//#define USE_FTOF
+#define USE_CTOF
+//#define USE_CND
+//#define USE_FT
+
+
 
 using namespace std;
 
@@ -48,11 +55,11 @@ string create_connection_string()
 
 #include "trigger.h"
 
-static uint16_t ec_threshold[3] = { 1, 1, 3 };
-static uint16_t ec_nframes = 0;
-static uint16_t ec_dipfactor = EC_STRIP_DIP_FACTOR;
-static uint16_t ec_dalitzmin = EC_DALITZ_MIN;
-static uint16_t ec_dalitzmax = EC_DALITZ_MAX;
+static uint16_t ec_threshold[3] = {50,80,150};
+static uint16_t ec_nframes = 3;
+static uint16_t ec_dipfactor = 1/*EC_STRIP_DIP_FACTOR*/;
+static uint16_t ec_dalitzmin = (69<<3)/*EC_DALITZ_MIN*/;
+static uint16_t ec_dalitzmax = (74<<3)/*EC_DALITZ_MAX*/;
 static uint16_t ec_nstripmax = 0;
 
 static uint16_t pc_threshold[3] = { 1, 1, 3 };
@@ -68,6 +75,12 @@ static uint16_t htcc_nframes = 0;
 static uint16_t ftof_threshold[3] = { 1, 1, 3 };
 static uint16_t ftof_nframes = 4;
 
+static uint16_t ctof_threshold[3] = { 1, 1, 3 };
+static uint16_t ctof_nframes = 4;
+
+static uint16_t cnd_threshold[3] = { 1, 1, 3 };
+static uint16_t cnd_nframes = 4;
+
 static uint16_t ft_threshold[3] = { 1, 1, 3 };
 static uint16_t calo_seed_threshold = FT_CALO_SEED_THRESHOLD;
 static uint16_t hodo_hit_threshold = FT_HODO_HIT_THRESHOLD;
@@ -79,9 +92,9 @@ unsigned int buf[MAXBUF];
 unsigned int *bufptr;
 
 /* 0,1,2 - segfauil on event 905; 3 and more - Ok */
-#define SKIPEVENTS 11
+#define SKIPEVENTS 0
 
-#define MAXEVENTS 20
+#define MAXEVENTS 200
 
 int main(int argc, char **argv) {
 	int run = 11; /* sergey: was told to use 11, do not know why .. */
@@ -202,6 +215,14 @@ int main(int argc, char **argv) {
 
 #ifdef USE_FTOF
 		ftoflib(bufptr, ftof_threshold, ftof_nframes);
+#endif
+
+#ifdef USE_CTOF
+		ctoflib(bufptr, ctof_threshold, ctof_nframes);
+#endif
+
+#ifdef USE_CND
+		cndlib(bufptr, cnd_threshold, cnd_nframes);
 #endif
 
 #ifdef USE_HTCC

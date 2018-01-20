@@ -35,6 +35,9 @@ using namespace std;
 /*xc7vx550tffg1158-1*/
 
 
+
+#ifdef COSMIC
+
 #define NPARTNERS 5
 
 static ap_uint<6> partners[NSTRIP][NPARTNERS] = {
@@ -88,6 +91,8 @@ static ap_uint<6> partners[NSTRIP][NPARTNERS] = {
  21,22,23,24,25, /*47*/
 };
 
+#endif
+
 
 /* 1.96/46/8/0%/0%/(10270)1%/(5734)1% II=8 */
 
@@ -99,10 +104,22 @@ ctofhit(nframe_t nframes, CTOFStrip_s s_strip[NH_READS], CTOFHit s_hit[NH_READS]
 
   static ap_uint<NSTRIP> outL[NPIPE], outR[NPIPE];
 
-  ap_uint<6> ipar;
   ap_uint<NSTRIP> output[NH_READS];
+
+#ifdef COSMIC
+  ap_uint<6> ipar;
   ap_uint<NSTRIP> output_opposite[NH_READS];
   ap_uint<NSTRIP> output_coinsidence[NH_READS];
+#endif
+
+#ifdef DEBUG
+  printf("== ctofhit start ==\n");
+  for(int j=0; j<NH_READS; j++)
+  {
+    if(s_strip[j].outL>0) cout<<"ctofhit: s_strip["<<j<<"].outL="<<hex<<s_strip[j].outL<<dec<<endl;
+    if(s_strip[j].outR>0) cout<<"ctofhit: s_strip["<<j<<"].outR="<<hex<<s_strip[j].outR<<dec<<endl;
+  }
+#endif
 
   /* shift old data 8 elements to the right */
   for(int i=15; i>=0; i--)
@@ -120,22 +137,26 @@ ctofhit(nframe_t nframes, CTOFStrip_s s_strip[NH_READS], CTOFHit s_hit[NH_READS]
   }
 
 
+#ifdef DEBUG
+  for(int i=NPIPE-1; i>=0; i--)
+  {
+    if(outL[i]>0) cout<<"ctofhit: outL[pipe="<<i<<"]="<<hex<<outL[i]<<dec<<endl;
+    if(outR[i]>0) cout<<"ctofhit: outR[pipe="<<i<<"]="<<hex<<outR[i]<<dec<<endl;
+  }
+#endif
+
+
+
+
+
+#ifdef COSMIC
+
   for(int i=0; i<NH_READS; i++)
   {
     output[i] = 0;
     output_opposite[i] = 0;
     output_coinsidence[i] = 0;
   }
-
-
-  /* check for left-right coincidence withing 'nframes' interval */
-
-  for(int i=8; i<16; i++) /* take middle interval left PMTs, and compare with +-(NPER/2) right PMTs */
-  {
-    for(int j=i-(NPER/2); j<=i+(NPER/2); j++) output[i-8] = outL[i] & outR[j];
-  }
-
-
 
   /* fill mask by shifting everything 180 degrees */
   for(int i=0; i<NH_READS; i++)
@@ -152,8 +173,6 @@ ctofhit(nframe_t nframes, CTOFStrip_s s_strip[NH_READS], CTOFHit s_hit[NH_READS]
     output_coinsidence[i] = output[i] & output_opposite[i];
   }
 
-
-
 #if 0
   /* for every time interval, for every strip, check coinsidences with the group of opposite strips */
   for(int i=0; i<NH_READS; i++)
@@ -163,17 +182,54 @@ ctofhit(nframe_t nframes, CTOFStrip_s s_strip[NH_READS], CTOFHit s_hit[NH_READS]
       for(int jj=0; jj<NPARTNERS; jj++)
 	  {
         ipar = partners[ii][jj];
-        output_coinsidence[i](ii,ii) = output[i](ii,ii) & output[i](ipar,ipar);
+        output_coinsidence[i](ii,ii) |= output[i](ii,ii) & output[i](ipar,ipar);
 	  }
     }
   }
 #endif
 
+#else
+
+  /* check for left-right coincidence withing 'nframes' interval */
+
+  if(nframes>NPER) nframes = NPER;
+  for(int i=8; i<16; i++) /* take middle interval left PMTs, and compare with +-nframes right PMTs */
+  {
+    output[i-8] = 0;
+    for(int j=i-NPER; j<=i+NPER; j++)
+	{
+      if(j<(i-nframes)) continue;
+      if(j>(i+nframes)) continue;
+      output[i-8] |= outL[i] & outR[j];
+	}
+  }
+
+#endif
+
+
+
 
   /* send trigger solution */
+
+#ifdef COSMIC
+
   for(int i=0; i<NH_READS; i++)
   {
     s_hit[i].output = output_coinsidence[i];
     s_hit[i].standalone = output_coinsidence[i] == 0 ? 0 : 1;
   }
+
+#else
+
+  for(int j=0; j<NH_READS; j++)
+  {
+#ifdef DEBUG
+    if(output[j]>0) cout<<"ftofhit: output["<<j<<"]="<<hex<<output[j]<<dec<<endl;
+#endif
+    s_hit[j].output = output[j];
+    s_hit[j].standalone = 0;
+  }
+
+#endif
+
 }

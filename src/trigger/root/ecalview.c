@@ -1269,7 +1269,7 @@ ecalview(int handler, TCanvas *fCanvas, int redraw)
   /*int sec=5;*/ /* /work/boiarino/data/vtp1_001294.evio.0 - #define USE_PCAL !!!!!!!! */
   /*int sec=1;*/ /* /work/boiarino/data/ec_pcal_TCS_1_.evio - #undef USE_PCAL !!!!!!!! */
 
-  int sec=1;
+  int sec=3;
 
   TArc *circle = new TArc();
 

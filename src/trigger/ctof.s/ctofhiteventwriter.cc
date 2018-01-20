@@ -60,7 +60,8 @@ ctofhiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata3_t> &
 
       //eventdata.end = 0;
       eventdata.data[1](31,31)  = 0;
-      eventdata.data[1](30,0)   = buf_ram_val.output(61,31); /*31 bits*/
+      eventdata.data[1](31,17)  = 0;
+      eventdata.data[1](16,0)   = buf_ram_val.output(47,31); /*31 bits*/
       //event_stream.write(eventdata);
 #ifdef DEBUG
 	  std::cout<<"ctofhiteventwriter: write2="<<eventdata.data<<endl;

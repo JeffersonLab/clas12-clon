@@ -47,7 +47,9 @@ epics_msg_sender_init(char *application, char *unique_id)
 
   printf("epics_msg_sender_init: unique_id set to >%s<\n",unique_id);
 
-  status = server.init(getenv("EXPID"), NULL, NULL, (char *)"epics_msg_send", NULL, "*");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", (char *)"epics_msg_send");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+  status = server.Open();
   if(status<0)
   {
     cerr << "\n?Unable to connect to server...probably duplicate unique id\n"
@@ -138,5 +140,5 @@ epics_msg_close()
 {
   int status;
 
-  status = server.close();
+  status = server.Close();
 }

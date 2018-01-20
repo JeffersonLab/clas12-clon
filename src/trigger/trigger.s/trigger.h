@@ -89,6 +89,8 @@ void eclib(unsigned int *bufptr, uint16_t threshold[3], uint16_t nframes, uint16
 void pclib(unsigned int *bufptr, uint16_t threshold[3], uint16_t nframes, uint16_t dipfactor, uint16_t dalitzmin, uint16_t dalitzmax, uint16_t nstripmax);
 void htcclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_);
 void ftoflib(uint32_t *bufptr, uint16_t threshold[3], uint16_t nframes);
+void ctoflib(uint32_t *bufptr, uint16_t threshold[3], uint16_t nframes);
+void cndlib(uint32_t *bufptr, uint16_t threshold[3], uint16_t nframes);
 void ftlib(uint32_t *bufptr, uint16_t calo_seed_threshold, uint16_t hodo_hit_threshold, uint16_t calo_dt, uint16_t hodo_dt);
 
 #ifdef	__cplusplus

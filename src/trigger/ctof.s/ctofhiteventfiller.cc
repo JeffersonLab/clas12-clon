@@ -37,5 +37,3 @@ ctofhiteventfiller(CTOFHit s_hitin[NH_READS], hit_ram_t buf_ram[512])
 
   itime ++;
 }
-
-

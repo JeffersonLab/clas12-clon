@@ -96,7 +96,9 @@ main(int argc,char **argv)
       //TutOptionSetNum(opt,0.0);
     }
     //dbr_init(uniq_dgrp,application,id_string);
-    server.init(getenv("EXPID"), NULL, NULL, (char *)"run_log_end_update");
+    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", (char *)"run_log_end_update");
+    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+    server.Open();
   }
 
   // recovery mode
@@ -113,7 +115,7 @@ main(int argc,char **argv)
   {
     //if(no_dbr==0) dbr_check((double) gmd_time);
     //dbr_close();
-    server.close();
+    server.Close();
   }
   
 

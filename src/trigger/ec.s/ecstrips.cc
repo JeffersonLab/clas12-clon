@@ -480,8 +480,8 @@ ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADC
     fifo[i].energy0 = enU[i*2+0];
     fifo[i].energy1 = enU[i*2+1];
 #ifdef DEBUG
-    cout<<"  enU["<<i*2+0<<"]="<<enU[i*2+0]<<" ";
-    cout<<"enU["<<i*2+1<<"]="<<enU[i*2+1]<<endl;
+	std::cout<<"  enU["<<i*2+0<<"]="<<enU[i*2+0]<<" ";
+	std::cout<<"enU["<<i*2+1<<"]="<<enU[i*2+1]<<std::endl;
 #endif
   }
   for(int j=0; j<NH_READS; j++)
@@ -500,8 +500,8 @@ ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADC
     fifo[i].energy0 = enV[i*2+0];
     fifo[i].energy1 = enV[i*2+1];
 #ifdef DEBUG
-    cout<<"  enV["<<i*2+0<<"]="<<enV[i*2+0]<<" ";
-    cout<<"enV["<<i*2+1<<"]="<<enV[i*2+1]<<endl;
+	std::cout<<"  enV["<<i*2+0<<"]="<<enV[i*2+0]<<" ";
+	std::cout<<"enV["<<i*2+1<<"]="<<enV[i*2+1]<<std::endl;
 #endif
   }
   for(int j=0; j<NH_READS; j++)
@@ -520,8 +520,8 @@ ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADC
     fifo[i].energy0 = enW[i*2+0];
     fifo[i].energy1 = enW[i*2+1];
 #ifdef DEBUG
-    cout<<"  enW["<<i*2+0<<"]="<<enW[i*2+0]<<" ";
-    cout<<"enW["<<i*2+1<<"]="<<enW[i*2+1]<<endl;
+	std::cout<<"  enW["<<i*2+0<<"]="<<enW[i*2+0]<<" ";
+	std::cout<<"enW["<<i*2+1<<"]="<<enW[i*2+1]<<std::endl;
 #endif
   }
   for(int j=0; j<NH_READS; j++)

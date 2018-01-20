@@ -20,18 +20,11 @@ using namespace std;
 #include "trigger.h"
 
 
-#define DEBUG_0
-#define DEBUG_3
+#define DEBUG
 
 
 #define MAX(a,b)    (a > b ? a : b)
 #define MIN(a,b)    (a < b ? a : b)
-
-static float ped[21][16]; /* pedestals */
-static float tet[21][16]; /* threshold */
-static float gain[21][16]; /* gain */
-static int nsa[21]; /* NSA */
-static int nsb[21]; /* NSB */
 
 
 void
@@ -53,7 +46,7 @@ cndhiteventreader(hls::stream<eventdata3_t> &event_stream, CNDHit_8slices &hit, 
     if(eventdata.end == 1) /* 0 for all words except last one when it is 1 */
     {
       bufout[0] = bufptr - bufout - 1;
-      printf("cndhiteventreader: END_OF_DATA\n");
+      //printf("cndhiteventreader: END_OF_DATA\n");
       break;
     }
 
@@ -61,6 +54,7 @@ cndhiteventreader(hls::stream<eventdata3_t> &event_stream, CNDHit_8slices &hit, 
     word_first = eventdata.data[0](31,31); /* 1 for the first word in hit, 0 for followings */
     tag = eventdata.data[0](30,27); /* must be 'CNDHIT_TAG' */
     j = eventdata.data[0](18,16); /* 3 lowest bits of timing */
+	hit.output[j](71,62) = eventdata.data[0](9,0);
 
     *bufptr++ = eventdata.data[1];
 	hit.output[j](61,31) = eventdata.data[1](30,0);
@@ -106,8 +100,8 @@ cndlib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
 
   hls::stream<fadc_16ch_t> s_fadc_words[NSLOT];
   hls::stream<fadc_256ch_t> s_fadcs;
-  hls::stream<CNDHit_8slices> s_hits;
-  CNDHit_8slices hit_tmp;
+  hls::stream<CNDOut_8slices> s_hits;
+  CNDOut_8slices hit_tmp;
   volatile ap_uint<1> hit_scaler_inc;
 
   hls::stream<trig_t> trig_stream;
@@ -140,9 +134,9 @@ cndlib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
     cnd_buf_ram_to_event_buf_ram(buf_ram, event_buf_ram);
     cndhiteventwriter(trig_stream, event_stream, event_buf_ram);
     cndhiteventreader(event_stream, hit, bufout);
-
-    for(int i=0; i<bufout[0]; i++) printf("bufout[%d]=0x%08x\n",i,bufout[i]);
-
+#ifdef DEBUG
+    for(int i=0; i<=bufout[0]; i++) printf("bufout[%d]=0x%08x\n",i,bufout[i]);
+#endif
     if(bufout[0]>0) /*bufout contains something */
 	{
       int fragtag = 60092;

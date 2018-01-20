@@ -216,13 +216,15 @@ create_sql(rlb_string);
 #ifdef USE_ACTIVEMQ
 
       // connect to ipc server
-	  server.init(getenv("EXPID"), NULL, NULL, (char *)"run_log_begin");
+      server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", (char *)"run_log_begin");
+      server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+      server.Open();
 
       // ship to database router
       insert_into_database(rlb_string.str());
 
       // close ipc connection
-      server.close();
+      server.Close();
 
 #else
       /*********************************************************/
@@ -588,7 +590,7 @@ insert_into_database(const char *entry)
 
 #ifdef USE_ACTIVEMQ
 
-    server << clrm << "json" << (char *)entry << endm;
+    server << clrm << "runlog" << (char *)entry << endm;
 
 #else
     // disable gmd timeout
