@@ -139,14 +139,19 @@ class MessageActionJSON : public MessageAction {
             "beam_energy",
             //"test",
             "beam_current",
+
             "torus_current",
             "solenoid_current",
-            "daq_config",
+
+            "torus_scale",
+            "solenoid_scale",
+
+            "run_config",
             //"target_position",
             "user_comment",
             "is_valid_run_end",
             "status",
-            "daq_setup",
+            "run_type",
             "target",
 			"beam_current_request",
 			"operators"

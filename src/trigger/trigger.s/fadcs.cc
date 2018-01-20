@@ -6,6 +6,13 @@
  strip[][].time   - strip time (ns)
  */
 
+/*
+'bad' channels:
+2 2 13 14
+2 3 17 8
+2 4 3 15
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,41 +40,44 @@ using namespace std;
 //#define DEBUG_3
 
 static int nslots[NDET] = { 7, 7, 14, 12, 14, 3, 12, 6, 9, 11, 10, 15 };
-static int slot2isl[NDET][22] = { -1, -1, -1, 0, 1, 2, 3, 4, 5, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* ECAL_IN slots: 3-9 */
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, 1, 2, 3, 4, 5, 6, -1, -1, -1, /* ECAL_OUT slots: 10, 13-18 */
--1, -1, -1, 0, 1, 2, 3, 4, 5, 6, 7, -1, -1, 8, 9, 10, 11, 12, 13, -1, -1, -1, /* ECAL slots: 3-10, 13-18 */
--1, -1, -1, 0, 1, 2, 3, 4, 5, 6, 7, -1, -1, 8, 9, 10, 11, -1, -1, -1, -1, -1, /* PCAL slots: 3-10, 13-16 */
--1, -1, -1, 0, 1, 2, 3, 4, 5, 6, -1, -1, -1, 7, 8, 9, 10, 11, 12, 13, -1, -1, /* DCRB slots: 3-9, 14-20 */
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 1, 2, -1, -1, -1, -1, -1, -1, /* HTCC slots: 13-15 */
--1, -1, -1, 0, 1, 2, 3, 4, 5, 6, 7, -1, -1, 8, 9, 10, 11, -1, -1, -1, -1, -1, /* FTOF slots: 3-10, 13-16 */
--1, -1, -1, 0, 1, 2, 3, 4, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* CTOF slots: 3-8 */
--1, -1, -1, 0, 1, 2, 3, 4, 5, 6, 7, -1, -1, 8, -1, -1, -1, -1, -1, -1, -1, -1, /* CND slots: 3-10, 13 */
--1, -1, -1, 0, 1, 2, 3, 4, 5, 6, 7, -1, -1, 8, 9, 10, -1, -1, -1, -1, -1, -1, /* FT1 slots: 3-10, 13-15 */
--1, -1, -1, 0, 1, 2, 3, 4, 5, 6, 7, -1, -1, 8, 9, -1, -1, -1, -1, -1, -1, -1, /* FT2 slots: 3-10, 13-14 */
--1, -1, -1, 0, 1, 2, 3, 4, 5, 6, 7, -1, -1, 8, 9, 10, 11, 12, 13, 14, -1, -1 /* FT3 slots: 3-10, 13-19 */
+static int slot2isl[NDET][22] = {
+ -1, -1, -1,  0,  1,  2,  3,  4,  5,  6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* ECAL_IN slots: 3-9 */
+ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  0, -1, -1,  1,  2,  3,  4,  5,  6, -1, -1, -1, /* ECAL_OUT slots: 10, 13-18 */
+ -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7, -1, -1,  8,  9, 10, 11, 12, 13, -1, -1, -1, /* ECAL slots: 3-10, 13-18 */
+ -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7, -1, -1,  8,  9, 10, 11, -1, -1, -1, -1, -1, /* PCAL slots: 3-10, 13-16 */
+ -1, -1, -1,  0,  1,  2,  3,  4,  5,  6, -1, -1, -1,  7,  8,  9, 10, 11, 12, 13, -1, -1, /* DCRB slots: 3-9, 14-20 */
+ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  0,  1,  2, -1, -1, -1, -1, -1, -1, /* HTCC slots: 13-15 */
+ -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7, -1, -1,  8,  9, 10, 11, -1, -1, -1, -1, -1, /* FTOF slots: 3-10, 13-16 */
+ -1, -1, -1,  0,  1,  2,  3,  4,  5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* CTOF slots: 3-8 */
+ -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7, -1, -1,  8, -1, -1, -1, -1, -1, -1, -1, -1, /* CND slots: 3-10, 13 */
+ -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7, -1, -1,  8,  9, 10, -1, -1, -1, -1, -1, -1, /* FT1 slots: 3-10, 13-15 */
+ -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7, -1, -1,  8,  9, -1, -1, -1, -1, -1, -1, -1, /* FT2 slots: 3-10, 13-14 */
+ -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7, -1, -1,  8,  9, 10, 11, 12, 13, 14, -1, -1 /* FT3 slots: 3-10, 13-19 */
 };
 
 static int nfragtags[NDET] = { 6, 6, 6, 6, 18, 1, 6, 1, 1, 1, 1, 1 };
-static int fragtags[NDET][18] = { 1, 7, 13, 19, 25, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*ECIN*/
-1, 7, 13, 19, 25, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*ECOUT*/
-1, 7, 13, 19, 25, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*ECAL*/
-3, 9, 15, 21, 27, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*PCAL*/
-41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, /*DCRB*/
-59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*HTCC*/
-5, 11, 17, 23, 29, 35, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*FTOF*/
-59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*CTOF*/
-73, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*CND*/
-70, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*FT1*/
-71, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*FT2*/
-72, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 /*FT3*/
+static int fragtags[NDET][18] = {
+  1,  7, 13, 19, 25, 31,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /*ECIN*/
+  1,  7, 13, 19, 25, 31,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /*ECOUT*/
+  1,  7, 13, 19, 25, 31,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /*ECAL*/
+  3,  9, 15, 21, 27, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /*PCAL*/
+ 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, /*DCRB*/
+ 59,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /*HTCC*/
+  5, 11, 17, 23, 29, 35,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /*FTOF*/
+ 59,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /*CTOF*/
+ 73,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /*CND*/
+ 70,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /*FT1*/
+ 71,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /*FT2*/
+ 72,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 /*FT3*/
 };
 
-static int config_loaded = 0;
-static float ped[NDET][21][16]; /* pedestals */
-static int   tet[NDET][21][16]; /* threshold */
-static float gain[NDET][21][16]; /* gain */
-static int nsa[NDET][21]; /* NSA */
-static int nsb[NDET][21]; /* NSB */
+static int config_loaded[6];
+/* det, sec, slot, chan */
+static float ped[NDET][6][22][16]; /* pedestals */
+static int   tet[NDET][6][22][16]; /* threshold */
+static float gain[NDET][6][22][16]; /* gain */
+static int nsa[NDET][6][22]; /* NSA */
+static int nsb[NDET][6][22]; /* NSB */
 
 int
 fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS], int dtimestamp, int dpulsetime,
@@ -194,8 +204,8 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 	banktag = 0xe10e;
 	banknum = fragtags[det][sec];
 	if ((ind = evLinkBank(bufptr, fragtag, fragnum, banktag, banknum, &nbytes, &ind_data)) > 0) {
-	    printf("FOUND CONFIG BANK\n");
-	    config_loaded = 1;
+	  printf("FOUND CONFIG BANK, sec=%d\n",sec);
+	    config_loaded[sec] = 1;
 #ifdef DEBUG_3
 		printf("evLinkBank: ind=%d ind_data=%d\n",ind, ind_data);fflush(stdout);
 		printf("ind=%d, nbytes=%d\n",ind,nbytes);fflush(stdout);
@@ -228,16 +238,16 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 			}
 
 			if (!strncmp(ch, "FADC250_NSB", 11)) {
-				nsb[det][slot] = atoi((char *) &ch[11]) / 4;
+				nsb[det][sec][slot] = atoi((char *) &ch[11]) / 4;
 #ifdef DEBUG_3
-				printf("===> nsb=%d ticks\n",nsb[det][slot]);fflush(stdout);
+				printf("===> nsb=%d ticks\n",nsb[det][sec][slot]);fflush(stdout);
 #endif
 			}
 
 			if (!strncmp(ch, "FADC250_NSA", 11)) {
-				nsa[det][slot] = atoi((char *) &ch[11]) / 4;
+				nsa[det][sec][slot] = atoi((char *) &ch[11]) / 4;
 #ifdef DEBUG_3
-				printf("===> nsa=%d ticks\n",nsa[det][slot]);fflush(stdout);
+				printf("===> nsa=%d ticks\n",nsa[det][sec][slot]);fflush(stdout);
 #endif
 			}
 
@@ -249,9 +259,9 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 						&ff[9], &ff[10], &ff[11], &ff[12], &ff[13], &ff[14], &ff[15]);
 
 				for (chan = 0; chan < 16; chan++) {
-					ped[det][slot][chan] = ff[chan];
+					ped[det][sec][slot][chan] = ff[chan];
 #ifdef DEBUG_3
-					printf("ped[%d][%d][%d]=%f\n",det,slot,chan,ped[det][slot][chan]);fflush(stdout);
+					printf("ped[%d][%d][%d][%d]=%f\n",det,sec,slot,chan,ped[det][sec][slot][chan]);fflush(stdout);
 #endif
 
 				}
@@ -265,9 +275,9 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 						&ff[9], &ff[10], &ff[11], &ff[12], &ff[13], &ff[14], &ff[15]);
 
 				for (chan = 0; chan < 16; chan++) {
-					gain[det][slot][chan] = ff[chan];
+					gain[det][sec][slot][chan] = ff[chan];
 #ifdef DEBUG_3
-					printf("gain[%d][%d][%d]=%f\n",det,slot,chan,gain[det][slot][chan]);fflush(stdout);
+					printf("gain[%d][%d][%d][%d]=%f\n",det,sec,slot,chan,gain[det][sec][slot][chan]);fflush(stdout);
 #endif
 
 				}
@@ -281,9 +291,9 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 						&dd[9], &dd[10], &dd[11], &dd[12], &dd[13], &dd[14], &dd[15]);
 
 				for (chan = 0; chan < 16; chan++) {
-					tet[det][slot][chan] = dd[chan];
+					tet[det][sec][slot][chan] = dd[chan];
 #ifdef DEBUG_3
-					printf("tet[%d][%d][%d]=%d\n",det,slot,chan,tet[det][slot][chan]);fflush(stdout);
+					printf("tet[%d][%d][%d][%d]=%d\n",det,sec,slot,chan,tet[det][sec][slot][chan]);fflush(stdout);
 #endif
 
 				}
@@ -292,6 +302,29 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 			ii++;
 			b08 += ii;
 		}
+
+		/*
+		if(sec==5)
+		{
+          printf("FOUND SO FAR:\n");
+          for(int i1=0; i1<6; i1++)
+		  {
+            for(int i2=3; i2<11; i2++) for(int i3=0; i3<16; i3++)
+					printf("  ped[%d][%d][%d][%d]=%f\n",det,i1,i2,i3,ped[det][i1][i2][i3]);fflush(stdout);
+            for(int i2=13; i2<21; i2++) for(int i3=0; i3<16; i3++)
+					printf("  ped[%d][%d][%d][%d]=%f\n",det,i1,i2,i3,ped[det][i1][i2][i3]);fflush(stdout);
+		  }
+          for(int i1=0; i1<6; i1++)
+		  {
+            for(int i2=3; i2<11; i2++) for(int i3=0; i3<16; i3++)
+					printf("  tet[%d][%d][%d][%d]=%d\n",det,i1,i2,i3,tet[det][i1][i2][i3]);fflush(stdout);
+            for(int i2=13; i2<21; i2++) for(int i3=0; i3<16; i3++)
+					printf("  tet[%d][%d][%d][%d]=%d\n",det,i1,i2,i3,tet[det][i1][i2][i3]);fflush(stdout);
+		  }
+		}
+		*/
+
+
 
 	} else {
 		/*printf("cannot find bank 0x%04x num %d (pedestal)\n",banktag, banknum);*/
@@ -303,8 +336,11 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 
 
     /* do not process anything until have configuration parameters */
-    if(config_loaded==0) return(0);
-
+    if(config_loaded[sec]==0)
+	{
+      printf("DET=%d: CONFIG FOR sec=%d IS NOT LOADED YET - DO NOTHING FOR THAT SECTOR\n",det,sec);
+      return(0);
+	}
 
 
 	/*****************/
@@ -354,7 +390,7 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 						GET8(chan);
 						GET32(nsamples);
 #ifdef DEBUG_0
-						printf("==> slot=%d, chan=%d, nsamples=%d\n",slot,chan,nsamples);fflush(stdout);
+						printf("==> det=%d, sec=%d, slot=%d, chan=%d, nsamples=%d\n",det,sec,slot,chan,nsamples);fflush(stdout);
 #endif
 
 						/*save data*/
@@ -364,10 +400,11 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 						}
 
 #ifdef DEBUG_0
-						printf("data[sl=%2d][ch=%2d]:",slot,chan);
+						printf("data[sl=%2d][ch=%2d]:\n",slot,chan);
 						for(mm=0; mm<100/*69*/; mm++)
 						{
-							printf(" [%2d]%4d,",mm,datasaved[mm]);
+						  printf(" [%2d]%4d,",mm,datasaved[mm]);
+                          if(((mm+1)%10)==0) printf("\n");
 						}
 						printf("\n");
 #endif		
@@ -382,12 +419,12 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 						while (mm < nsamples)
                         {
 #ifdef DEBUG_0
-						  printf("[%d] data=%d , ped=%d, tet=%d, ped+tet=%d\n",
-								 mm,datasaved[mm],(int)ped[det][slot][chan],tet[det][slot][chan],
-                                 (int)ped[det][slot][chan]+tet[det][slot][chan]);
+						  printf("[%d] data=%d , ped=%d(%f), tet=%d, ped+tet=%d\n",
+								 mm,datasaved[mm],(int)ped[det][sec][slot][chan],ped[det][sec][slot][chan],tet[det][sec][slot][chan],
+                                 (int)ped[det][sec][slot][chan]+tet[det][sec][slot][chan]);
 #endif
-						  if ( (datasaved[mm] > (int)ped[det][slot][chan] + tet[det][slot][chan])
-							  && (datasaved[mm - 1] <= (int)ped[det][slot][chan] + tet[det][slot][chan]) )
+						  if ( (datasaved[mm] > (int)ped[det][sec][slot][chan] + tet[det][sec][slot][chan])
+							  && (datasaved[mm - 1] <= (int)ped[det][sec][slot][chan] + tet[det][sec][slot][chan]) )
                             {
 								isample = mm;
 #ifdef DEBUG_0
@@ -408,16 +445,16 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 						fsum = 0.0;
 						fped = 0.0;
 						if (isample >= 0) {
-							isam1 = MAX((isample - nsb[det][slot]), 0);
-							isam2 = MIN((isample + nsa[det][slot]), nsamples);
+							isam1 = MAX((isample - nsb[det][sec][slot]), 0);
+							isam2 = MIN((isample + nsa[det][sec][slot]), nsamples);
 
 							for (int m = isam1; m < isam2; m++) {
 								fsum += (float) datasaved[m];
-								fped += ped[det][slot][chan];
+								fped += ped[det][sec][slot][chan];
 							}
 
 							//pulse_integral = (int)roundf(fsum-fped);
-							pulse_integral = (int) roundf((fsum - fped) * gain[det][slot][chan]);
+							pulse_integral = (int) roundf((fsum - fped) * gain[det][sec][slot][chan]);
 
 							/*offset: 7900/4=1975*/
 							offset = 1975;
@@ -442,8 +479,8 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 #ifdef DEBUG_0
 							int tttt;
 							tttt = ((int)time) & 0xFFFFFF;
-							printf("isample=%d nsa=%d nsb=%d -> isam1=%d isam2=%d -> data=%d ped=%f -> fsum=%f fped=%f -> pulse_integral=%6d -> it=%d tt=%d time=%lld(0x%016x) (tttt=%lld(0x%08x) (%lld %lld))\n",
-									isample, nsa[det][slot], nsb[det][slot], isam1, isam2, datasaved[mm], ped[det][slot][chan], fsum, fped, pulse_integral,it,(int)tt,time,time,
+							printf("isample=%d nsa=%d nsb=%d -> isam1=%d isam2=%d -> data=%d ped=%f\n    -> fsum=%f fped=%f -> pulse_integral=%6d -> it=%d tt=%d time=%lld(0x%016x) (tttt=%lld(0x%08x) (%lld %lld))\n",
+									isample, nsa[det][sec][slot], nsb[det][sec][slot], isam1, isam2, datasaved[mm], ped[det][sec][slot][chan], fsum, fped, pulse_integral,it,(int)tt,time,time,
 									tttt,tttt,tttt/8,tttt%8);
 #endif
 						} else {
@@ -469,6 +506,8 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 #endif
 						} else if (it >= MAXTIMES) {
 							printf("fadcs: WARN: itime=%d too big - ignore the hit\n", itime);
+						} else if (isl<0) {
+						  printf("fadcs: WARN: isl=%d (slot=%d) - ignore the hit\n", isl, slot);
 						} else {
 							if (chan == 0) {
 								fadcs[it][isl].e0 = ee;

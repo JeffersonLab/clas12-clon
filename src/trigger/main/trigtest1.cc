@@ -16,13 +16,13 @@
 
 /*******************************/
 /* uncomment desired detectors */ 
-//#define USE_ECAL
-//#define USE_PCAL
-//#define USE_HTCC
-//#define USE_FTOF
+#define USE_ECAL
+#define USE_PCAL
+#define USE_HTCC
+#define USE_FTOF
 #define USE_CTOF
-//#define USE_CND
-//#define USE_FT
+#define USE_CND
+#define USE_FT
 
 
 
@@ -55,7 +55,7 @@ string create_connection_string()
 
 #include "trigger.h"
 
-static uint16_t ec_threshold[3] = {50,80,150};
+static uint16_t ec_threshold[3] = {40,80,150};
 static uint16_t ec_nframes = 3;
 static uint16_t ec_dipfactor = 1/*EC_STRIP_DIP_FACTOR*/;
 static uint16_t ec_dalitzmin = (69<<3)/*EC_DALITZ_MIN*/;
@@ -94,6 +94,7 @@ unsigned int *bufptr;
 /* 0,1,2 - segfauil on event 905; 3 and more - Ok */
 #define SKIPEVENTS 0
 
+//#define MAXEVENTS 38
 #define MAXEVENTS 200
 
 int main(int argc, char **argv) {

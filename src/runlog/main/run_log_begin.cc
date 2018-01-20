@@ -424,8 +424,10 @@ create_sql(strstream &rlb)
 
     float beam_current = epics_val[0];
     float beam_energy = epics_val[1];
-    float torus_scale = epics_val[2];
-    float solenoid_scale = epics_val[3];
+    float torus_current = epics_val[2];
+    float torus_scale = torus_current / -3770.0;
+    float solenoid_current = epics_val[3];
+    float solenoid_scale = solenoid_current / -2416.0;
     float target_position = 0.0;
 
     int32_t event_count = 0;
@@ -488,9 +490,13 @@ create_sql(strstream &rlb)
             {"beam_energy", beam_energy},
             //{"test", test},
             {"beam_current", beam_current},
-            {"torus_current", torus_scale},
-            {"solenoid_current", solenoid_scale},
-            {"daq_config", daq_trigger},
+
+            {"torus_current", torus_current},
+            {"solenoid_current", solenoid_current},
+            {"torus_scale", torus_scale},
+            {"solenoid_scale", solenoid_scale},
+
+            {"run_config", daq_trigger},
             //{"target_position", target_position},
             //{"daq_comment", daq_comment}, // will come from run_log_comment BEFORE us, we do not want to overwrite it
             {"run_start_time", StringUtils::GetFormattedTime(*run_start_time)},
