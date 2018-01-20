@@ -20,7 +20,7 @@ using namespace std;
 #include "trigger.h"
 
 
-#define DEBUG
+//#define DEBUG
 
 
 #define MAX(a,b)    (a > b ? a : b)
@@ -114,7 +114,7 @@ cndlib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
 
   int detector = CND;
 
-  for(sec=0; sec<NSECTOR; sec++)
+  for(sec=0; sec<1/*NSECTOR*/; sec++)
   {
     ret = fadcs(bufptr, threshold[0], sec, detector, s_fadc_words, 0, 0, &iev, &timestamp);
     if(ret<=0) continue;

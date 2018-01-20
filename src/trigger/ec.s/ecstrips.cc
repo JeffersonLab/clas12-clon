@@ -8,8 +8,9 @@
 #include <math.h>
 
 //#define DEBUG
+//#define DEBUG_1
 
-#ifdef DEBUG
+#if defined(DEBUG) || defined(DEBUG_1)
 #include <iostream>
 using namespace std;
 #endif
@@ -309,7 +310,7 @@ ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADC
 
 
 
-#ifdef DEBUG
+#if defined(DEBUG) || defined(DEBUG_1)
   printf("== ecstrips starts ==\n");fflush(stdout);
 #endif
 
@@ -479,7 +480,7 @@ ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADC
   {
     fifo[i].energy0 = enU[i*2+0];
     fifo[i].energy1 = enU[i*2+1];
-#ifdef DEBUG
+#ifdef DEBUG_1
 	std::cout<<"  enU["<<i*2+0<<"]="<<enU[i*2+0]<<" ";
 	std::cout<<"enU["<<i*2+1<<"]="<<enU[i*2+1]<<std::endl;
 #endif
@@ -499,7 +500,7 @@ ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADC
   {
     fifo[i].energy0 = enV[i*2+0];
     fifo[i].energy1 = enV[i*2+1];
-#ifdef DEBUG
+#ifdef DEBUG_1
 	std::cout<<"  enV["<<i*2+0<<"]="<<enV[i*2+0]<<" ";
 	std::cout<<"enV["<<i*2+1<<"]="<<enV[i*2+1]<<std::endl;
 #endif
@@ -519,7 +520,7 @@ ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADC
   {
     fifo[i].energy0 = enW[i*2+0];
     fifo[i].energy1 = enW[i*2+1];
-#ifdef DEBUG
+#ifdef DEBUG_1
 	std::cout<<"  enW["<<i*2+0<<"]="<<enW[i*2+0]<<" ";
 	std::cout<<"enW["<<i*2+1<<"]="<<enW[i*2+1]<<std::endl;
 #endif
@@ -535,7 +536,7 @@ ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADC
 	}
   }
 
-#ifdef DEBUG
+#if defined(DEBUG) || defined(DEBUG_1)
   printf("== ecstrips ends ==\n");fflush(stdout);
 #endif
 

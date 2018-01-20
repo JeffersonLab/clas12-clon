@@ -41,7 +41,7 @@ using namespace std;
 //#define DEBUG
 //#define DEBUG_0
 //#define DEBUG_1
-#define DEBUG_2 /* hardware trigger info */
+//#define DEBUG_2 /* hardware trigger info */
 //#define DEBUG_3
 
 
@@ -620,8 +620,7 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
     static TrigECHit hits_trig[NHIT];
     /*trig data*/
 
-    printf("CALLING ectrig, sec=%d\n",sec);
-
+    printf("== ectrig (HARDWARE) start, sec=%d\n",sec);
     ret = ectrig(bufptr, sec, npeaks_trig, peaks_trig, &nhits_trig, hits_trig, 0);
     if(ret>0)
 	{
@@ -629,19 +628,20 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
       {
         for(jj=0; jj<npeaks_trig[ii]; jj++)
 	    {
-          cout<<"TRIG PEAK ["<<+ii<<"]["<<+jj<<"]:  coord="<<peaks_trig[ii][jj].coord<<"   energy="<<peaks_trig[ii][jj].energy<<"   time="<<peaks_trig[ii][jj].time<<endl;
+          cout<<"  TRIG PEAK ["<<+ii<<"]["<<+jj<<"]:  coord="<<peaks_trig[ii][jj].coord<<"   energy="<<peaks_trig[ii][jj].energy<<"   time="<<peaks_trig[ii][jj].time<<endl;
 	    }
       }
 
       {
         for(jj=0; jj<nhits_trig; jj++)
 	    {
-          cout<<"TRIG HIT ["<<+jj<<"]: coord="<<hits_trig[jj].coord[0]<<" "<<hits_trig[jj].coord[1]<<" "<<hits_trig[jj].coord[2]<<"   energy="<<hits_trig[jj].energy<<"   time="<<hits_trig[jj].time<<endl;
+          cout<<"  TRIG HIT ["<<+jj<<"]: coord="<<hits_trig[jj].coord[0]<<" "<<hits_trig[jj].coord[1]<<" "<<hits_trig[jj].coord[2]<<"   energy="<<hits_trig[jj].energy<<"   time="<<hits_trig[jj].time<<endl;
 	    }
       }
       cout<<endl;
 	}
 	}
+    printf("== ectrig (HADRWARE) done, sec=%d\n",sec);
     /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
     /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
     /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
@@ -788,8 +788,8 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
     static TrigECHit hits_trig[NHIT];
     /*trig data*/
 
-    printf("CALLING ectrig, sec=%d\n",sec);
 
+    printf("== ectrig (SOFTWARE) start, sec=%d\n",sec);
     ret = ectrig(bufptr, sec, npeaks_trig, peaks_trig, &nhits_trig, hits_trig, 1);
     if(ret>0)
 	{
@@ -810,6 +810,7 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
       cout<<endl;
 	}
 	}
+    printf("== ectrig (SOFTWARE) done, sec=%d\n",sec);
     /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
     /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
     /*TEMPORARY !!!!!!!!!!!!!!!!!!!!!!!!!*/
