@@ -68,9 +68,7 @@ ecpeakeventfiller(ap_uint<2> view, hls::stream<ECPeak_s> &s_peakin, peak_ram_t b
 #endif
   }
 
-/*#ifdef __SYNTHESIS__*/
   addr ++; /*increment on every call (every 32ns)*/
-/*#endif*/
 }
 
 

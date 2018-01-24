@@ -106,8 +106,13 @@ ecpeak2(ap_uint<16> peak_threshold, hls::stream<ECStrip_s> s_strip2[NF1],
   ECPeak0 peak[NSTRIP];
 #pragma HLS ARRAY_PARTITION variable=peak complete dim=1
 
+#ifdef USE_PCAL
+  ap_uint<13> energy[NSTRIP+4+2];
+#else
   ap_uint<13> energy[NSTRIP+4];
-#pragma HLS ARRAY_PARTITION variable=energy complete dim=1
+#endif
+
+  #pragma HLS ARRAY_PARTITION variable=energy complete dim=1
 
   ap_uint<NSTRIP> first;
   ap_uint<NSTRIP> middle;
@@ -143,16 +148,17 @@ ecpeak2(ap_uint<16> peak_threshold, hls::stream<ECStrip_s> s_strip2[NF1],
   middle = s_middle.read();
   last = s_last.read();
 
+  /* if doing .read/.write, limits have to be even to stream dimansion ! */
 #ifdef USE_PCAL
-  /*NF1=11 for PCAL, so we are reading 22 strips every 'j' iteration*/
-  /*assumed NSTRIP=84*/
-  const int b1[4] = {  0, 11, 22, 33};
-  const int e1[4] = { 11, 22, 33, 44/*42*/};
+  /*NF1=6 for PCAL, so we are reading 12 strips every 'j' iteration*/
+  /*assumed NSTRIP=42*/
+  const int b1[4] = {  0,  6, 12, 18};
+  const int e1[4] = {  6, 12, 18, 24};
 
-  /*NF2=21 for PCAL, so we are writing 21 peaks every 'j' iteration*/
-  /*assumed NSTRIP=84*/
-  const int b2[4] = {  0, 21, 42, 63};
-  const int e2[4] = { 21, 42, 63, 84};
+  /*NF2=11 for PCAL, so we are writing 11 peaks every 'j' iteration*/
+  /*assumed NSTRIP=42*/
+  const int b2[4] = {  0, 11, 22, 33};
+  const int e2[4] = { 11, 22, 33, 44};
 #else
   /*NF1=5 for ECAL, so we are reading 10 strips every 'j' iteration*/
   /*assumed NSTRIP=36*/
@@ -226,11 +232,21 @@ cout<<"CLOSE_PEAK: last["<<i<<"] = "<<last[i]<<endl;
   {
     for(int i=b2[j]; i<e2[j]; i++)
     {
-      fifo1.energy = peak[i].energy;
-      fifo1.energysum4coord = peak[i].energysum4coord;
-      fifo1.strip1 = peak[i].strip1;
-      fifo1.stripn = peak[i].stripn;
-
+#ifdef USE_PCAL
+      if(i<42)
+      {
+#endif
+        fifo1.energy = peak[i].energy;
+        fifo1.energysum4coord = peak[i].energysum4coord;
+        fifo1.strip1 = peak[i].strip1;
+        fifo1.stripn = peak[i].stripn;
+#ifdef USE_PCAL
+      }
+      else
+      {
+    	fifo1.energy = 0;
+      }
+#endif
 	  s_peak0strip[i-b2[j]].write(fifo1);
     }
   }

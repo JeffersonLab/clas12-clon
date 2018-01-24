@@ -113,8 +113,13 @@ ecpeak1(ap_uint<16> strip_threshold, ap_uint<4> strip_dip_factor, ap_uint<4> nst
   ECPeak0 peak[NSTRIP];
 #pragma HLS ARRAY_PARTITION variable=peak complete dim=1
 
+#ifdef USE_PCAL
+  ap_uint<13> energy[NSTRIP+3+4+1]; /* 2 extra below, one above, 4 extra to round up last read from streams */
+#else
   ap_uint<13> energy[NSTRIP+3+4]; /* 2 extra below, one above, 4 extra to round up last read from streams */
-#pragma HLS ARRAY_PARTITION variable=energy complete dim=1
+#endif
+
+  #pragma HLS ARRAY_PARTITION variable=energy complete dim=1
 
   ap_uint<NSTRIP+2> first;
   ap_uint<NSTRIP+2> middle;
@@ -136,16 +141,17 @@ ecpeak1(ap_uint<16> strip_threshold, ap_uint<4> strip_dip_factor, ap_uint<4> nst
   last = 0;
 
 
+  /* if doing .read/.write, limits have to be even to stream dimansion ! */
 #ifdef USE_PCAL
   /*NF1=11 for PCAL, so we are reading 22 strips every 'j' iteration*/
 
-  /*temporary assumed NSTRIP=84*/
-  const int b1[4] = {  0, 11, 22, 33};
-  const int e1[4] = { 11, 22, 33, 44/*42*/};
+  /*temporary assumed NSTRIP=42*/
+  const int b1[4] = {  0,  6, 12, 18};
+  const int e1[4] = {  6, 12, 18, 24};
 
-  /*temporary assumed NSTRIP=84*/
-  const int b2[4] = {  2, 23, 44, 65};
-  const int e2[4] = { 22, 43, 64, 85};
+  /*temporary assumed NSTRIP=42*/
+  const int b2[4] = {  2, 13, 24, 35};
+  const int e2[4] = { 12, 23, 34, 42/*45 bad*/};
 
 #else
   /*NF1=5 for ECAL, so we are reading 10 strips every 'j' iteration*/

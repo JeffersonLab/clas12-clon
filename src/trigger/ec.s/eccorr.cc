@@ -102,6 +102,8 @@ atten_read(uint8_t view, atten_t arrayUV[WIN1_LEN], atten_t arrayUW[WIN1_LEN], a
   /*exit(0);*/
 }
 
+
+/* take one of two strips */
 uint16_t
 pcal_coord_to_strip(ap_uint<2> view, uint16_t jj)
 {
@@ -111,18 +113,18 @@ pcal_coord_to_strip(ap_uint<2> view, uint16_t jj)
 
   if(view==0)
   {
-    if(jj <= 52) ii = jj;
-    if(jj >  52) ii = 52+(jj-52)/2;
+    if(jj <= 25) ii = jj*2;
+    if(jj >  25) ii = jj+26;
   }
   else if(view==1)
   {
-    if(jj <= 30) ii = jj/2;
-    if(jj >  30) ii = jj-15;
+    if(jj <= 15) ii = jj;
+    if(jj >  15) ii = jj + (jj-15);
   }
   else if(view==2)
   {
-    if(jj <= 30) ii = jj/2;
-    if(jj >  30) ii = jj-15;
+    if(jj <= 15) ii = jj;
+    if(jj >  15) ii = jj + (jj-15);
   }
   return(ii);
 }

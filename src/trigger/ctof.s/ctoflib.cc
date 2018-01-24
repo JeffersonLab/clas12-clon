@@ -20,12 +20,13 @@ using namespace std;
 #include "trigger.h"
 
 
-//#define DEBUG
+#define DEBUG
 
 
 #define MAX(a,b)    (a > b ? a : b)
 #define MIN(a,b)    (a < b ? a : b)
 
+static int the_number_of_banks = 0;
 
 void
 ctofhiteventreader(hls::stream<eventdata3_t> &event_stream, CTOFHit_8slices &hit, uint32_t *bufout)
@@ -138,6 +139,9 @@ ctoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
 #endif
     if(bufout[0]>0) /*bufout contains something */
 	{
+#ifdef DEBUG
+      printf("CTOF BANK %d\n",the_number_of_banks++);
+#endif
       int fragtag = 60093;
       int banktag = 0xe122;
       trigbank_open(bufptr, fragtag, banktag, iev, timestamp);

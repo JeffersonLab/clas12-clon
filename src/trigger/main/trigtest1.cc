@@ -16,13 +16,13 @@
 
 /*******************************/
 /* uncomment desired detectors */ 
-#define USE_ECAL
+//#define USE_ECAL
 #define USE_PCAL
-#define USE_HTCC
-#define USE_FTOF
-#define USE_CTOF
-#define USE_CND
-#define USE_FT
+//#define USE_HTCC
+//#define USE_FTOF
+//#define USE_CTOF
+//#define USE_CND
+//#define USE_FT
 
 
 
