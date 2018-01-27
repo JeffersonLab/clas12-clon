@@ -32,12 +32,24 @@ typedef ap_uint<6> nframe_t;
 
 
 
+
+
+
 #define NLR 2 /* the number of 'left-rights' */
+
+/* send from ftofstrips() to ftofhit() every 32ns; we assumes that only one pulse can exist in every 32ns interval */
 typedef struct ftofstrip_s
 {
-  ap_uint<NSTRIP> outL;
-  ap_uint<NSTRIP> outR;
+  ap_uint<13> enL[NSTRIP];
+  ap_uint<3>  tmL[NSTRIP];
+  ap_uint<13> enR[NSTRIP];
+  ap_uint<3>  tmR[NSTRIP];
 } FTOFStrip_s;
+
+
+
+
+
 
 
 
@@ -77,8 +89,8 @@ void ftofhiteventreader(hls::stream<eventdata_t> &event_stream, FTOFHit_8slices 
 
 void ftof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<FTOFHit_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512]);
 
-void ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, FTOFStrip_s s_strip[NH_READS]);
-void ftofhit(nframe_t nframes, FTOFStrip_s s_strip[NH_READS], FTOFHit s_hit[NH_READS]);
+void ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, FTOFStrip_s &s_strip);
+void ftofhit(ap_uint<32> threshold, nframe_t nframes, FTOFStrip_s s_strip, FTOFHit s_hit[NH_READS]);
 void ftofhitfanout(FTOFHit s_hit[NH_READS], hls::stream<FTOFHit_8slices> &s_hits, FTOFHit s_hit2[NH_READS], volatile ap_uint<1> &hit_scaler_inc);
 void ftofhiteventfiller(FTOFHit s_hitin[NH_READS], hit_ram_t buf_ram[512]);
 void ftofhiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata3_t> &event_stream, event_ram_t buf_ram_read[2048]);

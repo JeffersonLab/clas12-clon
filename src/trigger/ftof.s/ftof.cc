@@ -35,12 +35,16 @@ ftof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fa
 
 #pragma HLS PIPELINE II=1
 
-  FTOFStrip_s s_strip[NH_READS];
+  FTOFStrip_s s_strip;
   FTOFHit hit1[NH_READS];
   FTOFHit hit2[NH_READS];
+  ap_uint<32> thresh;
+
+  if(nframes>NPER) nframes = NPER;
+  thresh = threshold[1]*threshold[1];
 
   ftofstrips(threshold[0], s_fadcs, s_strip);
-  ftofhit(nframes, s_strip, hit1);
+  ftofhit(thresh, nframes, s_strip, hit1);
   ftofhitfanout(hit1, s_hits, hit2, hit_scaler_inc);
   ftofhiteventfiller(hit2, buf_ram);
 }

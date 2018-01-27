@@ -246,6 +246,9 @@ ecpeaksort(hls::stream<ECPeak0_s> s_peak0max[NF3], hls::stream<ECPeak0_s> &s_pea
   SORTING(1,21);
   */
 
+  
+  //SORTING(0,19);
+  //SORTING(1,18);
   SORTING(0,19);
   SORTING(1,18);
 
@@ -274,6 +277,8 @@ ecpeaksort(hls::stream<ECPeak0_s> s_peak0max[NF3], hls::stream<ECPeak0_s> &s_pea
   SORTING(1,2);
 
   SORTING(0,1);
+
+
 
 #else // NPEAKMAX=18
 
