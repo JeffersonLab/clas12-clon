@@ -33,29 +33,29 @@ typedef ap_fixed<NUMBER_OF_BITS,(NUMBER_OF_BITS-NUMBER_OF_DECIMAL_DIGITS)> myfp_
 
 #define NBIT_COORD 8/*9*//*10*/ /* can be 8,9,10 - the number of bits in peak coordinate */
 
-#define USTRIPS 84
-#define VSTRIPS 77
-#define WSTRIPS 77
+#define USTRIPS 42
+#define VSTRIPS 39
+#define WSTRIPS 39
 
 
 
 #if NBIT_COORD==8
-#define UVWDIV 28. /* 84*84/256 and round to bigger integer */
+#define UVWDIV 7. /* 42*42/256 and round to bigger integer */
 #endif
 
 #if NBIT_COORD==9
-#define UVWDIV 14. /* 84*84/512 */
+#define UVWDIV 4. /* 42*42/512 */
 #endif
 
 #if NBIT_COORD==10
-#define UVWDIV 7. /* 84*84/1024 */
+#define UVWDIV 2. /* 42*42/1024 */
 #endif
 
 
 
-#define UFACTOR (77./UVWDIV) /*11 or 5.5 or 2.75 */
-#define VFACTOR (84./UVWDIV) /*12 or 6   or 3 */
-#define WFACTOR (84./UVWDIV) /*12 or 6   or 3 */
+#define UFACTOR (38.5/UVWDIV) /*11 or 5.5 or 2.75 */
+#define VFACTOR (42./UVWDIV) /*12 or 6   or 3 */
+#define WFACTOR (42./UVWDIV) /*12 or 6   or 3 */
 
 #define UHALF   (UFACTOR/2.)
 #define VHALF   (VFACTOR/2.)
@@ -102,21 +102,21 @@ static myfp_t fhalf[3] = {UHALF,VHALF,WHALF};
 
 /* define strip nfifo - NSTRIP/NH_READS/2 rounded up */
 #ifdef USE_PCAL
-#define NF1 11 /* 84/NH_READS /2 */
+#define NF1  6  /* 42/NH_READS /2 */
 #else
 #define NF1  5 /* 36/NH_READS /2 */
 #endif
 
 /* define peak0strip nfifo - NSTRIP/NH_READS rounded up */
 #ifdef USE_PCAL
-#define NF2 21 /* 84/NH_READS */
+#define NF2 11 /* 42/NH_READS */
 #else
 #define NF2  9 /* 36/NH_READS */
 #endif
 
 /* define peak0max nfifo - NPEAKMAX/NH_READS rounded up */
 #ifdef USE_PCAL
-#define NF3 11 /* 42/NH_READS */
+#define NF3  6 /* 21/NH_READS */
 #else
 #define NF3  5 /* 18/NH_READS */
 #endif
@@ -209,6 +209,7 @@ typedef struct ecpeak0
   ap_uint<24>                  energysum4coord; /* pass it to next function to do coordinate calculation */
 
 } ECPeak0;
+
 
 typedef struct ecpeak0_s
 {

@@ -24,8 +24,13 @@ using namespace std;
   lay    = adclayer[isl][chan] - 1; \
   str    = adcstrip[isl][chan] - 1; \
   lr     = adclr[isl][chan] - 1; \
-  timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].t##ch_m) : 8); /* error in '?' without (uint16_t) ...*/ \
-  if(lay==0) timetmp[lr][str] = timexxx; \
+  timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].t##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
+  energyxxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].e##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
+  if(lay==0) \
+  { \
+    timetmp[lr][str] = timexxx;	\
+    energytmp[lr][str] = energyxxx; \
+  }
   /*if(lay==0 && energy>0) cout<<"ftofstrips: energy[lay="<<lay<<"][str="<<str<<"][lr="<<lr<<"]="<<energy<<endl; \
 	if(lay==0) cout<<"ftofstrips: timetmp[lr="<<lr<<"][str="<<str<<"]="<<timetmp[lr][str]<<endl*/
 
@@ -34,7 +39,7 @@ using namespace std;
 
 /* reads one 32-ns timing slice */
 void
-ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, FTOFStrip_s s_strip[NH_READS])
+ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, FTOFStrip_s &s_strip)
 {
 //#pragma HLS INTERFACE ap_stable port=strip_threshold
 //#pragma HLS DATA_PACK variable=s_fadcs
@@ -49,14 +54,19 @@ ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, FTOF
 
   fadc_256ch_t fadcs;
 
-  ap_uint<4> timexxx;
+  ap_uint<3> timexxx;
+  ap_uint<13> energyxxx;
 
-  ap_uint<4> timetmp[2][NSTRIP]; /* 3 low bits for time interval (0-7), high bit to mark missing hits */
+  ap_uint<3> timetmp[2][NSTRIP]; /* 3 low bits for time interval (0-7) */
 #pragma HLS ARRAY_PARTITION variable=timetmp complete dim=1
 #pragma HLS ARRAY_PARTITION variable=timetmp complete dim=2
-  ap_uint<NSTRIP> out[2];
-#pragma HLS ARRAY_PARTITION variable=out complete dim=1
+  ap_uint<13> energytmp[2][NSTRIP];
+#pragma HLS ARRAY_PARTITION variable=energytmp complete dim=1
+#pragma HLS ARRAY_PARTITION variable=energytmp complete dim=2
 
+  ap_uint<13> out[2][NSTRIP];
+#pragma HLS ARRAY_PARTITION variable=out complete dim=1
+#pragma HLS ARRAY_PARTITION variable=out complete dim=2
 
 
 #ifdef DEBUG
@@ -67,10 +77,17 @@ ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, FTOF
   for(int i=0; i<2; i++)
   {
     for(int j=0; j<NSTRIP; j++) timetmp[i][j] = 0;
-    out[i] = 0;
+    for(int j=0; j<NSTRIP; j++) energytmp[i][j] = 0;
+    for(int j=0; j<NSTRIP; j++) out[i][j] = 0;
   }
 
-
+  for(int j=0; j<NSTRIP; j++)
+  {
+    s_strip.enL[j] = 0;
+    s_strip.tmL[j] = 0;
+    s_strip.enR[j] = 0;
+    s_strip.tmR[j] = 0;
+  }
 
   /********************************************************************/
   /* get FADC data for 32-ns interval, and fill timetmp[2][NSTRIP] array */
@@ -101,27 +118,19 @@ ftofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, FTOF
 
 
 
-  /* filling 4ns-slices using 3 timing bits, and send it over - one slice per stream, all in parallel - we are 32ns domain ! */
+  /* sending translated signals */
 
-  for(int j=0; j<NH_READS; j++)
+  for(int i=0; i<NSTRIP; i++)
   {
-    for(int k=0; k<NLR; k++)
-    {
-      for(int i=0; i<NSTRIP; i++)
-      {
-        if(timetmp[k][i]==j) out[k](i,i) = 1;
-        else                 out[k](i,i) = 0;
-      }
-    }
-
-    s_strip[j].outL = out[0];
-    s_strip[j].outR = out[1];
+    s_strip.enL[i] = energytmp[0][i];
+    s_strip.tmL[i] = timetmp[0][i];
+    s_strip.enR[i] = energytmp[1][i];
+    s_strip.tmR[i] = timetmp[1][i];
 #ifdef DEBUG
-    cout<<"ftofstrips: outL["<<j<<"]="<<hex<<s_strip[j].outL<<dec<<endl;
-    cout<<"ftofstrips: outR["<<j<<"]="<<hex<<s_strip[j].outR<<dec<<endl;
+    cout<<"ftofstrips: s_strip.enL["<<i<<"]="<<s_strip.enL[i]<<", s_strip.tmL["<<i<<"]="<<s_strip.tmL[i]<<endl;
+    cout<<"ftofstrips: s_strip.enR["<<i<<"]="<<s_strip.enR[i]<<", s_strip.tmR["<<i<<"]="<<s_strip.tmR[i]<<endl;
 #endif
   }
-
 
 
 #ifdef DEBUG

@@ -30,7 +30,7 @@ using namespace std;
 #define MIN(a,b)    (a < b ? a : b)
 #define ABS(x)      ((x) < 0 ? -(x) : (x))
 
-#define NPIPE 24 /* the number on 4ns slices to keep and use in ftofhit logic; will be shifted 8 elements right on every call */
+#define NPIPE 3 /* the number on 32ns slices to keep and use in ftofhit logic; will be shifted 1 element right on every call */
 
 /*xc7vx550tffg1158-1*/
 
@@ -38,45 +38,55 @@ using namespace std;
 /* 1.96/46/8/0%/0%/(10270)1%/(5734)1% II=8 */
 
 void
-ftofhit(nframe_t nframes, FTOFStrip_s s_strip[NH_READS], FTOFHit s_hit[NH_READS])
+ftofhit(ap_uint<32> threshold, nframe_t nframes, FTOFStrip_s s_strip, FTOFHit s_hit[NH_READS])
 {
 //#pragma HLS INTERFACE ap_stable port=nframes
 #pragma HLS PIPELINE II=1
 
-  static ap_uint<NSTRIP> outL[NPIPE], outR[NPIPE];
-
-  ap_uint<NSTRIP> output[NH_READS];
+  int tdif;
+  static FTOFStrip_s strip_pipe[NPIPE];
+  ap_uint<NPER> output[NSTRIP];
 
 #ifdef DEBUG
   printf("== ftofhit start ==\n");
-  for(int j=0; j<NH_READS; j++)
-  {
-    if(s_strip[j].outL>0) cout<<"ftofhit: s_strip["<<j<<"].outL="<<hex<<s_strip[j].outL<<dec<<endl;
-    if(s_strip[j].outR>0) cout<<"ftofhit: s_strip["<<j<<"].outR="<<hex<<s_strip[j].outR<<dec<<endl;
-  }
+    for(int i=0; i<NSTRIP; i++)
+    {
+      if(s_strip.enL[i]>0) cout<<"ftofhit: s_strip.enL["<<i<<"]="<<s_strip.enL[i]<<", s_strip.tmL["<<i<<"]="<<s_strip.tmL[i]<<endl;
+      if(s_strip.enR[i]>0) cout<<"ftofhit: s_strip.enR["<<i<<"]="<<s_strip.enR[i]<<", s_strip.tmR["<<i<<"]="<<s_strip.tmR[i]<<endl;
+    }
 #endif
 
-  /* shift old data 8 elements to the right */
-  for(int i=15; i>=0; i--)
+  /* shift whole pipe to the right ([1]->[2], [0]->[1]) */
+  for(int j=(NPIPE-1); j>0; j--)
   {
-	outL[i+8] = outL[i];
-	outR[i+8] = outR[i];
+    for(int i=0; i<NSTRIP; i++)
+    {
+	  strip_pipe[j].enL[i] = strip_pipe[j-1].enL[i];
+	  strip_pipe[j].tmL[i] = strip_pipe[j-1].tmL[i];
+	  strip_pipe[j].enR[i] = strip_pipe[j-1].enR[i];
+	  strip_pipe[j].tmR[i] = strip_pipe[j-1].tmR[i];
+	}
   }
 
 
-  /* get new data */
-  for(int j=0; j<NH_READS; j++)
+  /* get NH_READS timing slices of new data and place in first interval of the pipe */
+  for(int i=0; i<NSTRIP; i++)
   {
-    outL[j]  = s_strip[j].outL;
-    outR[j]  = s_strip[j].outR;
+    strip_pipe[0].enL[i] = s_strip.enL[i];
+    strip_pipe[0].tmL[i] = s_strip.tmL[i];
+    strip_pipe[0].enR[i] = s_strip.enR[i];
+    strip_pipe[0].tmR[i] = s_strip.tmR[i];
   }
 
 
 #ifdef DEBUG
-  for(int i=NPIPE-1; i>=0; i--)
+  for(int j=NPIPE-1; j>=0; j--)
   {
-    if(outL[i]>0) cout<<"ftofhit: outL[pipe="<<i<<"]="<<hex<<outL[i]<<dec<<endl;
-    if(outR[i]>0) cout<<"ftofhit: outR[pipe="<<i<<"]="<<hex<<outR[i]<<dec<<endl;
+    for(int i=0; i<NSTRIP; i++)
+    {
+      if(strip_pipe[j].enL[i]>0) cout<<"ftofhit: strip_pipe["<<j<<"].enL["<<i<<"]="<<strip_pipe[j].enL[i]<<", strip_pipe["<<j<<"].tmL["<<i<<"]="<<strip_pipe[j].tmL[i]<<endl;
+      if(strip_pipe[j].enR[i]>0) cout<<"ftofhit: strip_pipe["<<j<<"].enR["<<i<<"]="<<strip_pipe[j].enR[i]<<", strip_pipe["<<j<<"].tmR["<<i<<"]="<<strip_pipe[j].tmR[i]<<endl;
+	}
   }
 #endif
 
@@ -84,34 +94,50 @@ ftofhit(nframe_t nframes, FTOFStrip_s s_strip[NH_READS], FTOFHit s_hit[NH_READS]
 
   /* check for left-right coincidence within 'nframes' interval */
 
+  for(int i=0; i<NH_READS; i++) output[i] = 0; /* cleanup output mask */
 
-#if 1
-  if(nframes>NPER) nframes = NPER;
-  for(int i=8; i<16; i++) /* take middle interval left PMTs, and compare with +-nframes right PMTs */
+  for(int i=0; i<NSTRIP; i++) /* loop over all counters */
   {
-    output[i-8] = 0;
-    for(int j=i-NPER; j<=i+NPER; j++)
-	{
-      if(j<(i-nframes)) continue;
-      if(j>(i+nframes)) continue;
-      output[i-8] |= outL[i] & outR[j];
-	}
-  }
-#else
-  for(int i=8; i<16; i++) /* take middle interval left PMTs, and compare with +-(NPER/2) right PMTs */
-  {
-    output[i-8] = 0;
-    for(int j=i-(NPER/2); j<=i+(NPER/2); j++) output[i-8] |= outL[i] & outR[j];
-  }
+    ap_uint<NPER> mask = 0;
+
+    for(int j=0; j<NPIPE; j++) /* on left side, look one interval before, one current and one after, and match with middle on right side */
+    {
+      if( (strip_pipe[1].enR[i]*strip_pipe[j].enL[i]) > threshold)
+	  {
+        tdif = strip_pipe[j].tmL[i]-strip_pipe[1].tmR[i];
+#ifdef DEBUG
+        cout<<"=> tdif1="<<tdif<<endl;
 #endif
+        if(tdif < 0) tdif = -tdif;
+#ifdef DEBUG
+        cout<<"=> tdif2="<<tdif<<endl;
+#endif
+        if(tdif <= nframes)
+		{
+          int it = strip_pipe[1].tmR[i]; /* take timing from right, because it will match PCAL-U which was PMTs on the same side */
+          mask(it,it) = 1;
+#ifdef DEBUG
+          cout<<"=> it="<<it<<", j="<<j<<", i="<<i<<endl;
+#endif
+		}
+	  }
+    }
+    output[i] = mask;
+  }
 
 
   /* send trigger solution */
   for(int j=0; j<NH_READS; j++)
   {
+    for(int i=0; i<NSTRIP; i++) /* loop over all counters */
+    {
+      s_hit[j].output(i,i) = output[i](j,j);
+    }
+  }
+}
+
+/*
 #ifdef DEBUG
     if(output[j]>0) cout<<"ftofhit: output["<<j<<"]="<<hex<<output[j]<<dec<<endl;
 #endif
-    s_hit[j].output = output[j];
-  }
-}
+*/

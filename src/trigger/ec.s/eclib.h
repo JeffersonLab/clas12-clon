@@ -21,6 +21,7 @@ extern "C" {
 /* some control defines */
 /************************/
 
+#define NSTRIP0   36
 #define NSTRIP    36
 #define NPEAKMAX  (NSTRIP/2)
 #define NLAYER    6

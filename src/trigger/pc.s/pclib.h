@@ -23,7 +23,7 @@ extern "C" {
 /************************/
 
 #define PSTRIP    68
-#define PSTRIPMAX 84
+#define PSTRIPMAX 42
 #define PPEAKMAX  (PSTRIPMAX/2)
 #define PLAYER    3
 #define PVIEW     3

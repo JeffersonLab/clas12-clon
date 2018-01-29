@@ -39,7 +39,7 @@ using namespace std;
 
 
 //#define DEBUG
-//#define DEBUG_0
+#define DEBUG_0
 //#define DEBUG_1
 //#define DEBUG_2 /* hardware trigger info */
 //#define DEBUG_3
@@ -48,6 +48,9 @@ using namespace std;
 #define MAX(a,b)    (a > b ? a : b)
 #define MIN(a,b)    (a < b ? a : b)
 #define ABS(x)      ((x) < 0 ? -(x) : (x))
+
+
+static int the_number_of_banks = 0;
 
 
 /* some functions for simulation only */
@@ -755,6 +758,9 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
 
     if(bufout0[0]>0 || bufout1[0]>0 || bufout2[0]>0 || bufout3[0]>0)
 	{
+#ifdef DEBUG_0
+      printf("BANK %d\n",the_number_of_banks++);
+#endif
 #ifdef USE_PCAL
       int fragtag = 60107+sec;
 #else

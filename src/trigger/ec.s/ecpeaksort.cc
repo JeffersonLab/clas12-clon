@@ -210,8 +210,9 @@ ecpeaksort(hls::stream<ECPeak0_s> s_peak0max[NF3], hls::stream<ECPeak0_s> &s_pea
 
 
 
-#ifdef USE_PCAL // NPEAKMAX=42
+#ifdef USE_PCAL // NPEAKMAX=21
 
+  /*
   SORTING(0,40);
   SORTING(1,39);
   SORTING(0,40);
@@ -243,36 +244,41 @@ ecpeaksort(hls::stream<ECPeak0_s> s_peak0max[NF3], hls::stream<ECPeak0_s> &s_pea
 
   SORTING(0,22);
   SORTING(1,21);
+  */
 
-  SORTING(0,20);
-  SORTING(1,19);
+  
+  //SORTING(0,19);
+  //SORTING(1,18);
+  SORTING(0,19);
+  SORTING(1,18);
 
-  SORTING(0,18);
-  SORTING(1,17);
+  SORTING(0,17);
+  SORTING(1,16);
 
-  SORTING(0,16);
-  SORTING(1,15);
+  SORTING(0,15);
+  SORTING(1,14);
 
-  SORTING(0,14);
-  SORTING(1,13);
+  SORTING(0,13);
+  SORTING(1,12);
 
-  SORTING(0,12);
-  SORTING(1,11);
+  SORTING(0,11);
+  SORTING(1,10);
 
-  SORTING(0,10);
-  SORTING(1,9);
+  SORTING(0,9);
+  SORTING(1,8);
 
-  SORTING(0,8);
-  SORTING(1,7);
+  SORTING(0,7);
+  SORTING(1,6);
 
-  SORTING(0,6);
-  SORTING(1,5);
+  SORTING(0,5);
+  SORTING(1,4);
 
-  SORTING(0,4);
-  SORTING(1,3);
+  SORTING(0,3);
+  SORTING(1,2);
 
-  SORTING(0,2);
-  SORTING(1,1);
+  SORTING(0,1);
+
+
 
 #else // NPEAKMAX=18
 

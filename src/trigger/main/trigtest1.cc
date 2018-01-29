@@ -16,10 +16,17 @@
 
 /*******************************/
 /* uncomment desired detectors */ 
+<<<<<<< HEAD
 // #define USE_ECAL
  #define USE_PCAL
 //#define USE_HTCC
 //#define USE_FTOF
+=======
+//#define USE_ECAL
+//#define USE_PCAL
+//#define USE_HTCC
+#define USE_FTOF
+>>>>>>> upstream/master
 //#define USE_CTOF
 //#define USE_CND
 //#define USE_FT
@@ -72,7 +79,7 @@ static uint16_t pc_nstripmax = 0;
 static uint16_t htcc_threshold[3] = { 1, 1, 3 };
 static uint16_t htcc_nframes = 0;
 
-static uint16_t ftof_threshold[3] = { 1, 1, 3 };
+static uint16_t ftof_threshold[3] = { 1, 1, 0 };
 static uint16_t ftof_nframes = 4;
 
 static uint16_t ctof_threshold[3] = { 1, 1, 3 };

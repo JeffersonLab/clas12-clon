@@ -9,9 +9,6 @@
 #include "hls_fadc_sum.h"
 
 
-//#define COSMIC
-
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
