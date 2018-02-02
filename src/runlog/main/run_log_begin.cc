@@ -478,7 +478,7 @@ create_sql(strstream &rlb)
     run = get_run_number(expid, session);
     printf("run=%d\n",run);
 
-	daq_trigger = get_daq_config(expid,"PROD");
+	daq_trigger = get_daq_config(expid,configin/*"PROD"*/);
 
 
     json j0 = {

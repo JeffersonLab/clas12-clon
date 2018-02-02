@@ -142,7 +142,7 @@ ctoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
 #ifdef DEBUG
       printf("CTOF BANK %d\n",the_number_of_banks++);
 #endif
-      int fragtag = 60093;
+      int fragtag = 61093;
       int banktag = 0xe122;
       trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
       trigbank_write(bufout);

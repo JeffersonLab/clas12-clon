@@ -37,9 +37,7 @@ extern "C" {
 #define NHITS (NHIT*MAXTIMES)
 
 
-
 #include "ectypes.h"
-
 
 
 #ifdef DEBUG

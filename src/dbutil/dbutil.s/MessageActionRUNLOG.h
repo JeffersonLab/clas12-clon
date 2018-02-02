@@ -135,6 +135,8 @@ class MessageActionJSON : public MessageAction {
       char *cond[] = {
             "event_count",
             "events_rate",
+            "evio_files_count",
+            "megabyte_count",
             //"temperature",
             "beam_energy",
             //"test",
