@@ -16,17 +16,11 @@
 
 /*******************************/
 /* uncomment desired detectors */ 
-<<<<<<< HEAD
-// #define USE_ECAL
- #define USE_PCAL
-//#define USE_HTCC
-//#define USE_FTOF
-=======
 //#define USE_ECAL
-//#define USE_PCAL
+#define USE_PCAL
 //#define USE_HTCC
 #define USE_FTOF
->>>>>>> upstream/master
+
 //#define USE_CTOF
 //#define USE_CND
 //#define USE_FT
