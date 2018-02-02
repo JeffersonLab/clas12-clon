@@ -545,6 +545,53 @@ return(ind);
 #define ecfrac pcfrac
 #define eccorr pccorr
 #define echitsort pchitsort
+#define eccoord2strip pccoord2strip
+#endif
+
+
+
+/*
+#ifdef USE_PCAL
+	  for(i=0; i<3; i++) uvw2[i] = pcal_coord_to_strip(i, ((uint32_t)uvw[i])/fview[i] ) + 1;
+#else
+      for(i=0; i<3; i++) uvw2[i] = (uvw[i]>>3) + 1;
+#endif
+*/
+
+
+#ifdef USE_PCAL
+uint16_t
+eccoord2strip(ap_uint<2> view, uint16_t jj)
+{
+  uint16_t ii;
+  float tmp;
+ 
+  tmp = ((float)jj)/((float)fview[view]);
+  jj = (int)tmp;
+  if(view==0)
+  {
+    if(jj <= 25) ii = jj*2;
+    if(jj >  25) ii = jj+26;
+  }
+  else if(view==1)
+  {
+    if(jj <= 15) ii = jj;
+    if(jj >  15) ii = jj + (jj-15);
+  }
+  else if(view==2)
+  {
+    if(jj <= 15) ii = jj;
+    if(jj >  15) ii = jj + (jj-15);
+  }
+
+  return(ii);
+}
+#else
+uint16_t
+eccoord2strip(ap_uint<2> view, uint16_t jj)
+{
+  return(jj>>3);
+}
 #endif
 
 
@@ -810,7 +857,11 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
       {
         for(jj=0; jj<nhits_trig; jj++)
 	    {
-          cout<<"TRIG HIT ["<<+jj<<"]: coord="<<hits_trig[jj].coord[0]<<" "<<hits_trig[jj].coord[1]<<" "<<hits_trig[jj].coord[2]<<"   energy="<<hits_trig[jj].energy<<"   time="<<hits_trig[jj].time<<endl;
+          cout<<"TRIG HIT ["<<+jj<<"]: coord=";
+          cout     <<hits_trig[jj].coord[0]<<"(U strip "<<eccoord2strip(0,hits_trig[jj].coord[0])<<")";
+          cout<<" "<<hits_trig[jj].coord[1]<<"(V strip "<<eccoord2strip(1,hits_trig[jj].coord[1])<<")";
+          cout<<" "<<hits_trig[jj].coord[2]<<"(W strip "<<eccoord2strip(2,hits_trig[jj].coord[2])<<")";
+          cout<<"   energy="<<hits_trig[jj].energy<<"   time="<<hits_trig[jj].time<<endl;
 	    }
       }
       cout<<endl;

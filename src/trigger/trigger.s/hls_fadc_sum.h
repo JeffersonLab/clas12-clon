@@ -18,6 +18,7 @@
 #define FTOFHIT_TAG    0x8
 #define CTOFHIT_TAG    0x9
 #define CNDHIT_TAG     0xA
+#define PCUHIT_TAG     0xB
 
 typedef struct
 {
