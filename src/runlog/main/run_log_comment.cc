@@ -59,6 +59,7 @@ static int gmd_time              = 3;
 static int filep               	 = 0;
 
 int run_number;
+int run_number_previous;
 
 
 #define MAXLABELS 16
@@ -239,7 +240,6 @@ main (int argc, char *argv[])
   }
 
 
-
   /* get values to be used as initial text */
   
   /* run number */
@@ -253,6 +253,7 @@ main (int argc, char *argv[])
                                     sessionShellWidgetClass, NULL);
   */
   ac = 0;
+  //XtSetArg (arg[ac], XmNdefaultPosition, False); ac++;
   toplevel = XtAppInitialize ( &app, "Editor", NULL, 0, &argc, argv, NULL, arg, ac );
 
   rowcol = XmCreateRowColumn (toplevel, "rowcol", NULL, 0);
@@ -262,6 +263,7 @@ main (int argc, char *argv[])
     n = 0;
     XtSetArg (args[n], XmNfractionBase, 10);       n++;
     XtSetArg (args[n], XmNnavigationType, XmNONE); n++;
+    //XtSetArg (args[n], XmNdefaultPosition, False); n++;
     form = XmCreateForm (rowcol, "form", args, n);
 
     n = 0;
@@ -281,8 +283,17 @@ main (int argc, char *argv[])
     XtSetArg (args[n], XmNleftPosition, 4);                   n++;
     XtSetArg (args[n], XmNrightAttachment, XmATTACH_FORM);    n++;
     XtSetArg (args[n], XmNnavigationType, XmTAB_GROUP);       n++;
+	/*XtSetArg (args[n], XmNeditable, False); n++;*/
     text[i] = XmCreateTextField (form, "text_w", args, n);
     XtManageChild (text[i]);
+
+    /* 'Run Number' field cannot be modified ! */
+    if(!strcmp(labels[i],"Run Number"))
+	{
+      ac = 0;
+      XtSetArg(arg[ac], XmNeditable, False); ac++;
+      XtSetValues (text[i], arg, ac);
+	}
 
     if(fix) /* have to fix previous comment: use previously typed values */
 	{
@@ -293,11 +304,22 @@ main (int argc, char *argv[])
           //printf("txt [%d]>%s< = [%d]>%s<, using >%s<\n",i,labels[i],j,labels_previous[j],values_previous[j]);
           XmTextFieldSetString(text[i],values_previous[j]);
 		  {
-		  char *txt;
-          txt = XmTextFieldGetString(text[i]);
-          //printf(" ttt[%d] >%s< >%s<\n",i,labels[i],txt);
-          XtFree (txt);
+		    char *txt;
+            txt = XmTextFieldGetString(text[i]);
+            //printf(" ttt[%d] >%s< >%s<\n",i,labels[i],txt);
+            XtFree (txt);
 		  }
+
+          if(!strcmp(labels[i],"Run Number"))
+	      {
+            run_number_previous = atoi(values_previous[j]);
+            printf("GOT run_number_previous = %d (current run_number=%d)\n",run_number_previous, run_number);
+            if(run_number_previous != run_number)
+			{
+              printf("ERROR: cannot modify comment for the previous run(s) - exit\n");
+              exit(0);
+			}
+	      }
 
           break;
 		}
@@ -305,7 +327,13 @@ main (int argc, char *argv[])
 	}
     else /* 'fix' not defined */
 	{
-      if(!strcmp(labels[i],"Operators"))
+      if(!strcmp(labels[i],"Run Number"))
+	  {
+        sprintf(temp,"%d",run_number);
+        values[i] = strdup(temp);
+        XmTextFieldSetString(text[i],values[i]);
+	  }
+      else if(!strcmp(labels[i],"Operators"))
 	  {
         values[i] = get_run_operators("", "");
         XmTextFieldSetString(text[i],values[i]);
@@ -321,6 +349,7 @@ main (int argc, char *argv[])
                             (XtPointer) labels[i]);
     XtManageChild (form);
   }
+
 
   //for(i=0; i<nlabels; i++) printf(" 111[%d] >%s<\n",i,labels[i]);
 
@@ -493,16 +522,18 @@ create_sql(strstream &rlb)
 {
   int i;
   int status;
+  bool is_valid_run_end;
 
-  if(ignore_run=='Y') status = 1;
-  else                status = 0;
+  if(ignore_run=='Y') is_valid_run_end = false;
+  else                is_valid_run_end = true;
 
   /* construct json manually */
-
-  rlb << "[{\"name\":\"run_log\",\"run_number\":"<<run_number<<",\"status\":"<<status<<"";
+  rlb << "[{\"name\":\"run_log\",\"run_number\":"<<run_number<<",\"is_valid_run_end\":"<<is_valid_run_end<<"";
 
   for(i=0; i<nlabels; i++)
   {
+    if(!strcmp(dbnames[i],"run_number")) continue; /* skip 'run_number', we already sent it as integer */
+
     rlb << ",\""<<dbnames[i]<<"\":\""<<vals[i]<<"\"";
   }
 

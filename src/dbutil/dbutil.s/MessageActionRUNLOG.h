@@ -168,6 +168,7 @@ class MessageActionJSON : public MessageAction {
         struct tm start_time;
         struct tm end_time;
 		std::string timestring;
+        int icond;
 
         auto exist1 = j1.find("run_start_time");
         if(exist1 != j1.end())
@@ -184,29 +185,47 @@ class MessageActionJSON : public MessageAction {
           strptime(timestring.c_str(), "%Y-%m-%d %H:%M:%S", &end_time);
           connection.AddRunEndTime(run_number, end_time);
 		}
- 
+
+        /* untill 'boolean' fixed below */
+        auto exist3 = j1.find("is_valid_run_end");
+        if(exist3 != j1.end())
+        {
+		  icond = j1["is_valid_run_end"];
+          if(icond)
+		  {
+            printf("Add boolean condition 'is_valid_run_end=true'\n");
+            connection.AddCondition(run_number, "is_valid_run_end", true);
+		  }
+          else
+		  {
+            printf("Add boolean condition 'is_valid_run_end=false'\n");
+            connection.AddCondition(run_number, "is_valid_run_end", false);
+		  }
+		}
+
+
 	    for(int i=0; i<(sizeof(cond)/sizeof(char *)); i++)
 	    {
           if (j1[cond[i]].type() == json::value_t::number_float)
           {
-            printf("Add condition >%s<\n",cond[i]);
+            printf("Add float condition >%s<\n",cond[i]);
             connection.AddCondition(run_number, cond[i], j1[cond[i]].get<float>());
           }
-          else if (j1[cond[i]].type() == json::value_t::number_unsigned) //number_integer does not recognize int32_t from run_log_begin
+          else if (j1[cond[i]].type() == json::value_t::boolean) /*does not work !*/
           {
-            printf("Add condition >%s<\n",cond[i]);
-            //connection.AddCondition(run_number, cond[i], j1[cond[i]].get<int>());
-            connection.AddCondition(run_number, cond[i], (long int)j1[cond[i]]);
-          }
-          else if (j1[cond[i]].type() == json::value_t::boolean)
-          {
-            printf("Add condition >%s<\n",cond[i]);
+            printf("Add boolean condition >%s<\n",cond[i]);
             //connection.AddCondition(run_number, cond[i], j1[cond[i]].get<std::bool>());
             connection.AddCondition(run_number, cond[i], (bool)j1[cond[i]]);
           }
+          else if (j1[cond[i]].type() == json::value_t::number_unsigned) //number_integer does not recognize int32_t from run_log_begin
+          {
+            printf("Add int condition >%s<\n",cond[i]);
+            //connection.AddCondition(run_number, cond[i], j1[cond[i]].get<int>());
+            connection.AddCondition(run_number, cond[i], (long int)j1[cond[i]]);
+          }
           else if (j1[cond[i]].type() == json::value_t::string)
           {
-            printf("Add condition >%s<\n",cond[i]);
+            printf("Add string condition >%s<\n",cond[i]);
             connection.AddCondition(run_number, cond[i], j1[cond[i]].get<std::string>());
           }
           else
