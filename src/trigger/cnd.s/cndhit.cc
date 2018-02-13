@@ -30,7 +30,7 @@ using namespace std;
 #define MIN(a,b)    (a < b ? a : b)
 #define ABS(x)      ((x) < 0 ? -(x) : (x))
 
-#define NPIPE 24 /* the number on 4ns slices to keep and use in cndhit logic; will be shifted 8 elements right on every call */
+#define NPIPE 3 /* the number on 32ns slices to keep and use in cndhit logic; will be shifted 1 element right on every call */
 
 /*xc7vx550tffg1158-1*/
 
@@ -40,89 +40,213 @@ using namespace std;
 #define THIRD (NSTRIP/3)
 
 void
-cndhit(nframe_t nframes, CNDStrip_s s_strip[NH_READS], CNDHit s_hit[NH_READS])
+cndhit(ap_uint<32> threshold, nframe_t nframes, CNDStrip_s strip[NSTRIP], CNDHit s_hit[NH_READS])
 {
 //#pragma HLS INTERFACE ap_stable port=nframes
 #pragma HLS PIPELINE II=1
 
-  static ap_uint<NSTRIP> outL[NPIPE], outR[NPIPE];
-  ap_uint<NSTRIP> output[NH_READS];
-  ap_uint<THIRD> coinc12[NH_READS];
-  ap_uint<THIRD> coinc23[NH_READS];
-  ap_uint<THIRD> coinc123[NH_READS];
+  int tdif;
+  static CNDStrip4_s strip_pipe[NPIPE][NSTRIP];
+#pragma HLS ARRAY_PARTITION variable=strip_pipe complete dim=1
+#pragma HLS ARRAY_PARTITION variable=strip_pipe complete dim=2
+
+  ap_uint<NPER> output[NSTRIP];
+#pragma HLS ARRAY_PARTITION variable=strip_pipe complete dim=1
+
 
 #ifdef DEBUG
   printf("== cndhit start ==\n");
-  for(int j=0; j<NH_READS; j++)
-  {
-    if(s_strip[j].outL>0) cout<<"cndhit: s_strip["<<j<<"].outL="<<hex<<s_strip[j].outL<<dec<<endl;
-    if(s_strip[j].outR>0) cout<<"cndhit: s_strip["<<j<<"].outR="<<hex<<s_strip[j].outR<<dec<<endl;
-  }
+    for(int i=0; i<NSTRIP; i++)
+    {
+      if(strip[i].enL>0) cout<<"cndhit: strip["<<i<<"].enL="<<strip[i].enL<<", strip["<<i<<"].tmL="<<strip[i].tmL<<endl;
+      if(strip[i].enR>0) cout<<"cndhit: strip["<<i<<"].enR="<<strip[i].enR<<", strip["<<i<<"].tmR="<<strip[i].tmR<<endl;
+    }
 #endif
 
-  /* shift old data 8 elements to the right */
-  for(int i=15; i>=0; i--)
+  /* shift whole pipe to the right ([1]->[2], [0]->[1]) */
+  for(int j=(NPIPE-1); j>0; j--)
   {
-	outL[i+8] = outL[i];
-	outR[i+8] = outR[i];
-  }
-
-
-  /* get new data */
-  for(int i=0; i<NH_READS; i++)
-  {
-    outL[i]  = s_strip[i].outL;
-    outR[i]  = s_strip[i].outR;
-  }
-
-#ifdef DEBUG
-  for(int i=NPIPE-1; i>=0; i--)
-  {
-    if(outL[i]>0) cout<<"cndhit: outL[pipe="<<i<<"]="<<hex<<outL[i]<<dec<<endl;
-    if(outR[i]>0) cout<<"cndhit: outR[pipe="<<i<<"]="<<hex<<outR[i]<<dec<<endl;
-  }
-#endif
-
-  /* check for left-right coincidence withing 'nframes' interval */
-
-  if(nframes>NPER) nframes = NPER;
-  for(int i=8; i<16; i++) /* take middle interval left PMTs, and compare with +-nframes right PMTs */
-  {
-    output[i-8] = 0;
-    for(int j=i-NPER; j<=i+NPER; j++)
-	{
-      if(j<(i-nframes)) continue;
-      if(j>(i+nframes)) continue;
-
-      output[i-8] |= outL[i] & outR[j];
+    for(int i=0; i<NSTRIP; i++)
+    {
+	  strip_pipe[j][i].enL = strip_pipe[j-1][i].enL;
+	  strip_pipe[j][i].tmL = strip_pipe[j-1][i].tmL;
+	  strip_pipe[j][i].enR = strip_pipe[j-1][i].enR;
+	  strip_pipe[j][i].tmR = strip_pipe[j-1][i].tmR;
 	}
   }
 
-  /* coincidence logic */
-  for(int i=0; i<8; i++)
+
+  /* get NH_READS timing slices of new data and place in first interval of the pipe */
+  for(int i=0; i<NSTRIP; i++)
   {
-    for(int j=0; j<24; j++)
-	{
-      int k = j*3;
-      coinc12[i](j,j) = output[i](k,k) & output[i](k+1,k+1);
-      coinc23[i](j,j) = output[i](k+1,k+1) & output[i](k+2,k+2);
-      coinc123[i](j,j) = output[i](k,k) & output[i](k+1,k+1) & output[i](k+2,k+2);
-	}
-    output[i] = (coinc123[i], coinc23[i], coinc12[i]);
+    strip_pipe[0][i].enL = strip[i].enL;
+    strip_pipe[0][i].tmL = strip[i].tmL;
+    strip_pipe[0][i].enR = strip[i].enR;
+    strip_pipe[0][i].tmR = strip[i].tmR;
+  }
+
+
 #ifdef DEBUG
-    if(coinc12[i]>0)  cout<<"cndhit: coinc12[pipe="<<i<<"]="<<hex<<coinc12[i]<<dec<<endl;
-    if(coinc23[i]>0)  cout<<"cndhit: coinc23[pipe="<<i<<"]="<<hex<<coinc23[i]<<dec<<endl;
-    if(coinc123[i]>0) cout<<"cndhit: coinc123[pipe="<<i<<"]="<<hex<<coinc123[i]<<dec<<endl;
-    if(output[i]>0)   cout<<"cndhit: output[pipe="<<i<<"]="<<hex<<output[i]<<dec<<endl;
+  for(int j=NPIPE-1; j>=0; j--)
+  {
+    for(int i=0; i<NSTRIP; i++)
+    {
+      if(strip_pipe[j][i].enL>0) cout<<"cndhit: strip_pipe["<<j<<"]["<<i<<"].enL="<<strip_pipe[j][i].enL<<", strip_pipe["<<j<<"]["<<i<<"].tmL="<<strip_pipe[j][i].tmL<<endl;
+      if(strip_pipe[j][i].enR>0) cout<<"cndhit: strip_pipe["<<j<<"]["<<i<<"].enR="<<strip_pipe[j][i].enR<<", strip_pipe["<<j<<"]["<<i<<"].tmR="<<strip_pipe[j][i].tmR<<endl;
+	}
+  }
+#endif
+
+
+
+  /* check for left-right coincidence within 'nframes' interval */
+
+  for(int i=0; i<NH_READS; i++) output[i] = 0; /* cleanup output mask */
+
+
+#if 0 /* left-right coincidence */
+
+  for(int i=0; i<NSTRIP; i++) /* loop over all counters */
+  {
+    ap_uint<NPER> mask = 0;
+    for(int j=0; j<NPIPE; j++) /* on left side, look one interval before, one current and one after, and match with middle on right side */
+    {
+      if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > threshold)
+	  {
+        tdif = strip_pipe[1][i].tmR - strip_pipe[j][i].tmL;
+#ifdef DEBUG
+        cout<<"=> tdif1="<<tdif<<endl;
+#endif
+        if(tdif < 0) tdif = -tdif;
+#ifdef DEBUG
+        cout<<"=> tdif2="<<tdif<<",nframes="<<nframes<<endl;
+#endif
+        if(tdif <= nframes)
+		{
+          int it = strip_pipe[1][i].tmR; /* take timing from right, because it will match PCAL-U which was PMTs on the same side */
+          mask(it,it) = 1;
+#ifdef DEBUG
+          cout<<"=> it="<<it<<", j="<<j<<", i="<<i<<", mask="<<hex<<mask<<dec<<endl;
+#endif
+		}
+	  }
+    }
+    output[i] = mask;
+#ifdef DEBUG
+    if(output[i]>0)  cout<<"cndhit: output[nstrip="<<i<<"]="<<hex<<output[i]<<dec<<endl;
 #endif
   }
 
   /* send trigger solution */
   for(int j=0; j<NH_READS; j++)
   {
-#ifdef DEBUG
-    if(output[j]>0) cout<<"cndhit: output["<<j<<"]="<<hex<<output[j]<<dec<<endl;
-#endif
-    s_hit[j].output = output[j];
+    for(int i=0; i<NSTRIP; i++) /* loop over all counters */
+    {
+      s_hit[j].output(i,i) = output[i](j,j);
+    }
   }
+
+#endif
+
+
+
+#if 1 /* L1_left x L1_right x L2_left x L2_right */
+
+  for(int k=0; k<THIRD; k++) /* loop over all counters */
+  {
+    ap_uint<NPER> mask1 = 0;
+    ap_uint<NPER> mask2 = 0;
+    ap_uint<NPER> mask3 = 0;
+    int i;
+
+    /* layer 1 */
+    i = k*3;
+    for(int j=0; j<NPIPE; j++) /* on left side, look one interval before, one current and one after, and match with middle on right side */
+    {
+      if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > threshold)
+	  {
+        tdif = strip_pipe[1][i].tmR - strip_pipe[j][i].tmL;
+        if(tdif < 0) tdif = -tdif;
+        if(tdif <= nframes)
+		{
+          int it = strip_pipe[1][i].tmR; /* take timing from right, because it will match PCAL-U which was PMTs on the same side */
+          mask1(it,it) = 1;
+#ifdef DEBUG
+          cout<<"L1=> it="<<it<<", j="<<j<<", i="<<i<<", mask1="<<hex<<mask1<<dec<<endl;
+#endif
+		}
+	  }
+    }
+
+    /* layer 2 */
+    i = k*3+1;
+    for(int j=0; j<NPIPE; j++) /* on left side, look one interval before, one current and one after, and match with middle on right side */
+    {
+      if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > threshold)
+	  {
+        tdif = strip_pipe[1][i].tmR - strip_pipe[j][i].tmL;
+        if(tdif < 0) tdif = -tdif;
+        if(tdif <= nframes)
+		{
+          int it = strip_pipe[1][i].tmR; /* take timing from right, because it will match PCAL-U which was PMTs on the same side */
+          mask2(it,it) = 1;
+#ifdef DEBUG
+          cout<<"L2=> it="<<it<<", j="<<j<<", i="<<i<<", mask2="<<hex<<mask2<<dec<<endl;
+#endif
+		}
+	  }
+    }
+
+    /* layer 3 */
+    i = k*3+2;
+    for(int j=0; j<NPIPE; j++) /* on left side, look one interval before, one current and one after, and match with middle on right side */
+    {
+      if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > threshold)
+	  {
+        tdif = strip_pipe[1][i].tmR - strip_pipe[j][i].tmL;
+        if(tdif < 0) tdif = -tdif;
+        if(tdif <= nframes)
+		{
+          int it = strip_pipe[1][i].tmR; /* take timing from right, because it will match PCAL-U which was PMTs on the same side */
+          mask3(it,it) = 1;
+#ifdef DEBUG
+          cout<<"L3=> it="<<it<<", j="<<j<<", i="<<i<<", mask3="<<hex<<mask3<<dec<<endl;
+#endif
+		}
+	  }
+    }
+
+    /* L1 x L2 */
+    output[k*3]   = (mask1 & mask2) | (mask1 & (mask2<<1)) | (mask1 & (mask2>>1));
+
+    /* L2 x L3 */
+    output[k*3+1] = (mask2 & mask3) | (mask2 & (mask3<<1)) | (mask2 & (mask3>>1));
+
+    /* L1 x L2 x L3 */
+    output[k*3+2] = mask1 & mask2 & mask3;
+
+#ifdef DEBUG
+    if(output[k*3]>0)    cout<<"cndhit: output[ncoin="<<k*3<<"]="<<hex<<output[k*3]<<dec<<endl;
+    if(output[k*3+1]>0)  cout<<"cndhit: output[ncoin="<<k*3+1<<"]="<<hex<<output[k*3+1]<<dec<<endl;
+    if(output[k*3+2]>0)  cout<<"cndhit: output[ncoin="<<k*3+2<<"]="<<hex<<output[k*3+2]<<dec<<endl;
+#endif
+  }
+
+
+  /* send trigger solution */
+  for(int j=0; j<NH_READS; j++)
+  {
+    for(int i=0; i<THIRD; i++)
+    {
+      s_hit[j].output(i,i) = output[i*3](j,j);
+      s_hit[j].output(i+24,i+24) = output[i*3+1](j,j);
+      s_hit[j].output(i+48,i+48) = output[i*3+2](j,j);
+    }
+#ifdef DEBUG
+    if(s_hit[j].output>0) cout<<"cndhit: s_hit[time="<<j<<"].output="<<hex<<s_hit[j].output<<dec<<endl;
+#endif
+  }
+
+#endif
+
 }

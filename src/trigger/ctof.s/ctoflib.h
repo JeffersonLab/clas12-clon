@@ -19,6 +19,9 @@ extern "C" {
 
 #define NSTRIP 48
 
+#define NCHAN 48
+#define NHIT NSTRIP
+
 #define NBIT_OUT 16 /* the number of bits in output */
 
 #define NH_READS  8   /* the number of reads-write for streams, AND the number of 4ns intervals inside 32ns interval */
@@ -36,8 +39,10 @@ typedef ap_uint<6> nframe_t;
 #define NLR 2 /* the number of 'left-rights' */
 typedef struct ctofstrip_s
 {
-  ap_uint<NSTRIP> outL;
-  ap_uint<NSTRIP> outR;
+  ap_uint<13> enL[NSTRIP];
+  ap_uint<3>  tmL[NSTRIP];
+  ap_uint<13> enR[NSTRIP];
+  ap_uint<3>  tmR[NSTRIP];
 } CTOFStrip_s;
 
 
@@ -53,6 +58,7 @@ typedef struct
   ap_uint<NSTRIP> output[NPER];
   ap_uint<NSTANDALONEBITS> standalone[NPER];
 } CTOFHit_8slices;
+
 
 typedef struct
 {
@@ -88,8 +94,8 @@ void ctofhiteventreader(hls::stream<eventdata_t> &event_stream, CTOFHit_8slices 
 
 void ctof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<CTOFOut_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512]);
 
-void ctofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CTOFStrip_s s_strip[NH_READS]);
-void ctofhit(nframe_t nframes, CTOFStrip_s s_strip[NH_READS], CTOFHit s_hit[NH_READS]);
+void ctofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CTOFStrip_s &s_strip);
+void ctofhit(ap_uint<32> threshold, nframe_t nframes, CTOFStrip_s s_strip, CTOFHit s_hit[NH_READS]);
 void ctofhitfanout(CTOFHit s_hit[NH_READS], hls::stream<CTOFOut_8slices> &s_hits, CTOFHit s_hit2[NH_READS], volatile ap_uint<1> &hit_scaler_inc);
 void ctofhiteventfiller(CTOFHit s_hitin[NH_READS], hit_ram_t buf_ram[512]);
 void ctofhiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata3_t> &event_stream, event_ram_t buf_ram_read[2048]);

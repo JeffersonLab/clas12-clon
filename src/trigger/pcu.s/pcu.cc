@@ -16,7 +16,7 @@ using namespace std;
 #include "hls_fadc_sum.h"
 
 void
-pcu(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<PCUHit_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512])
+pcu(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<PCUHit_out> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512])
 {
 #pragma HLS INTERFACE ap_stable port=threshold
 #pragma HLS ARRAY_PARTITION variable=threshold dim=1
@@ -39,9 +39,9 @@ pcu(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fad
 #pragma HLS ARRAY_PARTITION variable=strip complete dim=1
   //#pragma HLS DATA_PACK variable=strip
 
+  ap_uint<4> outtime[NSTRIP];
+#pragma HLS ARRAY_PARTITION variable=outtime complete dim=1
 
-  PCUHit hit1[NH_READS];
-#pragma HLS ARRAY_PARTITION variable=hit1 complete dim=1
   PCUHit hit2[NH_READS];
 #pragma HLS ARRAY_PARTITION variable=hit2 complete dim=1
 
@@ -49,7 +49,7 @@ pcu(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fad
   if(nframes>NPER) nframes = NPER;
 
   pcustrips(threshold[0], s_fadcs, strip);
-  pcuhit(threshold[1], threshold[2], nframes, strip, hit1);
-  pcuhitfanout(hit1, s_hits, hit2, hit_scaler_inc);
+  pcuhit(threshold[1], threshold[2], nframes, strip, outtime);
+  pcuhitfanout(outtime, s_hits, hit2, hit_scaler_inc);
   pcuhiteventfiller(hit2, buf_ram);
 }

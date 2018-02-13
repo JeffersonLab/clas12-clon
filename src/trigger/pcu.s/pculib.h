@@ -49,10 +49,15 @@ typedef struct pcuhit
   ap_uint<NSTRIP> output;
 } PCUHit;
 
+
+
 typedef struct
 {
-  ap_uint<NSTRIP> output[NPER];
-} PCUHit_8slices;
+  ap_uint<4> output[NSTRIP];
+} PCUHit_out;
+
+
+
 
 
 
@@ -76,13 +81,13 @@ typedef struct
 
 
 
-void pcuhiteventreader(hls::stream<eventdata_t> &event_stream, PCUHit_8slices &hit, uint32_t *bufout);
+void pcuhiteventreader(hls::stream<eventdata_t> &event_stream, PCUHit_out &hit, uint32_t *bufout);
 
-void pcu(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<PCUHit_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512]);
+void pcu(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<PCUHit_out> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512]);
 
 void pcustrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, PCUStrip strip[NSTRIP]);
-void pcuhit(ap_uint<16> thresholdmin, ap_uint<16> thresholdmax, nframe_t nframes, PCUStrip strip[NSTRIP], PCUHit s_hit[NH_READS]);
-void pcuhitfanout(PCUHit s_hit[NH_READS], hls::stream<PCUHit_8slices> &s_hits, PCUHit s_hit2[NH_READS], volatile ap_uint<1> &hit_scaler_inc);
+void pcuhit(ap_uint<16> thresholdmin, ap_uint<16> thresholdmax, nframe_t nframes, PCUStrip strip[NSTRIP], ap_uint<4> outtime[NSTRIP]);
+void pcuhitfanout(ap_uint<4> outtime[NSTRIP], hls::stream<PCUHit_out> &s_hits, PCUHit s_hit2[NH_READS], volatile ap_uint<1> &hit_scaler_inc);
 void pcuhiteventfiller(PCUHit s_hitin[NH_READS], hit_ram_t buf_ram[512]);
 void pcuhiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata3_t> &event_stream, event_ram_t buf_ram_read[2048]);
 

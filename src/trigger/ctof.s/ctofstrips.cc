@@ -19,19 +19,21 @@ using namespace std;
 #include "ctoflib.h"
 
 #define TRANSLATE(ch_m) \
-      energy = fadcs.fadc[isl].e##ch_m; \
-      chan = ch_m; \
-      str    = adcstrip[isl][chan] - 1; \
-      lr     = adclr[isl][chan] - 1; \
-      timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].t##ch_m) : 8); /* error in '?' without (uint16_t) ...*/ \
-      timetmp[lr][str] = timexxx
+  energy = fadcs.fadc[isl].e##ch_m; \
+  chan = ch_m; \
+  str    = adcstrip[isl][chan] - 1; \
+  lr     = adclr[isl][chan] - 1; \
+  timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].t##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
+  energyxxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].e##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
+  timetmp[lr][str] = timexxx; \
+  energytmp[lr][str] = energyxxx
 
 
 /* 1.96/16/8/0%/0%/~0%(638)/~0%(519) II=8 */
 
 /* reads one 32-ns timing slice */
 void
-ctofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CTOFStrip_s s_strip[NH_READS])
+ctofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CTOFStrip_s &s_strip)
 {
 //#pragma HLS INTERFACE ap_stable port=strip_threshold
 //#pragma HLS DATA_PACK variable=s_fadcs
@@ -45,12 +47,17 @@ ctofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CTOF
 
   fadc_256ch_t fadcs;
 
-  ap_uint<4> timexxx;
+  ap_uint<3> timexxx;
+  ap_uint<13> energyxxx;
 
-  ap_uint<4> timetmp[2][NSTRIP]; /* 3 low bits for time interval (0-7), high bit to mark missing hits */
+  ap_uint<3> timetmp[2][NSTRIP]; /* 3 low bits for time interval (0-7) */
 #pragma HLS ARRAY_PARTITION variable=timetmp complete dim=1
 #pragma HLS ARRAY_PARTITION variable=timetmp complete dim=2
-  ap_uint<NSTRIP> out[2];
+  ap_uint<13> energytmp[2][NSTRIP];
+#pragma HLS ARRAY_PARTITION variable=energytmp complete dim=1
+#pragma HLS ARRAY_PARTITION variable=energytmp complete dim=2
+
+  ap_uint<13> out[2][NSTRIP];
 #pragma HLS ARRAY_PARTITION variable=out complete dim=1
 
 
@@ -63,9 +70,17 @@ ctofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CTOF
   for(int i=0; i<2; i++)
   {
     for(int j=0; j<NSTRIP; j++) timetmp[i][j] = 0;
-    out[i] = 0;
+    for(int j=0; j<NSTRIP; j++) energytmp[i][j] = 0;
+    for(int j=0; j<NSTRIP; j++) out[i][j] = 0;
   }
 
+  for(int j=0; j<NSTRIP; j++)
+  {
+    s_strip.enL[j] = 0;
+    s_strip.tmL[j] = 0;
+    s_strip.enR[j] = 0;
+    s_strip.tmR[j] = 0;
+  }
 
 
   /********************************************************************/
@@ -96,25 +111,17 @@ ctofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CTOF
   /************************************/
 
 
+  /* sending translated signals */
 
-  /* filling 4ns-slices using 3 timing bits, and send it over - one slice per stream, all in parallel - we are 32ns domain ! */
-
-  for(int j=0; j<NH_READS; j++)
+  for(int i=0; i<NSTRIP; i++)
   {
-    for(int k=0; k<NLR; k++)
-    {
-      for(int i=0; i<NSTRIP; i++)
-      {
-        if(timetmp[k][i]==j) out[k](i,i) = 1;
-        else                 out[k](i,i) = 0;
-      }
-    }
-
-    s_strip[j].outL = out[0];
-    s_strip[j].outR = out[1];
+    s_strip.enL[i] = energytmp[0][i];
+    s_strip.tmL[i] = timetmp[0][i];
+    s_strip.enR[i] = energytmp[1][i];
+    s_strip.tmR[i] = timetmp[1][i];
 #ifdef DEBUG
-    cout<<"ctofstrips: outL["<<j<<"]="<<hex<<s_strip[j].outL<<dec<<endl;
-    cout<<"ctofstrips: outR["<<j<<"]="<<hex<<s_strip[j].outR<<dec<<endl;
+    cout<<"ctofstrips: s_strip.enL["<<i<<"]="<<s_strip.enL[i]<<", s_strip.tmL["<<i<<"]="<<s_strip.tmL[i]<<endl;
+    cout<<"ctofstrips: s_strip.enR["<<i<<"]="<<s_strip.enR[i]<<", s_strip.tmR["<<i<<"]="<<s_strip.tmR[i]<<endl;
 #endif
   }
 

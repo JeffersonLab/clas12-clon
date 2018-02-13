@@ -104,8 +104,8 @@ pculib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
 
   hls::stream<fadc_16ch_t> s_fadc_words[NSLOT];
   hls::stream<fadc_256ch_t> s_fadcs;
-  hls::stream<PCUHit_8slices> s_hits;
-  PCUHit_8slices hit_tmp;
+  hls::stream<PCUHit_out> s_hits;
+  PCUHit_out hit_tmp;
   volatile ap_uint<1> hit_scaler_inc;
 
   hls::stream<trig_t> trig_stream;

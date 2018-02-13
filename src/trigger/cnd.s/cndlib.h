@@ -17,6 +17,7 @@ extern "C" {
 #define NSLOT 9
 
 #define NSTRIP 72
+#define NHIT NSTRIP
 
 #define NBIT_OUT 64 /* the number of bits in output */
 
@@ -33,9 +34,19 @@ typedef ap_uint<6> nframe_t;
 #define NLR 2 /* the number of 'left-rights' */
 typedef struct cndstrip_s
 {
-  ap_uint<NSTRIP> outL;
-  ap_uint<NSTRIP> outR;
+  ap_uint<13> enL;
+  ap_uint<3>  tmL;
+  ap_uint<13> enR;
+  ap_uint<3>  tmR;
 } CNDStrip_s;
+
+typedef struct cndstrip4_s
+{
+  ap_uint<13> enL;
+  ap_uint<3>  tmL;
+  ap_uint<13> enR;
+  ap_uint<3>  tmR;
+} CNDStrip4_s;
 
 
 
@@ -79,8 +90,8 @@ void cndhiteventreader(hls::stream<eventdata_t> &event_stream, CNDHit_8slices &h
 
 void cnd(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<CNDOut_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512]);
 
-void cndstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CNDStrip_s s_strip[NH_READS]);
-void cndhit(nframe_t nframes, CNDStrip_s s_strip[NH_READS], CNDHit s_hit[NH_READS]);
+void cndstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CNDStrip_s s_strip[NSTRIP]);
+void cndhit(ap_uint<32> threshold, nframe_t nframes, CNDStrip_s s_strip[NSTRIP], CNDHit s_hit[NH_READS]);
 void cndhitfanout(CNDHit s_hit[NH_READS], hls::stream<CNDOut_8slices> &s_hits, CNDHit s_hit2[NH_READS], volatile ap_uint<1> &hit_scaler_inc);
 void cndhiteventfiller(CNDHit s_hitin[NH_READS], hit_ram_t buf_ram[512]);
 void cndhiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata3_t> &event_stream, event_ram_t buf_ram_read[2048]);

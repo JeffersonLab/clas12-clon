@@ -35,12 +35,16 @@ ctof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fa
 
 #pragma HLS PIPELINE II=1
 
-  CTOFStrip_s s_strip[NH_READS];
+  CTOFStrip_s s_strip;
   CTOFHit hit1[NH_READS];
   CTOFHit hit2[NH_READS];
+  ap_uint<32> thresh;
+
+  if(nframes>NPER) nframes = NPER;
+  thresh = threshold[1]*threshold[1];
 
   ctofstrips(threshold[0], s_fadcs, s_strip);
-  ctofhit(nframes, s_strip, hit1);
+  ctofhit(thresh, nframes, s_strip, hit1);
   ctofhitfanout(hit1, s_hits, hit2, hit_scaler_inc);
   ctofhiteventfiller(hit2, buf_ram);
 }

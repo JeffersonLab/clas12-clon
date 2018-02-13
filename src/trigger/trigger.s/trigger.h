@@ -65,10 +65,10 @@
 
 /* FT */
 
-#define FT_CALO_SEED_THRESHOLD 20
-#define FT_HODO_HIT_THRESHOLD 20
+#define FT_CALO_SEED_THRESHOLD 50
+#define FT_HODO_HIT_THRESHOLD 200
 #define FT_CALO_DT 16
-#define FT_HODO_DT 10
+#define FT_HODO_DT 16
 
 
 

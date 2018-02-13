@@ -35,12 +35,19 @@ cnd(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fad
 
 #pragma HLS PIPELINE II=1
 
-  CNDStrip_s s_strip[NH_READS];
+  CNDStrip_s strip[NSTRIP];
+#pragma HLS ARRAY_PARTITION variable=strip complete dim=1
+
+
   CNDHit hit1[NH_READS];
   CNDHit hit2[NH_READS];
+  ap_uint<32> thresh;
 
-  cndstrips(threshold[0], s_fadcs, s_strip);
-  cndhit(nframes, s_strip, hit1);
+  if(nframes>NPER) nframes = NPER;
+  thresh = threshold[1]*threshold[1];
+
+  cndstrips(threshold[0], s_fadcs, strip);
+  cndhit(thresh, nframes, strip, hit1);
   cndhitfanout(hit1, s_hits, hit2, hit_scaler_inc);
   cndhiteventfiller(hit2, buf_ram);
 }

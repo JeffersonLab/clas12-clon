@@ -14,6 +14,7 @@
 #include <memory>
 
 
+
 /*******************************/
 /* uncomment desired detectors */ 
 //#define USE_ECAL
@@ -72,16 +73,16 @@ static uint16_t pc_nstripmax = 0;
 static uint16_t htcc_threshold[3] = { 1, 1, 3 };
 static uint16_t htcc_nframes = 0;
 
-static uint16_t ftof_threshold[3] = { 1, 1, 0 };
+static uint16_t ftof_threshold[3] = { 1, 1, 0 }; /* strip, sqrt(L*R) */
 static uint16_t ftof_nframes = 4;
 
 static uint16_t pcu_threshold[3] = { 1, 1, 65000}; /* strip, emin, emax */
 static uint16_t pcu_nframes = 0;
 
-static uint16_t ctof_threshold[3] = { 1, 1, 3 };
+static uint16_t ctof_threshold[3] = { 1, 1, 3 }; /* strip, sqrt(L*R) */
 static uint16_t ctof_nframes = 4;
 
-static uint16_t cnd_threshold[3] = { 1, 1, 3 };
+static uint16_t cnd_threshold[3] = { 1, 1, 3 }; /* strip, sqrt(L*R) */
 static uint16_t cnd_nframes = 4;
 
 static uint16_t ft_threshold[3] = { 1, 1, 3 };
@@ -106,6 +107,12 @@ int main(int argc, char **argv) {
 	int nhitp, nhiti, nhito, nhitp_offline, nhiti_offline, nhito_offline;
 	float tmp;
 
+
+
+	cout<<"PC_DALITZ_MAX = "<<PC_DALITZ_MAX<<endl;
+	cout<<"PC_DALITZ_MIN = "<<PC_DALITZ_MIN<<endl;
+	cout<<"PC_STRIP_DIP_FACTOR = "<<PC_STRIP_DIP_FACTOR<<endl;
+	cout<<"pc_nframes = "<<pc_nframes<<endl;
 #if 0
 
 	//Obtain connection string. You can change it to mysql://localhost for example
