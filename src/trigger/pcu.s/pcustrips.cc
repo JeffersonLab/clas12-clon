@@ -22,10 +22,13 @@ using namespace std;
   energy = fadcs.fadc[isl].e##ch_m; \
   chan = ch_m; \
   str    = adcstrip[isl][chan] - 1; \
-  timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].t##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
-  energyxxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].e##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
-  timetmp[str] = timexxx;	\
-  energytmp[str] = energyxxx
+  if(str<NSTRIP) \
+  { \
+    timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].t##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
+    energyxxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].e##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
+    timetmp[str] = timexxx;	\
+    energytmp[str] = energyxxx; \
+  }
 
   /*if(lay==0 && energy>0) cout<<"pcustrips: energy[lay="<<lay<<"][str="<<str<<"][lr="<<lr<<"]="<<energy<<endl; \
 	if(lay==0) cout<<"pcustrips: timetmp[lr="<<lr<<"][str="<<str<<"]="<<timetmp[lr][str]<<endl*/

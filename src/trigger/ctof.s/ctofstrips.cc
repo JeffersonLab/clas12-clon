@@ -42,7 +42,7 @@ ctofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CTOF
 
   ap_uint<13> energy;
   ap_uint<4> chan; /*0-15*/
-  ap_uint<6> str; /*0-61*/
+  ap_uint<6> str; /*0-47*/
   ap_uint<1> lr; /*0-1*/
 
   fadc_256ch_t fadcs;
