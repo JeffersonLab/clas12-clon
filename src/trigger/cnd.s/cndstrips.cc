@@ -19,19 +19,21 @@ using namespace std;
 #include "cndlib.h"
 
 #define TRANSLATE(ch_m) \
-      energy = fadcs.fadc[isl].e##ch_m; \
-      chan = ch_m; \
-      str    = adcstrip[isl][chan] - 1; \
-      lr     = adclr[isl][chan] - 1; \
-      timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].t##ch_m) : 8); /* error in '?' without (uint16_t) ...*/ \
-      timetmp[lr][str] = timexxx
+  energy = fadcs.fadc[isl].e##ch_m; \
+  chan = ch_m; \
+  str    = adcstrip[isl][chan] - 1; \
+  lr     = adclr[isl][chan] - 1; \
+  timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].t##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
+  energyxxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].e##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
+  timetmp[lr][str] = timexxx; \
+  energytmp[lr][str] = energyxxx
 
 
 /* 1.96/16/8/0%/0%/~0%(638)/~0%(519) II=8 */
 
 /* reads one 32-ns timing slice */
 void
-cndstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CNDStrip_s s_strip[NH_READS])
+cndstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CNDStrip_s strip[NSTRIP])
 {
 //#pragma HLS INTERFACE ap_stable port=strip_threshold
 //#pragma HLS DATA_PACK variable=s_fadcs
@@ -45,13 +47,19 @@ cndstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CNDSt
 
   fadc_256ch_t fadcs;
 
-  ap_uint<4> timexxx;
+  ap_uint<3> timexxx;
+  ap_uint<13> energyxxx;
 
-  ap_uint<4> timetmp[2][NSTRIP]; /* 3 low bits for time interval (0-7), high bit to mark missing hits */
+  ap_uint<3> timetmp[2][NSTRIP]; /* 3 low bits for time interval (0-7), high bit to mark missing hits */
 #pragma HLS ARRAY_PARTITION variable=timetmp complete dim=1
 #pragma HLS ARRAY_PARTITION variable=timetmp complete dim=2
-  ap_uint<NSTRIP> out[2];
+  ap_uint<13> energytmp[2][NSTRIP];
+#pragma HLS ARRAY_PARTITION variable=energytmp complete dim=1
+#pragma HLS ARRAY_PARTITION variable=energytmp complete dim=2
+
+  ap_uint<13> out[2][NSTRIP];
 #pragma HLS ARRAY_PARTITION variable=out complete dim=1
+#pragma HLS ARRAY_PARTITION variable=out complete dim=2
 
 
 
@@ -63,9 +71,17 @@ cndstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CNDSt
   for(int i=0; i<2; i++)
   {
     for(int j=0; j<NSTRIP; j++) timetmp[i][j] = 0;
-    out[i] = 0;
+    for(int j=0; j<NSTRIP; j++) energytmp[i][j] = 0;
+    for(int j=0; j<NSTRIP; j++) out[i][j] = 0;
   }
 
+  for(int j=0; j<NSTRIP; j++)
+  {
+    strip[j].enL = 0;
+    strip[j].tmL = 0;
+    strip[j].enR = 0;
+    strip[j].tmR = 0;
+  }
 
 
   /********************************************************************/
@@ -96,22 +112,18 @@ cndstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CNDSt
   /************************************/
 
 
+  /* sending translated signals */
 
-  /* filling 4ns-slices using 3 timing bits, and send it over - one slice per stream, all in parallel - we are 32ns domain ! */
-
-  for(int j=0; j<NH_READS; j++)
+  for(int i=0; i<NSTRIP; i++)
   {
-    for(int k=0; k<NLR; k++)
-    {
-      for(int i=0; i<NSTRIP; i++)
-      {
-        if(timetmp[k][i]==j) out[k](i,i) = 1;
-        else                 out[k](i,i) = 0;
-      }
-    }
-
-    s_strip[j].outL = out[0];
-    s_strip[j].outR = out[1];
+    strip[i].enL = energytmp[0][i];
+    strip[i].tmL = timetmp[0][i];
+    strip[i].enR = energytmp[1][i];
+    strip[i].tmR = timetmp[1][i];
+#ifdef DEBUG
+    cout<<"cndstrips: strip["<<i<<"].enL="<<strip[i].enL<<", strip["<<i<<"].tmL="<<strip[i].tmL<<endl;
+    cout<<"cndstrips: strip["<<i<<"].enR="<<strip[i].enR<<", strip["<<i<<"].tmR="<<strip[i].tmR<<endl;
+#endif
   }
 
 
