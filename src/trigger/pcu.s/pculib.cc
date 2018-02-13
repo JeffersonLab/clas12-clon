@@ -55,7 +55,7 @@ pcuhiteventreader(hls::stream<eventdata3_t> &event_stream, PCUHit hit[MAXTIMES],
     word_first = eventdata.data[0](31,31); /* 1 for the first word in hit, 0 for followings */
     tag = eventdata.data[0](30,27); /* must be 'PCUHIT_TAG' */
     j = eventdata.data[0](18,16); /* 3 lowest bits of timing */
-	hit[j].output(67,62) = eventdata.data[1](5,0);
+	hit[j].output(67,62) = eventdata.data[0](5,0);
 
     *bufptr++ = eventdata.data[1];
 	hit[j].output(61,31) = eventdata.data[1](30,0);
