@@ -17,17 +17,14 @@
 
 /*******************************/
 /* uncomment desired detectors */ 
-#define USE_ECAL
+//#define USE_ECAL
 #define USE_PCAL
-#define USE_HTCC
+//#define USE_HTCC
 #define USE_FTOF
-#define USE_CTOF
-#define USE_CND
-#define USE_FT
+//#define USE_CTOF
+//#define USE_CND
+//#define USE_FT
 #define USE_PCU
-
-
-
 
 using namespace std;
 
@@ -66,7 +63,8 @@ static uint16_t ec_dalitzmax = (74<<3)/*EC_DALITZ_MAX*/;
 static uint16_t ec_nstripmax = 0;
 
 static uint16_t pc_threshold[3] = { 1, 1, 3 };
-static uint16_t pc_nframes = 2;
+static uint16_t pc_nframes = 3;
+
 static uint16_t pc_dipfactor = PC_STRIP_DIP_FACTOR;
 static uint16_t pc_dalitzmin = PC_DALITZ_MIN;
 static uint16_t pc_dalitzmax = PC_DALITZ_MAX;
@@ -109,6 +107,12 @@ int main(int argc, char **argv) {
 	int nhitp, nhiti, nhito, nhitp_offline, nhiti_offline, nhito_offline;
 	float tmp;
 
+
+
+	cout<<"PC_DALITZ_MAX = "<<PC_DALITZ_MAX<<endl;
+	cout<<"PC_DALITZ_MIN = "<<PC_DALITZ_MIN<<endl;
+	cout<<"PC_STRIP_DIP_FACTOR = "<<PC_STRIP_DIP_FACTOR<<endl;
+	cout<<"pc_nframes = "<<pc_nframes<<endl;
 #if 0
 
 	//Obtain connection string. You can change it to mysql://localhost for example
@@ -183,6 +187,12 @@ int main(int argc, char **argv) {
 	}
 
 	maxevents = MAXEVENTS;
+
+	if( argc >= 3 ){
+	  maxevents = atoi(argv[2]);
+	  cout<<"Number of events to process is "<<maxevents<<endl;
+	}
+
 
 	iev = 0;
 	while (iev < maxevents) {
