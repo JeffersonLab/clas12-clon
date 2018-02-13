@@ -47,7 +47,7 @@ pcustrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, PCUSt
   ap_uint<13> energy;
   ap_uint<4> chan; /*0-15*/
   ap_uint<2> lay; /*0-2*/
-  ap_uint<6> str; /*0-61*/
+  ap_uint<7> str; /*0-67*/
 
   fadc_256ch_t fadcs;
 
