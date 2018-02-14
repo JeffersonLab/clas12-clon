@@ -232,7 +232,7 @@ ii=67 jj=82 - does not exist
 /* 1.38/0/1/0%/0%/0%/0% */
 
 inline void
-pc_norm_u(ap_uint<13> stripin[NSTRIP], ap_uint<13> stripout[NF1*NH_READS*2])
+pc_norm_u(ap_uint<13> stripin[NSTRIP0], ap_uint<13> stripout[NF1*NH_READS*2])
 {
 #pragma HLS ARRAY_PARTITION variable=stripin complete dim=1
 #pragma HLS ARRAY_PARTITION variable=stripout complete dim=1
@@ -247,20 +247,20 @@ pc_norm_u(ap_uint<13> stripin[NSTRIP], ap_uint<13> stripout[NF1*NH_READS*2])
   {
     ii = jj*2;
     stripout[jj] = stripin[ii] + stripin[ii+1];
-	//printf("ii=%d jj=%d\n",ii,jj);
+	/*printf("1: jj=%d -> ii=%d+%d\n",jj,ii,ii+1);*/
   }
-  for(jj=26; jj<NSTRIP; jj+=2)
+  for(jj=26; jj<NSTRIP; jj++)
   {
     ii = jj+26;
     stripout[jj] = stripin[ii];
-    //printf("ii=%d jj=%d(%d)\n",ii,jj-1,jj);
+	/*printf("2: jj=%d -> ii=%d\n",jj,ii);*/
   }
 }
 
 
 
 inline void
-pc_norm_vw(ap_uint<13> stripin[NSTRIP], ap_uint<13> stripout[NF1*NH_READS*2])
+pc_norm_vw(ap_uint<13> stripin[NSTRIP0], ap_uint<13> stripout[NF1*NH_READS*2])
 {
 #pragma HLS ARRAY_PARTITION variable=stripin complete dim=1
 #pragma HLS ARRAY_PARTITION variable=stripout complete dim=1
@@ -275,17 +275,18 @@ pc_norm_vw(ap_uint<13> stripin[NSTRIP], ap_uint<13> stripout[NF1*NH_READS*2])
   {
     ii = jj;
     stripout[jj] = stripin[ii];
-	//printf("ii=%d jj=%d(%d)\n",ii,jj,jj+1);
+	/*printf("3: jj=%d -> ii=%d\n",jj,ii);*/
   }
 
   for(jj=15; jj<=37; jj++)
   {
     ii = jj + (jj-15);
     stripout[jj] = stripin[ii] + stripin[ii+1];
-	//printf("ii=%d jj=%d\n",ii,jj);
+	/*printf("4: jj=%d -> ii=%d+%d\n",jj,ii,ii+1);*/
   }
 
   stripout[38] = stripin[61];
+  /*printf("5: jj=%d -> ii=%d\n",38,61);*/
 }
 
 

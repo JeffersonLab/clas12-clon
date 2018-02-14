@@ -38,11 +38,11 @@ using namespace std;
 #include "trigger.h"
 
 
-//#define DEBUG
+#define DEBUG
 #define DEBUG_0
-//#define DEBUG_1
-//#define DEBUG_2 /* hardware trigger info */
-//#define DEBUG_3
+#define DEBUG_1
+#define DEBUG_2 /* hardware trigger info */
+#define DEBUG_3
 
 
 #define MAX(a,b)    (a > b ? a : b)
@@ -850,7 +850,7 @@ eclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_, uint16_t dipf
       {
         for(jj=0; jj<npeaks_trig[ii]; jj++)
 	    {
-          cout<<"TRIG PEAK ["<<+ii<<"]["<<+jj<<"]:  coord="<<peaks_trig[ii][jj].coord<<"   energy="<<peaks_trig[ii][jj].energy<<"   time="<<peaks_trig[ii][jj].time<<endl;
+          cout<<"TRIG PEAK ["<<+ii<<"]["<<+jj<<"]:  coord="<<peaks_trig[ii][jj].coord<<"(strip "<<eccoord2strip(ii,peaks_trig[ii][jj].coord)<<")   energy="<<peaks_trig[ii][jj].energy<<"   time="<<peaks_trig[ii][jj].time<<endl;
 	    }
       }
 

@@ -18,13 +18,13 @@
 /*******************************/
 /* uncomment desired detectors */ 
 //#define USE_ECAL
-//#define USE_PCAL
+#define USE_PCAL
 //#define USE_HTCC
 //#define USE_FTOF
 //#define USE_CTOF
 //#define USE_CND
 //#define USE_FT
-#define USE_PCU
+//#define USE_PCU
 
 using namespace std;
 
@@ -62,12 +62,12 @@ static uint16_t ec_dalitzmin = (69<<3)/*EC_DALITZ_MIN*/;
 static uint16_t ec_dalitzmax = (74<<3)/*EC_DALITZ_MAX*/;
 static uint16_t ec_nstripmax = 0;
 
+/* dalitz around 462 ??*/
 static uint16_t pc_threshold[3] = { 1, 1, 3 };
 static uint16_t pc_nframes = 3;
-
-static uint16_t pc_dipfactor = PC_STRIP_DIP_FACTOR;
-static uint16_t pc_dalitzmin = PC_DALITZ_MIN;
-static uint16_t pc_dalitzmax = PC_DALITZ_MAX;
+static uint16_t pc_dipfactor = 1/*PC_STRIP_DIP_FACTOR*/;
+static uint16_t pc_dalitzmin = (440.)/*PC_DALITZ_MIN*/;
+static uint16_t pc_dalitzmax = (480.)/*PC_DALITZ_MAX*/;
 static uint16_t pc_nstripmax = 0;
 
 static uint16_t htcc_threshold[3] = { 1, 1, 3 };

@@ -151,7 +151,7 @@ ecpeak1(ap_uint<16> strip_threshold, ap_uint<4> strip_dip_factor, ap_uint<4> nst
 
   /*temporary assumed NSTRIP=42*/
   const int b2[4] = {  2, 13, 24, 35};
-  const int e2[4] = { 12, 23, 34, 42/*45 bad*/};
+  const int e2[4] = { 12, 23, 34, 43/*42*//*45 bad*/};
 
 #else
   /*NF1=5 for ECAL, so we are reading 10 strips every 'j' iteration*/

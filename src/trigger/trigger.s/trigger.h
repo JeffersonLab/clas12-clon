@@ -57,7 +57,7 @@
 #define PC_STRIP_DIP_FACTOR 1
 #define PC_NSTRIPMAX 0
 
-#define ABC (80*81*2/28./*UVWDIV*/) /* about 925 */
+#define ABC (80*81*2/28./*UVWDIV*/) /* about 925 (462)*/
 #define PC_DALITZ_MIN (ABC-ABC/50) /* -2% */
 #define PC_DALITZ_MAX (ABC+ABC/50) /* +2% */
 
