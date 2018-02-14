@@ -58,8 +58,9 @@ static char *msql_database     	 = (char*)"clasrun";
 static int gmd_time              = 3;
 static int filep               	 = 0;
 
-int run_number;
-int run_number_previous;
+static int run_number;
+static int run_number_previous;
+static char *config;
 
 
 #define MAXLABELS 16
@@ -84,6 +85,7 @@ char *session;
 extern "C"
 {
   char *get_run_operators(char *, char *);
+  void get_run_config(char *msql_database, char *session, int *run, char **config, char **, char **);
   int get_run_number(char *, char *);
 }
 void create_sql(strstream &rlb_string);
@@ -244,6 +246,13 @@ main (int argc, char *argv[])
   
   /* run number */
   run_number = get_run_number(expid, session);
+  {
+    int run;
+    char *confil;
+    char *datafile;
+    get_run_config(expid,session,&run,&config,&confil,&datafile);
+    printf("config >%s<\n",config);
+  }
 
   /* open gui */
   XtSetLanguageProc (NULL, NULL, NULL);
@@ -331,6 +340,16 @@ main (int argc, char *argv[])
 	  {
         sprintf(temp,"%d",run_number);
         values[i] = strdup(temp);
+        XmTextFieldSetString(text[i],values[i]);
+	  }
+      else if(!strcmp(labels[i],"Run Type"))
+	  {
+        values[i] = config;
+        XmTextFieldSetString(text[i],values[i]);
+	  }
+      else if(!strcmp(labels[i],"Target"))
+	  {
+        values[i] = strdup("LH2");
         XmTextFieldSetString(text[i],values[i]);
 	  }
       else if(!strcmp(labels[i],"Operators"))

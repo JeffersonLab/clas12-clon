@@ -20,7 +20,7 @@ using namespace std;
 #include "trigger.h"
 
 
-//#define DEBUG
+#define DEBUG
 
 
 #define MAX(a,b)    (a > b ? a : b)
@@ -117,7 +117,9 @@ ftoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
   {
     ret = fadcs(bufptr, threshold[0], sec, detector, s_fadc_words, 0, 0, &iev, &timestamp);
     if(ret<=0) continue;
-
+#ifdef DEBUG
+    printf("FTOF sec=%d\n",sec);
+#endif
     trig.t_stop = trig.t_start + MAXTIMES*NH_READS; /* set readout window MAXTIMES*32ns in 4ns ticks */
     trig_stream.write(trig);
 

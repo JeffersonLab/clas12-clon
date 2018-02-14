@@ -142,6 +142,8 @@ class MessageActionJSON : public MessageAction {
             //"test",
             "beam_current",
 
+            "half_wave_plate",
+
             "torus_current",
             "solenoid_current",
 

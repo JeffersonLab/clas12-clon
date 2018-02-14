@@ -429,6 +429,7 @@ create_sql(strstream &rlb)
     float solenoid_current = epics_val[3];
     float solenoid_scale = solenoid_current / -2416.0;
     float target_position = 0.0;
+    int32_t half_wave_plate = epics_val[4];
 
     int32_t event_count = 0;
     float events_rate = 0.0;
@@ -490,6 +491,8 @@ create_sql(strstream &rlb)
             {"beam_energy", beam_energy},
             //{"test", test},
             {"beam_current", beam_current},
+
+            {"half_wave_plate", half_wave_plate},
 
             {"torus_current", torus_current},
             {"solenoid_current", solenoid_current},

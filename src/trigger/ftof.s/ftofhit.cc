@@ -49,11 +49,11 @@ ftofhit(ap_uint<32> threshold, nframe_t nframes, FTOFStrip_s s_strip, FTOFHit s_
 
 #ifdef DEBUG
   printf("== ftofhit start ==\n");
-    for(int i=0; i<NSTRIP; i++)
-    {
-      if(s_strip.enL[i]>0) cout<<"ftofhit: s_strip.enL["<<i<<"]="<<s_strip.enL[i]<<", s_strip.tmL["<<i<<"]="<<s_strip.tmL[i]<<endl;
-      if(s_strip.enR[i]>0) cout<<"ftofhit: s_strip.enR["<<i<<"]="<<s_strip.enR[i]<<", s_strip.tmR["<<i<<"]="<<s_strip.tmR[i]<<endl;
-    }
+  for(int i=0; i<NSTRIP; i++)
+  {
+    if(s_strip.enL[i]>0) cout<<"ftofhit: s_strip.enL["<<i<<"]="<<s_strip.enL[i]<<", s_strip.tmL["<<i<<"]="<<s_strip.tmL[i]<<endl;
+    if(s_strip.enR[i]>0) cout<<"ftofhit: s_strip.enR["<<i<<"]="<<s_strip.enR[i]<<", s_strip.tmR["<<i<<"]="<<s_strip.tmR[i]<<endl;
+  }
 #endif
 
   /* shift whole pipe to the right ([1]->[2], [0]->[1]) */
@@ -99,12 +99,13 @@ ftofhit(ap_uint<32> threshold, nframe_t nframes, FTOFStrip_s s_strip, FTOFHit s_
   for(int i=0; i<NSTRIP; i++) /* loop over all counters */
   {
     ap_uint<NPER> mask = 0;
+    const int add[NPIPE] = {16, 8, 0}; /* add 16 to interval [0] and 8 to interval [1], to get consequative numbering from 0 to 23 */
 
     for(int j=0; j<NPIPE; j++) /* on left side, look one interval before, one current and one after, and match with middle on right side */
     {
       if( (strip_pipe[1].enR[i]*strip_pipe[j].enL[i]) > threshold)
 	  {
-        tdif = strip_pipe[j].tmL[i]-strip_pipe[1].tmR[i];
+        tdif = (strip_pipe[j].tmL[i]+add[j])-(strip_pipe[1].tmR[i]+add[1]);
 #ifdef DEBUG
         cout<<"=> tdif1="<<tdif<<endl;
 #endif
@@ -133,11 +134,11 @@ ftofhit(ap_uint<32> threshold, nframe_t nframes, FTOFStrip_s s_strip, FTOFHit s_
     {
       s_hit[j].output(i,i) = output[i](j,j);
     }
-  }
-}
-
-/*
 #ifdef DEBUG
-    if(output[j]>0) cout<<"ftofhit: output["<<j<<"]="<<hex<<output[j]<<dec<<endl;
+    if(s_hit[j].output>0) cout<<"ftofhit: s_hit["<<j<<"].output="<<hex<<s_hit[j].output<<dec<<endl;
 #endif
-*/
+  }
+#ifdef DEBUG
+  printf("== ftofhit ends ==\n");
+#endif
+}

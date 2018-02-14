@@ -158,6 +158,7 @@ cndhit(ap_uint<32> threshold, nframe_t nframes, CNDStrip_s strip[NSTRIP], CNDHit
     ap_uint<NPER> mask2 = 0;
     ap_uint<NPER> mask3 = 0;
     int i;
+    const int add[NPIPE] = {16, 8, 0}; /* add 16 to interval [0] and 8 to interval [1], to get consequative numbering from 0 to 23 */
 
     /* layer 1 */
     i = k*3;
@@ -165,7 +166,7 @@ cndhit(ap_uint<32> threshold, nframe_t nframes, CNDStrip_s strip[NSTRIP], CNDHit
     {
       if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > threshold)
 	  {
-        tdif = strip_pipe[1][i].tmR - strip_pipe[j][i].tmL;
+        tdif = strip_pipe[1][i].tmR+add[1] - strip_pipe[j][i].tmL+add[j];
         if(tdif < 0) tdif = -tdif;
         if(tdif <= nframes)
 		{
@@ -184,7 +185,7 @@ cndhit(ap_uint<32> threshold, nframe_t nframes, CNDStrip_s strip[NSTRIP], CNDHit
     {
       if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > threshold)
 	  {
-        tdif = strip_pipe[1][i].tmR - strip_pipe[j][i].tmL;
+        tdif = strip_pipe[1][i].tmR+add[1] - strip_pipe[j][i].tmL+add[j];
         if(tdif < 0) tdif = -tdif;
         if(tdif <= nframes)
 		{
@@ -203,7 +204,7 @@ cndhit(ap_uint<32> threshold, nframe_t nframes, CNDStrip_s strip[NSTRIP], CNDHit
     {
       if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > threshold)
 	  {
-        tdif = strip_pipe[1][i].tmR - strip_pipe[j][i].tmL;
+        tdif = strip_pipe[1][i].tmR+add[1] - strip_pipe[j][i].tmL+add[j];
         if(tdif < 0) tdif = -tdif;
         if(tdif <= nframes)
 		{
