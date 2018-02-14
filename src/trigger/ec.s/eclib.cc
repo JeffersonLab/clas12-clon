@@ -38,11 +38,11 @@ using namespace std;
 #include "trigger.h"
 
 
-#define DEBUG
+//#define DEBUG
 #define DEBUG_0
-#define DEBUG_1
-#define DEBUG_2 /* hardware trigger info */
-#define DEBUG_3
+//#define DEBUG_1
+//#define DEBUG_2 /* hardware trigger info */
+//#define DEBUG_3
 
 
 #define MAX(a,b)    (a > b ? a : b)

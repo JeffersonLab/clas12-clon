@@ -9,7 +9,7 @@
 #include <iostream>
 using namespace std;
 
-#define DEBUG
+//#define DEBUG
 
 #include "evio.h"
 #include "evioBankUtil.h"
@@ -30,35 +30,40 @@ static int fragnum;
 int
 trigbank_open(uint32_t *bufptr, int fragtag, int banktag, int iev, unsigned long long timestamp)
 {
-	GET_PUT_INIT;
-	int banknum = BANKNUM;
-	int ind,
-	ind_data, ret;
-	uint32_t word;
+  GET_PUT_INIT;
+  int banknum = BANKNUM;
+  int ind,
+  ind_data, ret;
+  uint32_t word;
 
-	fragnum = FRAGNUM;
+  fragnum = FRAGNUM;
 
-	ind = evLinkFrag(bufptr, fragtag, fragnum);
-	if (ind <= 0) {
-		/*printf("Fragment %d does not exist - create one\n",fragtag);*/
-		ind = evOpenFrag(bufptr, fragtag, fragnum);
-		if (ind <= 0) {
-			printf("ERROR: cannot create fragment %d - exit\n", fragtag);
-			exit(0);
-		}
+  ind = evLinkFrag(bufptr, fragtag, fragnum);
+  if (ind <= 0)
+  {
+	/*printf("Fragment %d does not exist - create one\n",fragtag);*/
+	ind = evOpenFrag(bufptr, fragtag, fragnum);
+	if (ind <= 0)
+    {
+	  printf("ERROR: cannot create fragment %d - exit\n", fragtag);
+	  exit(0);
+	}
 #ifdef DEBUG
-		else {
-			printf("Created fragment fragtag=%d fragnum=%d\n", fragtag, fragnum);
-		}
+	else
+    {
+	  printf("Created fragment fragtag=%d fragnum=%d\n", fragtag, fragnum);
+	}
 #endif
-	} else {
-		printf("Fragment %d banktag %d iev %d exist already : ind=%d - exit\n", fragtag, banktag, iev, ind);
-		fflush(stdout);
-		//exit(0);
-		fragnum = fragnum + 1;
-		ind = evOpenFrag(bufptr, fragtag, fragnum);
-		printf("Here");
-		fflush(stdout);
+	}
+    else
+    {
+	  printf("Fragment %d number %d banktag %d iev %d exist already : ind=%d - exit\n", fragtag, fragnum, banktag, iev, ind);
+      fflush(stdout);
+	  //exit(0);
+	  fragnum = fragnum + 1;
+	  ind = evOpenFrag(bufptr, fragtag, fragnum);
+	  printf("Creating Fragment %d\n",fragnum);
+	  fflush(stdout);
 	}
 
 	ret = evOpenBank(bufptr, fragtag, fragnum, banktag, BANKNUM, BANKTYP, "", &ind_data);
@@ -121,8 +126,7 @@ trigbank_open(uint32_t *bufptr, int fragtag, int banktag, int iev, unsigned long
 int
 trigbank_write(uint32_t *data)
 {
-	GET_PUT_INIT
-	;
+	GET_PUT_INIT;
 
 	b08out = b08out_save;
 

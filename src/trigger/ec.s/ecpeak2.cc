@@ -28,6 +28,7 @@ using namespace std;
 
 
 //#define DEBUG
+//#define DEBUG_1
 
 
 
@@ -128,7 +129,7 @@ ecpeak2(ap_uint<16> peak_threshold, hls::stream<ECStrip_s> s_strip2[NF1],
 #pragma HLS ARRAY_PARTITION variable=peak_energysum4coord complete dim=1
 
 
-#ifdef DEBUG
+#if defined(DEBUG) || defined(DEBUG_1)
   printf("\n+++ ecpeak2 +++\n");
   cout<<"  peak_threshold="<<peak_threshold<<endl;
 #endif
@@ -251,7 +252,7 @@ cout<<"CLOSE_PEAK: last["<<i<<"] = "<<last[i]<<endl;
     }
   }
 
-#ifdef DEBUG
+#if defined(DEBUG) || defined(DEBUG_1)
   for(int i=0; i<NSTRIP; i++) cout<<" peak["<<i<<"]: energy="<<peak[i].energy<<" energysum4coord="<<peak[i].energysum4coord<<" strip1="<<peak[i].strip1<<" stripn="<<peak[i].stripn<<endl;
   printf("\n+++ ecpeak2 +++\n");
 #endif
