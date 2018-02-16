@@ -24,8 +24,8 @@ using namespace std;
   lay    = adclayer[isl][chan] - 1; \
   str    = adcstrip[isl][chan] - 1; \
   lr     = adclr[isl][chan] - 1; \
-  timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].t##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
-  energyxxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].e##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
+  timexxx = ((energy >= strip_threshold) ? ((uint16_t)fadcs.fadc[isl].t##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
+  energyxxx = ((energy >= strip_threshold) ? ((uint16_t)fadcs.fadc[isl].e##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
   if(lay==0) \
   { \
     timetmp[lr][str] = timexxx;	\

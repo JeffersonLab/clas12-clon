@@ -24,8 +24,8 @@ using namespace std;
   str    = adcstrip[isl][chan] - 1; \
   if(str<NSTRIP) \
   { \
-    timexxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].t##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
-    energyxxx = ((energy >= strip_threshold) ? ((uint8_t)fadcs.fadc[isl].e##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
+    timexxx = ((energy >= strip_threshold) ? ((uint16_t)fadcs.fadc[isl].t##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
+    energyxxx = ((energy >= strip_threshold) ? ((uint16_t)fadcs.fadc[isl].e##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
     timetmp[str] = timexxx;	\
     energytmp[str] = energyxxx; \
   }

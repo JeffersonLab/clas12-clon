@@ -74,7 +74,7 @@ static uint16_t htcc_threshold[3] = { 1, 1, 3 };
 static uint16_t htcc_nframes = 0;
 
 static uint16_t ftof_threshold[3] = { 1, 1, 0 }; /* strip, sqrt(L*R) */
-static uint16_t ftof_nframes = 4;
+static uint16_t ftof_nframes = 5;
 
 static uint16_t pcu_threshold[3] = { 1, 1, 65000}; /* strip, emin, emax */
 static uint16_t pcu_nframes = 0;

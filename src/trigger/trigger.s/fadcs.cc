@@ -293,7 +293,7 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 						&dd[9], &dd[10], &dd[11], &dd[12], &dd[13], &dd[14], &dd[15]);
 
 				for (chan = 0; chan < 16; chan++) {
-					tet[det][sec][slot][chan] = dd[chan];
+				  tet[det][sec][slot][chan] = dd[chan]/* -10*/;
 #ifdef DEBUG_3
 					printf("tet[%d][%d][%d][%d]=%d\n",det,sec,slot,chan,tet[det][sec][slot][chan]);fflush(stdout);
 #endif
@@ -511,6 +511,9 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 						} else if (isl<0) {
 						  printf("fadcs: WARN: isl=%d (slot=%d) - ignore the hit\n", isl, slot);
 						} else {
+#ifdef DEBUG_1
+						    cout<<"fadcs: ACCEPT HIT: it="<<it<<", isl="<<isl<<", chan="<<chan<<", ee="<<ee<<", tt="<<tt<<endl;
+#endif
 							if (chan == 0) {
 								fadcs[it][isl].e0 = ee;
 								fadcs[it][isl].t0 = tt;

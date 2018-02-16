@@ -109,11 +109,12 @@ cndhit(ap_uint<32> threshold, nframe_t nframes, CNDStrip_s strip[NSTRIP], CNDHit
   for(int i=0; i<NSTRIP; i++) /* loop over all counters */
   {
     ap_uint<NPER> mask = 0;
+    const int add[NPIPE] = {16, 8, 0}; /* add 16 to interval [0] and 8 to interval [1], to get consequative numbering from 0 to 23 */
     for(int j=0; j<NPIPE; j++) /* on left side, look one interval before, one current and one after, and match with middle on right side */
     {
       if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > threshold)
 	  {
-        tdif = strip_pipe[1][i].tmR - strip_pipe[j][i].tmL;
+        tdif = strip_pipe[1][i].tmR+add[1] - strip_pipe[j][i].tmL+add[j];
 #ifdef DEBUG
         cout<<"=> tdif1="<<tdif<<endl;
 #endif
