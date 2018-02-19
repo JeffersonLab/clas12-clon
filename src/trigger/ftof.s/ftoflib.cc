@@ -109,6 +109,7 @@ ftoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
   hls::stream<eventdata3_t> event_stream;
   FTOFHit_8slices hit;
 
+  int s_hits_empty;
   uint32_t bufout[2048];
 
   int detector = FTOF;
@@ -128,10 +129,15 @@ ftoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
       fadcs_to_onestream(NSLOT, s_fadc_words, s_fadcs);
       ftof(threshold, nframes, s_fadcs, s_hits, hit_scaler_inc, buf_ram);
 
+      if(s_hits.empty()) s_hits_empty = 1;
+      else               s_hits_empty = 0;
+
       /* read hits to avoid 'leftover' warnings */
-      hit_tmp = s_hits.read();
+      if(!s_hits_empty) hit_tmp = s_hits.read();
     }
 
+  if(!s_hits_empty)
+  {
     ftof_buf_ram_to_event_buf_ram(buf_ram, event_buf_ram);
     ftofhiteventwriter(trig_stream, event_stream, event_buf_ram);
     ftofhiteventreader(event_stream, hit, bufout);
@@ -146,7 +152,7 @@ ftoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
       trigbank_write(bufout);
       trigbank_close(bufout[0]);
 	}
-
+  }
 
     trig.t_start += MAXTIMES*8; /* in preparation for next event, step up MAXTIMES*32ns in 4ns ticks */
   }

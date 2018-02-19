@@ -128,7 +128,7 @@ ctoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
       ctof(threshold, nframes, s_fadcs, s_hits, hit_scaler_inc, buf_ram);
 
       /* read hits to avoid 'leftover' warnings */
-      hit_tmp = s_hits.read();
+      if(!s_hits.empty()) hit_tmp = s_hits.read();
     }
 
     ctof_buf_ram_to_event_buf_ram(buf_ram, event_buf_ram);
