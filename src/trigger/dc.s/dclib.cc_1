@@ -1,0 +1,588 @@
+
+/* dclib.cc */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <math.h>
+
+#include <iostream>
+using namespace std;
+
+#include "evio.h"
+#include "evioBankUtil.h"
+
+#include "dclib.h"
+#include "dctrans.h"
+
+#include "hls_fadc_sum.h"
+#include "trigger.h"
+
+
+#define DEBUG
+
+
+#define MAX(a,b)    (a > b ? a : b)
+#define MIN(a,b)    (a < b ? a : b)
+
+
+
+
+#if 0 /* dcrb event builder from Ben */
+#include <hls_stream.h>
+#include <ap_int.h>
+
+typedef struct
+{
+  ap_uint<11> t_start;
+  ap_uint<11> t_stop;
+} trig_t;
+
+#define TAG_DC_ROAD   0xC0
+
+typedef ap_uint<71> eventram_t;
+typedef ap_uint<33> eventdata_t;
+
+#define S_IDLE    0
+#define S_WRITE_0 1
+#define S_WRITE_1 2
+#define S_WRITE_2 3
+#define S_END     4
+
+void dcrbroadfinder_eb_hls(
+    eventram_t eventram[512],
+    hls::stream<trig_t> &trigger_stream,
+    hls::stream<eventdata_t> &eventdata_stream
+  )
+{
+  static ap_uint<9> pos, t;
+  static ap_uint<3> state = S_IDLE;
+  static trig_t trigger_data;
+  static eventram_t eventram_word;
+  eventdata_t eventdata;
+
+  switch(state)
+  {
+    case S_IDLE:
+      trigger_data = trigger_stream.read();
+      pos = trigger_data.t_start(10,2);
+      t = 0;
+      state = S_WRITE_0;
+      break;
+
+    case S_WRITE_0:
+      eventram_word = eventram[pos];
+
+      if(eventram_word)
+      {
+        // word 0
+        eventdata(32,32)  = 0;                    // end-of-event flag
+        eventdata(31,31)  = 1;                    // data-defining flag
+        eventdata(30,23)  = TAG_DC_ROAD;          // data type (0xC0)
+        eventdata(22,17)  = eventram_word(70,65); // sl6,sl5,...,sl1
+        eventdata(16,12)  = 0;                    // unused
+        eventdata(11,11)  = eventram_word[62];    // road_inbend
+        eventdata(10,10)  = eventram_word[63];    // road_outbend
+        eventdata(9,9)    = eventram_word[64];    // road_valid
+        eventdata(8,0)    = t;                    // time
+
+        eventdata_stream.write(eventdata);
+      }
+
+      pos++;
+      t++;
+
+      state = S_WRITE_1;
+      break;
+
+    case S_WRITE_1:
+      if(eventram_word)
+      {
+        eventdata(32,32)  = 0;                    // end-of-event flag
+        eventdata(31,31)  = 0;                    // data-defining flag
+        eventdata(30,0)   = eventram_word(61,31); // data type
+
+        eventdata_stream.write(eventdata);
+      }
+
+      state = S_WRITE_2;
+      break;
+
+    case S_WRITE_2:
+      if(eventram_word)
+      {
+        eventdata(32,32)  = 0;                    // end-of-event flag
+        eventdata(31,31)  = 0;                    // data-defining flag
+        eventdata(30,0)   = eventram_word(30,0);  // data type
+
+        eventdata_stream.write(eventdata);
+      }
+
+      if(pos == trigger_data.t_stop(10,2))
+        state = S_END;
+      else
+        state = S_WRITE_0;
+
+      break;
+
+    case S_END:
+      state = S_IDLE;
+
+      eventdata(32,32)        = 1;          // end-of-event flag
+      eventdata(31,0)         = 0;          // n/a
+      eventdata_stream.write(eventdata);
+      break;
+  }
+}
+#endif
+
+
+
+
+
+void
+dcsegmenteventreader(hls::stream<eventdata10_t> &event_stream, DCSegment segm[2], uint32_t *bufout)
+{
+  eventdata10_t eventdata;
+  uint32_t data_end, word_first, tag, inst, view, data, *bufptr = bufout + 1;
+  int j, isl;
+  while(1)
+  {
+    if(event_stream.empty())
+    {
+      bufout[0] = 0;
+      printf("dcsegmenteventreader: EMPTY STREAM ERROR1\n");
+      break;
+    }
+
+    eventdata = event_stream.read();
+    if(eventdata.end == 1) /* 0 for all words except last one when it is 1 */
+    {
+      bufout[0] = bufptr - bufout - 1;
+      /*printf("dcsegmenteventreader: END_OF_DATA\n");*/
+      break;
+    }
+
+
+    *bufptr++ = eventdata.data[0];
+    word_first = eventdata.data[0](31,31); /* 1 for the first word in segment, 0 for followings */
+    tag = eventdata.data[0](30,23); /* must be 'DC1SEGM_TAG' */
+    j = eventdata.data[0](18,16); /* 3 lowest bits of timing - always zero in our case since we have only one 32ns timing bin !?*/
+    isl = eventdata.data[0](11,9); /* superlayer number */
+
+    *bufptr++ = eventdata.data[1];
+	segm[0].output(111,93) = eventdata.data[1](18,0);
+
+    *bufptr++ = eventdata.data[2];
+	segm[0].output(92,62) = eventdata.data[2](30,0);
+
+    *bufptr++ = eventdata.data[3];
+	segm[0].output(61,31) = eventdata.data[3](30,0);
+
+    *bufptr++ = eventdata.data[4];
+	segm[0].output(30,0)  = eventdata.data[4](30,0);
+
+
+    *bufptr++ = eventdata.data[5];
+    word_first = eventdata.data[5](31,31); /* 1 for the first word in segment, 0 for followings */
+    tag = eventdata.data[5](30,23); /* must be 'DC1SEGM_TAG' */
+    j = eventdata.data[5](18,16); /* 3 lowest bits of timing - always zero in our case since we have only one 32ns timing bin !?*/
+    isl = eventdata.data[5](11,9); /* superlayer number */
+
+    *bufptr++ = eventdata.data[6];
+	segm[1].output(111,93) = eventdata.data[6](18,0);
+
+    *bufptr++ = eventdata.data[7];
+	segm[1].output(92,62) = eventdata.data[7](30,0);
+
+    *bufptr++ = eventdata.data[8];
+	segm[1].output(61,31) = eventdata.data[8](30,0);
+
+    *bufptr++ = eventdata.data[9];
+	segm[1].output(30,0)  = eventdata.data[9](30,0);
+
+  }
+
+}
+
+void
+dcroadeventreader(hls::stream<eventdata5_t> &event_stream, DCRoad &road, uint32_t *bufout)
+{
+  eventdata5_t eventdata;
+  uint32_t data_end, word_first, tag, inst, view, data, *bufptr = bufout + 1;
+  int j, isl;
+  while(1)
+  {
+    if(event_stream.empty())
+    {
+      bufout[0] = 0;
+      printf("dcroadeventreader: EMPTY STREAM ERROR1\n");
+      break;
+    }
+
+    eventdata = event_stream.read();
+    if(eventdata.end == 1) /* 0 for all words except last one when it is 1 */
+    {
+      bufout[0] = bufptr - bufout - 1;
+      /*printf("dcroadeventreader: END_OF_DATA\n");*/
+      break;
+    }
+
+    *bufptr++ = eventdata.data[0];
+    word_first = eventdata.data[0](31,31); /* 1 for the first word in road, 0 for followings */
+    tag = eventdata.data[0](30,23); /* must be 'DC1ROAD_TAG' */
+    j = eventdata.data[0](18,16); /* 3 lowest bits of timing - always zero in our case since we have only one 32ns timing bin !?*/
+
+    *bufptr++ = eventdata.data[1];
+	road.output(111,93) = eventdata.data[1](18,0);
+
+    *bufptr++ = eventdata.data[2];
+	road.output(92,62) = eventdata.data[2](30,0);
+
+    *bufptr++ = eventdata.data[3];
+	road.output(61,31) = eventdata.data[3](30,0);
+
+    *bufptr++ = eventdata.data[4];
+	road.output(30,0)  = eventdata.data[4](30,0);
+
+  }
+
+}
+
+
+
+
+
+
+void
+dceventreader(hls::stream<eventdata10_t> segment_event_stream[NSLS], hls::stream<eventdata5_t> &road_event_stream, DCSegment segm[NSLS], DCRoad &road, uint32_t *bufout)
+{
+
+  eventdata10_t eventdata;
+  uint32_t data_end, word_first, tag, inst, view, data, *bufptr = bufout + 1;
+  int j, isl, superlayer;
+
+
+  for(isl=0; isl<NSLS; isl++)
+  {
+
+  while(1)
+  {
+    if(segment_event_stream[isl].empty())
+    {
+      bufout[0] = 0;
+      printf("dcsegmenteventreader: EMPTY STREAM ERROR1\n");
+      break;
+    }
+
+    eventdata = segment_event_stream[isl].read();
+    if(eventdata.end == 1) /* 0 for all words except last one when it is 1 */
+    {
+      bufout[0] = bufptr - bufout - 1;
+      /*printf("dcsegmenteventreader: END_OF_DATA\n");*/
+      break;
+    }
+
+
+    *bufptr++ = eventdata.data[0];
+    word_first = eventdata.data[0](31,31); /* 1 for the first word in segment, 0 for followings */
+    tag = eventdata.data[0](30,23); /* must be 'DC1SEGM_TAG' */
+    j = eventdata.data[0](18,16); /* 3 lowest bits of timing - always zero in our case since we have only one 32ns timing bin !?*/
+    superlayer = eventdata.data[0](11,9); /* superlayer number */
+
+    *bufptr++ = eventdata.data[1];
+	segm[isl].output(111,93) = eventdata.data[1](18,0);
+
+    *bufptr++ = eventdata.data[2];
+	segm[isl].output(92,62) = eventdata.data[2](30,0);
+
+    *bufptr++ = eventdata.data[3];
+	segm[isl].output(61,31) = eventdata.data[3](30,0);
+
+    *bufptr++ = eventdata.data[4];
+	segm[isl].output(30,0)  = eventdata.data[4](30,0);
+  }
+
+  }
+
+  while(1)
+  {
+    if(road_event_stream.empty())
+    {
+      bufout[0] = 0;
+      printf("dcroadeventreader: EMPTY STREAM ERROR1\n");
+      break;
+    }
+
+    eventdata = road_event_stream.read();
+    if(eventdata.end == 1) /* 0 for all words except last one when it is 1 */
+    {
+      bufout[0] = bufptr - bufout - 1;
+      /*printf("dcroadeventreader: END_OF_DATA\n");*/
+      break;
+    }
+
+    *bufptr++ = eventdata.data[0];
+    word_first = eventdata.data[0](31,31); /* 1 for the first word in road, 0 for followings */
+    tag = eventdata.data[0](30,23); /* must be 'DC1ROAD_TAG' */
+    j = eventdata.data[0](18,16); /* 3 lowest bits of timing - always zero in our case since we have only one 32ns timing bin !?*/
+
+    *bufptr++ = eventdata.data[1];
+	road.output(111,93) = eventdata.data[1](18,0);
+
+    *bufptr++ = eventdata.data[2];
+	road.output(92,62) = eventdata.data[2](30,0);
+
+    *bufptr++ = eventdata.data[3];
+	road.output(61,31) = eventdata.data[3](30,0);
+
+    *bufptr++ = eventdata.data[4];
+	road.output(30,0)  = eventdata.data[4](30,0);
+
+  }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+static trig_t trig[2]; /* stream to initiate readout, one for every dc..writer() call; assumed to be cleaned up because of 'static'; here event builder clock is 8ns */
+
+void
+dclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
+{
+  int status, ret, sec, crate, isl;
+  int iev;
+  unsigned long long timestamp;
+
+  ap_uint<16> threshold[3] = {threshold_[0], threshold_[1], threshold_[2]};
+  nframe_t nframes = nframes_;
+
+  hls::stream<fadc_16ch_t> s_fadc_words[NFADCS];
+  hls::stream<dcrb_96ch_t> s_dcrb_words[NSLOT];
+
+  hls::stream<segment_word_t> s_segments[NSLS];
+  hls::stream<road_word_t> s_roads;
+
+  segment_word_t segment_tmp;
+  road_word_t road_tmp;
+
+  volatile ap_uint<1> segment_scaler_inc;
+  volatile ap_uint<1> road_scaler_inc;
+
+
+
+  hls::stream<trig_t> trig_stream[2]; /* one stream for each event writer */
+  hit_ram_t segm_buf_ram[NSLS][RAMSIZE]; /* always fill it by dcsegmenteventfiller.cc, index run over */
+  hit_ram_t road_buf_ram[RAMSIZE]; /* always fill it by dcroadeventfiller.cc, index run over */
+
+
+  hls::stream<eventdata10_t> segment_event_stream[NSLS];
+  hls::stream<eventdata5_t> road_event_stream;
+  DCSegment segm[2];
+  DCRoad road;
+
+  int segments_empty[NSLS], roads_empty;
+  uint32_t bufout[RAMSIZE];
+
+  int detector = DC;
+
+
+
+  /***********/
+  /* stage 1 */
+
+  for(sec=0; sec<NSECTOR; sec++) /* loop over sectors */
+  {
+
+
+
+
+    for(crate=0; crate<3; crate++) /* loop over crates inside sector */
+	{
+      ret = fadcs(bufptr, threshold[0], (sec*3)+crate, detector, s_fadc_words, 0, 0, &iev, &timestamp); /* 3rd parameter here is crate number from 0 to 17; s_fadc_words has dimension 16 to be compatible with fadcs, we use 14 */
+      //if(ret<=0) continue; /* process even if there is no data */
+#ifdef DEBUG
+      printf("dclib: segment search sec=%d crate=%d\n",sec,crate);
+#endif
+
+
+      for(int i=0; i<2; i++) trig[i].t_stop = trig[i].t_start + MAXTIMES; /* set readout window MAXTIMES*32ns in 32ns ticks */
+#ifdef DEBUG
+      cout<<"-dclib-> t_start="<<trig[0].t_start<<" t_stop="<<trig[0].t_stop<<endl;
+#endif
+      for(int i=0; i<2; i++) trig_stream[i].write(trig[i]);
+
+
+
+      for(int it=0; it<MAXTIMES; it++)
+      {
+		printf("dclib 1 (crate=%d it=%d)\n",crate,it);fflush(stdout);
+        /* first 7 slots */
+        for(int i=0; i<NSLOT; i++) fadcs_32ns_to_dcrb_32ns(s_fadc_words[i], s_dcrb_words[i]);
+        isl = crate*2;
+        dc1(threshold, nframes, s_dcrb_words, s_segments[isl], segment_scaler_inc, segm_buf_ram[isl]);
+
+        //if(s_segments[isl].empty()) segments_empty[isl] = 1;
+        //else                        segments_empty[isl] = 0;
+if(s_segments[isl].empty()) printf("EMPTY0 isl=%d crate=%d sec=%d\n",isl,crate,sec);
+
+
+		printf("dclib 2\n");fflush(stdout);
+        /* last 7 slots */
+        for(int i=0; i<NSLOT; i++) fadcs_32ns_to_dcrb_32ns(s_fadc_words[i+7], s_dcrb_words[i]);
+        isl = crate*2+1;
+        dc1(threshold, nframes, s_dcrb_words, s_segments[isl], segment_scaler_inc, segm_buf_ram[isl]);
+
+        //if(s_segments[isl].empty()) segments_empty[isl] = 1;
+        //else                        segments_empty[isl] = 0;
+if(s_segments[isl].empty()) printf("EMPTY1 isl=%d crate=%d sec=%d\n",isl,crate,sec);
+
+		printf("dclib 3\n");fflush(stdout);
+
+	  }
+
+	  printf("dclib 4\n");fflush(stdout);
+
+
+
+	} /* loop over 3 crates inside sector */
+
+
+
+    /***********/
+    /* stage 2 */
+
+    for(int it=0; it<MAXTIMES; it++)
+    {
+	  printf("dclib 41 it=%d\n",it);fflush(stdout);
+      dc2(threshold, nframes, s_segments, s_roads, road_scaler_inc, road_buf_ram);
+printf("dclib 42\n");fflush(stdout);
+
+      if(s_roads.empty()) roads_empty = 1;
+      else                roads_empty = 0;
+printf("dclib 43 roads_empty=%d\n",roads_empty);fflush(stdout);
+
+      /* read roads to avoid 'leftover' warnings */
+      if(!roads_empty)
+	  {
+        road_tmp = s_roads.read();
+	  }
+printf("dclib 44\n");fflush(stdout);
+    }
+
+
+printf("dclib 5\n");fflush(stdout);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      dcsegmenteventwriter(trig_stream[0], segment_event_stream, segm_buf_ram);
+      dcroadeventwriter(trig_stream[1], road_event_stream, road_buf_ram);
+
+
+
+      dceventreader(segment_event_stream, road_event_stream, segm, road, bufout);
+
+
+
+
+
+
+
+
+
+
+
+#if 0
+
+    //if((!segments_empty[0])||(!segments_empty[1])||(!segments_empty[2])||(!segments_empty[3])||(!segments_empty[4])||(!segments_empty[5]))
+    {
+      dcsegmenteventwriter(trig_stream[0], segment_event_stream, segm_buf_ram);
+printf("dclib 53\n");fflush(stdout);
+      dcsegmenteventreader(segment_event_stream, segm, bufout);
+#ifdef DEBUG
+      for(int i=0; i<=bufout[0]; i++) printf("DC segm bufout[%d]=0x%08x\n",i,bufout[i]);
+#endif
+      if(bufout[0]>0) /*bufout contains something */
+	  {
+        int banktag = 0xe122; /* vtp bank tag */
+        int fragtag;
+        /*if(crate==0)*/      fragtag = 60119+sec; /* dc vtp rocid range for region1 is 119-124 */
+        //else if(crate==1) fragtag = 60086+sec; /* dc vtp rocid range for region2 is 86-91 */
+        //else if(crate==2) fragtag = 60113+sec; /* dc vtp rocid range for region3 is 113-118 */
+        //else
+		//{
+        //  printf("ERROR: crate=%d sec=%d\n",crate,sec);exit(0);
+	    //}
+
+        trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
+        trigbank_write(bufout);
+        trigbank_close(bufout[0]);
+	  }
+    }
+
+printf("dclib 6\n");fflush(stdout);
+
+    //if(!roads_empty)
+    {
+      dcroadeventwriter(trig_stream[1], road_event_stream, road_buf_ram);
+      dcroadeventreader(road_event_stream, road, bufout);
+#ifdef DEBUG
+      for(int i=0; i<=bufout[0]; i++) printf("DC road bufout[%d]=0x%08x\n",i,bufout[i]);
+#endif
+      if(bufout[0]>0) /*bufout contains something */
+	  {
+        int banktag = 0xe122; /* vtp bank tag */
+        int fragtag = 61113+sec; /* dc vtp rocid range: 113-118 */
+        trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
+        trigbank_write(bufout);
+        trigbank_close(bufout[0]);
+	  }
+    }
+
+#endif
+
+
+
+
+
+
+
+
+
+
+
+	printf("dclib 7\n");fflush(stdout);
+
+
+
+    for(int i=0; i<2; i++) trig[i].t_start += MAXTIMES; /* in preparation for next event, step up MAXTIMES*32ns in 32ns ticks */
+
+  } /* loop over sectors */
+
+
+  return;
+}
