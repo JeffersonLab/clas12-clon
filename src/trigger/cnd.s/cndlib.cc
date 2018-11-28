@@ -20,12 +20,13 @@ using namespace std;
 #include "trigger.h"
 
 
-//#define DEBUG
+#define DEBUG
 
 
 #define MAX(a,b)    (a > b ? a : b)
 #define MIN(a,b)    (a < b ? a : b)
 
+static int the_number_of_banks = 0;
 
 void
 cndhiteventreader(hls::stream<eventdata3_t> &event_stream, CNDHit_8slices &hit, uint32_t *bufout)
@@ -96,7 +97,7 @@ cndlib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
   unsigned long long timestamp;
 
   ap_uint<16> threshold[3] = {threshold_[0], threshold_[1], threshold_[2]};
-  nframe_t nframes = 1;
+  nframe_t nframes = nframes_;
 
   hls::stream<fadc_16ch_t> s_fadc_words[NSLOT];
   hls::stream<fadc_256ch_t> s_fadcs;
@@ -135,10 +136,13 @@ cndlib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
     cndhiteventwriter(trig_stream, event_stream, event_buf_ram);
     cndhiteventreader(event_stream, hit, bufout);
 #ifdef DEBUG
-    for(int i=0; i<=bufout[0]; i++) printf("bufout[%d]=0x%08x\n",i,bufout[i]);
+    for(int i=0; i<=bufout[0]; i++) printf("CND bufout[%d]=0x%08x\n",i,bufout[i]);
 #endif
     if(bufout[0]>0) /*bufout contains something */
 	{
+#ifdef DEBUG
+      printf("CND BANK %d\n",the_number_of_banks++);
+#endif
       int fragtag = 60092;
       int banktag = 0xe122;
       trigbank_open(bufptr, fragtag, banktag, iev, timestamp);

@@ -53,14 +53,20 @@ cndhit(ap_uint<32> threshold, nframe_t nframes, CNDStrip_s strip[NSTRIP], CNDHit
   ap_uint<NPER> output[NSTRIP];
 #pragma HLS ARRAY_PARTITION variable=strip_pipe complete dim=1
 
+  ap_uint<32> thresh;
+
+
+  if(nframes>NPER) nframes = NPER;
+  thresh = threshold*threshold;
+
 
 #ifdef DEBUG
-  printf("== cndhit start ==\n");
-    for(int i=0; i<NSTRIP; i++)
-    {
-      if(strip[i].enL>0) cout<<"cndhit: strip["<<i<<"].enL="<<strip[i].enL<<", strip["<<i<<"].tmL="<<strip[i].tmL<<endl;
-      if(strip[i].enR>0) cout<<"cndhit: strip["<<i<<"].enR="<<strip[i].enR<<", strip["<<i<<"].tmR="<<strip[i].tmR<<endl;
-    }
+  printf("== cndhit start, nframes=%d ==\n",(uint8_t)nframes);
+  for(int i=0; i<NSTRIP; i++)
+  {
+    if(strip[i].enL>0) cout<<"cndhit: strip["<<i<<"].enL="<<strip[i].enL<<", strip["<<i<<"].tmL="<<strip[i].tmL<<endl;
+    if(strip[i].enR>0) cout<<"cndhit: strip["<<i<<"].enR="<<strip[i].enR<<", strip["<<i<<"].tmR="<<strip[i].tmR<<endl;
+  }
 #endif
 
   /* shift whole pipe to the right ([1]->[2], [0]->[1]) */
@@ -112,9 +118,9 @@ cndhit(ap_uint<32> threshold, nframe_t nframes, CNDStrip_s strip[NSTRIP], CNDHit
     const int add[NPIPE] = {16, 8, 0}; /* add 16 to interval [0] and 8 to interval [1], to get consequative numbering from 0 to 23 */
     for(int j=0; j<NPIPE; j++) /* on left side, look one interval before, one current and one after, and match with middle on right side */
     {
-      if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > threshold)
+      if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > thresh)
 	  {
-        tdif = strip_pipe[1][i].tmR+add[1] - strip_pipe[j][i].tmL+add[j];
+        tdif = (strip_pipe[j][i].tmL+add[j]) - (strip_pipe[1][i].tmR+add[1]);
 #ifdef DEBUG
         cout<<"=> tdif1="<<tdif<<endl;
 #endif
@@ -165,9 +171,9 @@ cndhit(ap_uint<32> threshold, nframe_t nframes, CNDStrip_s strip[NSTRIP], CNDHit
     i = k*3;
     for(int j=0; j<NPIPE; j++) /* on left side, look one interval before, one current and one after, and match with middle on right side */
     {
-      if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > threshold)
+      if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > thresh)
 	  {
-        tdif = strip_pipe[1][i].tmR+add[1] - strip_pipe[j][i].tmL+add[j];
+        tdif = (strip_pipe[j][i].tmL+add[j]) - (strip_pipe[1][i].tmR+add[1]);
         if(tdif < 0) tdif = -tdif;
         if(tdif <= nframes)
 		{
@@ -184,9 +190,9 @@ cndhit(ap_uint<32> threshold, nframe_t nframes, CNDStrip_s strip[NSTRIP], CNDHit
     i = k*3+1;
     for(int j=0; j<NPIPE; j++) /* on left side, look one interval before, one current and one after, and match with middle on right side */
     {
-      if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > threshold)
+      if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > thresh)
 	  {
-        tdif = strip_pipe[1][i].tmR+add[1] - strip_pipe[j][i].tmL+add[j];
+        tdif = (strip_pipe[j][i].tmL+add[j]) - (strip_pipe[1][i].tmR+add[1]);
         if(tdif < 0) tdif = -tdif;
         if(tdif <= nframes)
 		{
@@ -203,9 +209,9 @@ cndhit(ap_uint<32> threshold, nframe_t nframes, CNDStrip_s strip[NSTRIP], CNDHit
     i = k*3+2;
     for(int j=0; j<NPIPE; j++) /* on left side, look one interval before, one current and one after, and match with middle on right side */
     {
-      if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > threshold)
+      if( (strip_pipe[1][i].enR*strip_pipe[j][i].enL) > thresh)
 	  {
-        tdif = strip_pipe[1][i].tmR+add[1] - strip_pipe[j][i].tmL+add[j];
+        tdif = (strip_pipe[j][i].tmL+add[j]) - (strip_pipe[1][i].tmR+add[1]);
         if(tdif < 0) tdif = -tdif;
         if(tdif <= nframes)
 		{
@@ -218,6 +224,12 @@ cndhit(ap_uint<32> threshold, nframe_t nframes, CNDStrip_s strip[NSTRIP], CNDHit
 	  }
     }
 
+
+
+
+
+#if 0
+
     /* L1 x L2 */
     output[k*3]   = (mask1 & mask2) | (mask1 & (mask2<<1)) | (mask1 & (mask2>>1));
 
@@ -226,6 +238,17 @@ cndhit(ap_uint<32> threshold, nframe_t nframes, CNDStrip_s strip[NSTRIP], CNDHit
 
     /* L1 x L2 x L3 */
     output[k*3+2] = mask1 & mask2 & mask3;
+
+#else /* report single layers */
+
+    output[k*3]   = mask1; /* L1 only */
+    output[k*3+1] = mask2; /* L2 only */
+	output[k*3+2] = mask3; /* L3 only */
+
+#endif
+
+
+
 
 #ifdef DEBUG
     if(output[k*3]>0)    cout<<"cndhit: output[ncoin="<<k*3<<"]="<<hex<<output[k*3]<<dec<<endl;

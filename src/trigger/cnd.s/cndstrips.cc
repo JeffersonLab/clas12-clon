@@ -74,7 +74,7 @@ cndstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CNDSt
     for(int j=0; j<NSTRIP; j++) energytmp[i][j] = 0;
     for(int j=0; j<NSTRIP; j++) out[i][j] = 0;
   }
-
+/*
   for(int j=0; j<NSTRIP; j++)
   {
     strip[j].enL = 0;
@@ -82,7 +82,7 @@ cndstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CNDSt
     strip[j].enR = 0;
     strip[j].tmR = 0;
   }
-
+*/
 
   /********************************************************************/
   /* get FADC data for 32-ns interval, and fill timetmp[2][NSTRIP] array */
@@ -121,8 +121,8 @@ cndstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CNDSt
     strip[i].enR = energytmp[1][i];
     strip[i].tmR = timetmp[1][i];
 #ifdef DEBUG
-    cout<<"cndstrips: strip["<<i<<"].enL="<<strip[i].enL<<", strip["<<i<<"].tmL="<<strip[i].tmL<<endl;
-    cout<<"cndstrips: strip["<<i<<"].enR="<<strip[i].enR<<", strip["<<i<<"].tmR="<<strip[i].tmR<<endl;
+    if(strip[i].enL>0) cout<<"cndstrips: strip["<<i<<"].enL="<<strip[i].enL<<", strip["<<i<<"].tmL="<<strip[i].tmL<<endl;
+    if(strip[i].enR>0) cout<<"cndstrips: strip["<<i<<"].enR="<<strip[i].enR<<", strip["<<i<<"].tmR="<<strip[i].tmR<<endl;
 #endif
   }
 

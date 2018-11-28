@@ -436,7 +436,7 @@ SegmentSearch31(word16_t in[6], word1_t out[NOFFSETS], ap_uint<3> hit_threshold)
 #ifdef DEBUG_NO
     cout<<"#segm="<<+j<<" itmp[5..1]="<<+shift[j][4]<<","<<+shift[j][3]<<","<<+shift[j][2]<<","<<+shift[j][1]<<","<<+shift[j][0]<<" MAXSHIFT="<<+MAXSHIFT<<endl;
 #endif
-    for(i=5; i>0; i--) /* loop over layers 5-1 */
+    for(i=5; i>0; i--) /* loop over layers 5-1 shifting them in according to segment dictionary */
     {
       itmp = shift[j][i-1];
       data[i] = ((in[i]) >> itmp)&((ap_uint<1>)1);
@@ -523,7 +523,7 @@ SegmentSearch3(word112_t in[6], word112_t out[NOFFSETS], ap_uint<3> hit_threshol
   word16_t ininin[6];
 
 #ifdef DEBUG
-  printf("\nIN DATA:\n");
+  printf("\nSegmentSearch3: IN DATA:\n");
   for(i=NLAY-1; i>=0; i--) {printf("         ");Word112Print(i,in[i]);}
 #endif
 
@@ -535,7 +535,7 @@ SegmentSearch3(word112_t in[6], word112_t out[NOFFSETS], ap_uint<3> hit_threshol
   }
 
 #ifdef DEBUG
-  printf("\nININ DATA:\n");
+  printf("\nSegmentSearch3: ININ DATA:\n");
   for(i=NLAY-1; i>=0; i--) Word128Print(i,inin[i]);
 #endif
 
@@ -560,7 +560,7 @@ SegmentSearch3(word112_t in[6], word112_t out[NOFFSETS], ap_uint<3> hit_threshol
   }
 
 #ifdef DEBUG
-  printf("\nOUTPUT ARRAY:\n");
+  printf("\nSegmentSearch3: OUTPUT ARRAY:\n");
   for(i=(NOFFSETS-1); i>=0; i--)
   {
     printf("         ");

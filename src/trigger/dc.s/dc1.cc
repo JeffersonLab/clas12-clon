@@ -1,13 +1,6 @@
 
-/* dc1.c - first stage DC trigger
+/* dc1.cc - signle crate stage 1 - segment finder for one region (two superlayers), run in all 18 crates */
 
-  input:  
-
-  output: 
-
-*/
-
-	
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -17,129 +10,59 @@
 #include <iostream>
 using namespace std;
 
-
-
-#include "dclib.h"
-
-
-
 //#define DEBUG
 
+#include "dclib.h"
+#include "dctrans.h"
 
-#define MAX(a,b)    (a > b ? a : b)
-#define MIN(a,b)    (a < b ? a : b)
-#define ABS(x)      ((x) < 0 ? -(x) : (x))
+#include "hls_fadc_sum.h"
 
-
-
-/*xc7vx550tffg1158-1*/
-
-/* 3.48/4/1/0%/0%/~0%/~0% */
-
-
-/* High Threshold Cherenkov Counter:
-
-   S1    S2    S3    S4    S5    S6
-  0  1  2  3  4  5  6  7  8  9 10 11
- 12 13 14 15 16 17 18 19 20 21 22 23
- 24 25 26 27 28 29 30 31 32 33 34 35
- 36 37 38 39 40 41 42 43 44 45 46 47
-
-1. cluster is formed by 2x2 window in any location - NCLSTR=36 total
-
-2. for every cluster multiplicity and energy sum are calculated
-
-3. trigger formed if at least one cluster exceeds multiplicity OR energy thresholds
-
-input:
-  threshold - individual channel energy threshold
-  mult_threshold - cluster multiplicity threshold
-  cluster_threshold - cluster energy threshold
-  d[] - input adc values
-
-output:
-  mult[] - multiplicity for every cluster
-  clusters[] - energy sum for every cluster
-
-return:
-  1 - if at least one cluster exceeds multiplicity OR energy threshold
-  0 - otherwise
-
- */
-
-ap_uint<6>
-dc1(ap_uint<13> threshold, ap_uint<3> mult_threshold, ap_uint<16> cluster_threshold, ap_uint<13> d[NCHAN],
-	  ap_uint<3> mult[NCLSTR], ap_uint<16> clusters[NCLSTR])
+void
+dc1(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<dcrb_96ch_t> s_dcrb_words[NSLOT], hls::stream<segment_word_t> &s_segments, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[RAMSIZE])
 {
-#pragma HLS ARRAY_PARTITION variable=clusters complete dim=1
-#pragma HLS ARRAY_PARTITION variable=d complete dim=1
-#pragma HLS ARRAY_PARTITION variable=mult complete dim=1
-#pragma HLS PIPELINE
+//#pragma HLS DATAFLOW
 
-  int i;
-  ap_uint<6> ret;
+#pragma HLS INTERFACE ap_stable port=threshold
+#pragma HLS ARRAY_PARTITION variable=threshold dim=1
+#pragma HLS INTERFACE ap_stable port=nframes
 
+#pragma HLS DATA_PACK variable=s_fadcs
+#pragma HLS INTERFACE axis register both port=s_fadcs
 
-  /* clusters energy sums */
+#pragma HLS DATA_PACK variable=s_hits
+#pragma HLS INTERFACE axis register both port=s_hits
 
-  for(i=0; i<11; i++) clusters[i] = d[i] + d[i+1] + d[i+12] + d[i+13];
-  clusters[11] = d[11] + d[12] + d[23] + d[0];
+#pragma HLS INTERFACE ap_none port=hit_scaler_inc
 
-  for(i=12; i<23; i++) clusters[i] = d[i] + d[i+1] + d[i+12] + d[i+13];
-  clusters[23] = d[23] + d[24] + d[35] + d[12];
+#pragma HLS DATA_PACK variable=buf_ram
+//#pragma HLS ARRAY_PARTITION variable=buf_ram block factor=8 dim=1
 
-  for(i=24; i<35; i++) clusters[i] = d[i] + d[i+1] + d[i+12] + d[i+13];
-  clusters[35] = d[35] + d[36] + d[47] + d[24];
+#pragma HLS PIPELINE II=1
 
+  static int first = 0;
 
-  /* clusters multiplicity */
+  DCSL_s superlayer;
+  segment_word_t segment, segment2;
 
-  for(i=0; i<NCLSTR; i++) mult[i]=0;
-  for(i=0; i<11; i++)
+  if(nframes>NPER) nframes = NPER;
+
+  //printf("dc1 0\n"); fflush(stdout);
+
+  dcwires(threshold[0], s_dcrb_words, superlayer);
+  //printf("dc1 1\n"); fflush(stdout);
+
+  dcsegments(threshold[1], superlayer, segment);
+  //printf("dc1 2\n"); fflush(stdout);
+
+  /*
+  if(first==0)
   {
-	if(d[i   ] > threshold) mult[i] ++;
-	if(d[i+ 1] > threshold) mult[i] ++;
-	if(d[i+12] > threshold) mult[i] ++;
-	if(d[i+13] > threshold) mult[i] ++;
+    first = 1;
+    return;
   }
-  if(d[11] > threshold) mult[11] ++;
-  if(d[12] > threshold) mult[11] ++;
-  if(d[23] > threshold) mult[11] ++;
-  if(d[ 0] > threshold) mult[11] ++;
+  */
 
-  for(i=12; i<23; i++)
-  {
-	if(d[i   ] > threshold) mult[i] ++;
-	if(d[i+ 1] > threshold) mult[i] ++;
-	if(d[i+12] > threshold) mult[i] ++;
-	if(d[i+13] > threshold) mult[i] ++;
-  }
-  if(d[23] > threshold) mult[23] ++;
-  if(d[24] > threshold) mult[23] ++;
-  if(d[35] > threshold) mult[23] ++;
-  if(d[12] > threshold) mult[23] ++;
+  dcsegmentfanout(segment, s_segments, segment2, hit_scaler_inc);
+  dcsegmenteventfiller(segment2, buf_ram);
 
-  for(i=24; i<35; i++)
-  {
-	if(d[i   ] > threshold) mult[i] ++;
-	if(d[i+ 1] > threshold) mult[i] ++;
-	if(d[i+12] > threshold) mult[i] ++;
-	if(d[i+13] > threshold) mult[i] ++;
-  }
-  if(d[35] > threshold) mult[35] ++;
-  if(d[36] > threshold) mult[35] ++;
-  if(d[47] > threshold) mult[35] ++;
-  if(d[24] > threshold) mult[35] ++;
-
-
-  /* trigger solution */
-
-  ret = 0;
-  for(i=0; i<NCLSTR; i++)
-  {
-    if(clusters[i] > cluster_threshold) ret = 1;
-    if(mult[i] > mult_threshold) ret = 1;
-  }
-
-  return(ret);
 }

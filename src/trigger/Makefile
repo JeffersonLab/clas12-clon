@@ -22,6 +22,8 @@ include $(CLON)/src/Makefile.include
 #-----------------------
 #CFLAGS = -g
 #CXXFLAGS = -g
+CFLAGS = -O2 -fPIC -DLinux -DLINUX
+CXXFLAGS = -O2 -fPIC -DLinux -DLINUX
 
 CLON_FLAGS += -std=c++11
 

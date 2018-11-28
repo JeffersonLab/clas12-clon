@@ -29,6 +29,14 @@ cndhiteventfiller(CNDHit s_hitin[NH_READS], hit_ram_t buf_ram[512])
 
   static ap_uint<8> itime = 0;
 
+  static int first = 0;
+  if(first==0)
+  {
+    first = 1;
+    return;
+  }
+
+
   for(int i=0; i<NH_READS; i++)
   {
     buf_ram[itime].output[i] = s_hitin[i].output;

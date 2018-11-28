@@ -1,7 +1,10 @@
 #ifndef _DCLIB_
 
 #include <ap_int.h>
+#include <ap_fixed.h>
 #include <hls_stream.h>
+
+#include "hls_fadc_sum.h"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -10,18 +13,118 @@ extern "C" {
 /* dclib.h */
 
 
+/*
+
+HLS part:
+
+  dc1(): 32ns clock, input from 7 DCRB slots (one superlayer), output is 512bit (0-111 segments, 112-511 unused)
+  dc2(): 32ns clock, input from 6 superlayers, output is 512bit (0-road found, 1-inbending, 2-outbending, 3-64-FTOF1B, 65-sl0 presence, 66-sl1, 67-sl2, 68-sl3, 69-sl4, 70-sl5, 71-511 unused)
+*/
+
+
+#define NSECTOR 6
+
+#define NSLOT 7
+
+#define NWIRES 112
+#define NLAYERS  6
+#define NSLS     6
+#define NCRATES 18
+
+#define NCHAN 96
+#define NHIT NWIRES
+
+
+#define NH_READS  4   /* the number of reads-write for streams, AND the number of 8ns intervals inside 32ns interval (we are running on 125MHz here) */
+
+#define EBTICKS   4   /* event builder is running on 8ns clock, so we have 4 clocks in every 32ns interval */
+
+#define TIMECORR 7 /*TEMPORARY !!!!!!!!!!!!!!!! */
+
+/* strip persistency */
+#define NPER 8
+typedef ap_uint<6> nframe_t;
+
+
+  /* following two values have to correspond to each other ! for example 9/512, or 11/2048 */
+#define RAMBITS 9/*11*/
+#define RAMSIZE 512/*2048*/
 
 
 
-#define NCHAN 48
-#define NCLSTR 36
+
+#define NLR 2 /* the number of 'left-rights' */
+
+/* superlayer: send from dcwires() every 32ns */
+typedef struct dcsl_s
+{
+  ap_uint<NWIRES> layer[NLAYERS];
+} DCSL_s;
+
+typedef struct dcsegment
+{
+  ap_uint<3>      superlayer_number;
+  ap_uint<8>      time;
+  ap_uint<NWIRES> output;
+} DCSegment;
+
+typedef struct dcroads
+{
+  ap_uint<8>      time;
+  ap_uint<NWIRES> output;
+} DCRoad;
 
 
 
 
 
-ap_uint<6>  dc1(ap_uint<13> threshold, ap_uint<3> mult_threshold, ap_uint<16> cluster_threshold,
-		ap_uint<13> d[NCHAN], ap_uint<3> mult[NCLSTR], ap_uint<16> clusters[NCLSTR]);
+#define NBIT_HIT_ENERGY 16
+#define NBIT_COORD_EB 10 /*in event builder coordinates always 10 bits*/
+
+
+
+
+
+
+/* will be asymetric ram in vhdl */
+typedef struct
+{
+  ap_uint<NWIRES> output;
+} hit_ram_t;
+/* will be asymetric ram in vhdl */
+
+
+
+
+typedef ap_uint<112> dc_row_t;
+typedef ap_uint<1> res_t;
+
+/* output from dcrb board every 32ns */
+typedef ap_uint<96> dcrb_hits_t;
+
+/* output from dc1 every 32ns */
+typedef ap_uint<512> segment_word_t;
+
+/* output from dc2 every 32ns */
+typedef ap_uint<512> road_word_t;
+
+
+
+void dc1(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<dcrb_96ch_t> s_dcrb_words[NSLOT], hls::stream<segment_word_t> &s_segments, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[RAMSIZE]);
+void dc2(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<segment_word_t> s_segments[NSLS], hls::stream<road_word_t> &s_roads, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[RAMSIZE]);
+
+void dcwires(ap_uint<16> strip_threshold, hls::stream<dcrb_96ch_t> s_dcrb_words[NSLOT], DCSL_s &superlayer);
+void dcsegments(ap_uint<3> segment_threshold, DCSL_s superlayer, segment_word_t &segment_word);
+void dcroads(ap_uint<3> road_threshold, segment_word_t segment_word[NSLS], road_word_t &road);
+
+void dcsegmentfanout(segment_word_t segment, hls::stream<segment_word_t> &s_segments, segment_word_t &segment2, volatile ap_uint<1> &hit_scaler_inc);
+void dcroadfanout(road_word_t road, hls::stream<road_word_t> &s_roads, road_word_t &road2, volatile ap_uint<1> &hit_scaler_inc);
+
+void dcsegmenteventfiller(segment_word_t segment, hit_ram_t buf_ram[RAMSIZE]);
+void dcsegmenteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata5_t> &event_stream, hit_ram_t buf_ram_read[RAMSIZE]);
+
+void dcroadeventfiller(road_word_t road, hit_ram_t buf_ram[RAMSIZE]);
+void dcroadeventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata5_t> &event_stream, hit_ram_t buf_ram_read[RAMSIZE]);
 
 
 #ifdef	__cplusplus

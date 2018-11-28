@@ -1,4 +1,5 @@
-/* fadcs.cc - loading strip info for particular sector
+
+/* fadcs.cc - loading fadc or dcrb information into appropriate stream
 
  input:  sector - sector number
 
@@ -45,7 +46,7 @@ static int slot2isl[NDET][22] = {
  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  0, -1, -1,  1,  2,  3,  4,  5,  6, -1, -1, -1, /* ECAL_OUT slots: 10, 13-18 */
  -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7, -1, -1,  8,  9, 10, 11, 12, 13, -1, -1, -1, /* ECAL slots: 3-10, 13-18 */
  -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7, -1, -1,  8,  9, 10, 11, -1, -1, -1, -1, -1, /* PCAL slots: 3-10, 13-16 */
- -1, -1, -1,  0,  1,  2,  3,  4,  5,  6, -1, -1, -1,  7,  8,  9, 10, 11, 12, 13, -1, -1, /* DCRB slots: 3-9, 14-20 */
+ -1, -1, -1,  0,  1,  2,  3,  4,  5,  6, -1, -1, -1, -1,  7,  8,  9, 10, 11, 12, 13, -1, /* DCRB slots: 3-9, 14-20 */
  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  0,  1,  2, -1, -1, -1, -1, -1, -1, /* HTCC slots: 13-15 */
  -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7, -1, -1,  8,  9, 10, 11, -1, -1, -1, -1, -1, /* FTOF slots: 3-10, 13-16 */
  -1, -1, -1,  0,  1,  2,  3,  4,  5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* CTOF slots: 3-8 */
@@ -73,13 +74,18 @@ static int fragtags[NDET][18] = {
   3,  9, 15, 21, 27, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0  /*PCU*/
 };
 
-static int config_loaded[6];
+static int banktags[NDET] = { 0xe101, 0xe101, 0xe101, 0xe101, 0xe116, 0xe101, 0xe101, 0xe101, 0xe101, 0xe101, 0xe101, 0xe101, 0xe101 };
+
+static int config_loaded[18]; /* 18 for DC crates, 6 for others */
 /* det, sec, slot, chan */
 static float ped[NDET][6][22][16]; /* pedestals */
 static int   tet[NDET][6][22][16]; /* threshold */
 static float gain[NDET][6][22][16]; /* gain */
 static int nsa[NDET][6][22]; /* NSA */
 static int nsb[NDET][6][22]; /* NSB */
+
+static int dcrb_hit_trig_width[NDET][18][22]; /* DCRB_HIT_TRIG_WIDTH in 4ns ticks */
+
 
 int
 fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS], int dtimestamp, int dpulsetime,
@@ -93,7 +99,7 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 	GET_PUT_INIT;
 	int fragtag,
 	fragnum, banktag, banknum;
-	unsigned short pulse_time, pulse_min, pulse_max, dat16;
+	unsigned short pulse_time, pulse_min, pulse_max, dat16, tdc;
 	unsigned int pulse_integral;
 	unsigned char *end;
 	unsigned long long time;
@@ -104,8 +110,11 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 	int dd[16];
 	float fsum, fped, ff[16];
 	int bank_not_found = 1;
+
 	fadc_16ch_t fadcs[MAXTIMES][NFADCS];
-	int isl;
+    dcrb_96ch_t dcrbs[MAXTIMES][NDCRBS];
+
+	int isl, islot;
 	ap_uint<13> ee;
 	ap_uint<3> tt;
 	int nslot;
@@ -117,7 +126,14 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 	fflush(stdout);
 #endif
 
-	/* cleanup output array */
+
+
+	/* cleanup arrays */
+	for (i = 0; i < MAXTIMES; i++) {
+		for (isl = 0; isl < NDCRBS; isl++) {
+			dcrbs[i][isl].chan = 0;
+		}
+	}
 	for (i = 0; i < MAXTIMES; i++) {
 		for (isl = 0; isl < NFADCS; isl++) {
 			fadcs[i][isl].e0 = 0;
@@ -157,11 +173,6 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 
 
 
-
-
-
-
-
 	/************************************/
     /* read event number from head bank */
 
@@ -180,14 +191,14 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 
     if(ind<=0)
 	{
-      printf("ERROR: cannot find head bank\n");
+      printf("ERROR: cannot find HEAD bank (fragtag=%d)\n",fragtag);
 	}
 	else
 	{
       b08 = (unsigned char *) &bufptr[ind_data];
       GET32(itmp);
       GET32(ievent);
-      printf("Event number = %d =====================================================================================\n",ievent);
+      //printf("Event number = %d =====================================================================================\n",ievent);
 
 	  //if(ievent>/*11189566*/1967427) exit(0);
 	}
@@ -198,15 +209,16 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 
 
 
-	/*************************/
-	/* pedestal nsa, nsb etc */
+	/**********************/
+	/* config information */
+
 
 	fragtag = fragtags[det][sec];
 	fragnum = -1;
 	banktag = 0xe10e;
 	banknum = fragtags[det][sec];
 	if ((ind = evLinkBank(bufptr, fragtag, fragnum, banktag, banknum, &nbytes, &ind_data)) > 0) {
-	  printf("FOUND CONFIG BANK, sec=%d\n",sec);
+	    if(config_loaded[sec]==0) printf("\nFOUND CONFIG BANK, sec/crate=%d\n\n",sec);
 	    config_loaded[sec] = 1;
 #ifdef DEBUG_3
 		printf("evLinkBank: ind=%d ind_data=%d\n",ind, ind_data);fflush(stdout);
@@ -301,6 +313,26 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 				}
 			}
 
+
+
+
+
+			if (!strncmp(ch, "DCRB_SLOT", 9)) {
+				slot = atoi((char *) &ch[9]);
+#ifdef DEBUG_3
+				printf("===> dcrb slot=%d\n",slot);fflush(stdout);
+#endif
+			}
+
+			if (!strncmp(ch, "DCRB_HIT_TRIG_WIDTH", 19)) {
+				dcrb_hit_trig_width[det][sec][slot] = atoi((char *) &ch[19]) / 4;
+#ifdef DEBUG_3
+				printf("===> dcrb_hit_trig_width[%d][%d][%d]=%d ticks\n",det,sec,slot,dcrb_hit_trig_width[det][sec][slot]);fflush(stdout);
+#endif
+			}
+
+
+
 			ii++;
 			b08 += ii;
 		}
@@ -333,16 +365,22 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 		fflush(stdout);
 	}
 
-	/* pedestal and nba */
-	/********************/
+	/* config information */
+	/**********************/
+
+
+
+
+
 
 
     /* do not process anything until have configuration parameters */
     if(config_loaded[sec]==0)
 	{
-      printf("DET=%d: CONFIG FOR sec=%d IS NOT LOADED YET - DO NOTHING FOR THAT SECTOR\n",det,sec);
+      //printf("DET=%d: CONFIG FOR sec=%d IS NOT LOADED YET - DO NOTHING FOR THAT SECTOR\n",det,sec);
       return(0);
 	}
+
 
 
 	/*****************/
@@ -353,7 +391,8 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 
 	fragtag = fragtags[det][sec];
 	fragnum = -1;
-	banktag = 0xe101;
+	banktag = banktags[det];
+	banknum = fragtags[det][sec];
 
 	if (bank_not_found) {
 		for (banknum = 0; banknum < 40; banknum++) {
@@ -370,6 +409,170 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 #ifdef DEBUG_0
 				printf("ind=%d, nbytes=%d (from 0x%08x to 0x%08x)\n",ind,nbytes,b08,end);fflush(stdout);
 #endif
+
+
+
+                if(det==DC)
+				{
+
+
+				/* DCRB section */
+
+				while (b08 < end) {
+#ifdef DEBUG_0
+					printf("dcrbs: begin while: b08=0x%08x\n",b08);fflush(stdout);
+#endif
+					GET8(slot);
+					isl = slot2isl[det][slot];
+					GET32(trig);
+					GET64(time); /* time stamp for FADCs 2 counts bigger then for VTPs */
+					time = ((time & 0xFFFFFF) << 24) | ((time >> 24) & 0xFFFFFF); /* UNTILL FIXED IN ROL2 !!!!!!!!!!!!!!!!! */
+
+					*iev = trig;
+					*timestamp = time/*0x12345678abcd*/;
+
+					GET32(nchan);
+#ifdef DEBUG_0
+					printf("slot=%d, trig=%d, time=%lld(0x%016x) nchan=%d\n",slot,trig,time,time,nchan);fflush(stdout);
+#endif
+					for (nn = 0; nn < nchan; nn++) {
+
+						GET8(chan);
+						GET16(tdc);
+#ifdef DEBUG_0
+						printf("==> det=%d, sec=%d, slot=%d(%d), chan=%d, tdc=%d\n",det,sec,slot,isl,chan,tdc);fflush(stdout);
+#endif
+
+
+						/*offset: 7900/4=1975*/
+						offset = 1975;
+						ptime = tdc/4; /* tdc in 4-ns ticks */
+
+						offset += dtimestamp;
+						ptime += dpulsetime;
+
+						itime = ((time - offset) + ptime) / 8 - (time - offset) / 8;
+						it = itime; /* 32-ns bin number */
+						tt = ((time - offset) + ptime) - ((((time - offset) + ptime) / 8) * 8); /* 4-ns bin number inside 32-ns bin */
+
+
+/*HUCK
+itime=0;
+it=0;
+tt=0;
+HUCK*/
+
+#ifdef DEBUG_0
+						printf("tdc=%d -> it=%d tt=%d time=%lld(0x%016x)\n",tdc,it,(int)tt,time,time);
+#endif
+
+
+
+
+
+						/* based on tt and it values, put hits into array dcrbs[time_slice][slot].chan[channel]
+                        starting from tt/it and during dcrb_hit_trig_width[det][sec][slot] interval */
+#ifdef DEBUG_1
+						cout<<"dcrbs: tdc="<<tdc<<", itime="<<itime<<", isl="<<isl<<", chan="<<chan<<", it="<<it<<", tt="<<tt<<endl;
+#endif
+						//printf("dcrb_hit_trig_width[%d][%d][%d]=%d\n",det,sec,slot,dcrb_hit_trig_width[det][sec][slot]);
+                        int persistency = dcrb_hit_trig_width[det][sec][slot];
+
+
+
+						/* if we require only one timing bin, move all hits to that bin */
+						if(DCRBTIMES==1) {
+                            it = 0;
+                            tt = 0;
+                            persistency = 0;
+						}
+						
+
+
+						/*if (it >= MAXTIMES) {
+						    printf("dcrbs: WARN: itime=%d too big - ignore the hit\n", itime);
+						} else*/ if (isl<0) {
+						    /*printf("dcrbs: WARN: isl=%d (slot=%d) - ignore the hit\n", isl, slot)*/;
+						} else {
+/*#ifdef DEBUG_1*/
+						    cout<<"dcrbs: ACCEPT HIT: it="<<it<<", isl="<<isl<<", chan="<<chan<<endl;
+/*#endif*/
+                            int ttmax = it*8 + tt + persistency;
+                            int itmax = ttmax/8;
+                            if(itmax > DCRBTIMES) itmax = DCRBTIMES;
+                            printf("persistency=%d ttmax=%d itmax=%d\n",persistency,ttmax,itmax);
+
+                            for(i=it; i<itmax; i++) dcrbs[i][isl].chan[chan] = 1;
+						}
+
+					} /*for(nn=0; nn<nchan; nn++)*/
+
+#ifdef DEBUG_0
+					printf("fadcs: end loop: b08=0x%08x\n",b08);fflush(stdout);
+#endif
+				}
+
+
+
+
+				//printf("fadcs 1\n");fflush(stdout);
+
+                if (it >= DCRBTIMES) {
+				      /*printf("dcrbs: WARN: itime=%d too big - ignore the hit\n", itime)*/;
+				} else if (isl<0) {
+					  /*printf("dcrbs: WARN: isl=%d (slot=%d) - ignore the hit\n", isl, slot)*/;
+				} else {
+
+                /* for now, will use part of 's_fadc_words' output stream to report dcrb data to preserve the same fadcs() parameters, should do something better in future*/
+                for (i = 0; i < DCRBTIMES; i++) {
+					for (islot = 0; islot < nslot; islot++) {
+
+#ifdef DEBUG_1
+					  cout<<"dcrbs["<<i<<"]["<<islot<<"]="<<hex<<dcrbs[i][islot].chan<<dec<<endl;
+#endif
+
+					  fadcs[i][islot].e0 = dcrbs[i][islot].chan(12,0);
+					  fadcs[i][islot].t0 = dcrbs[i][islot].chan(15,13);
+					  fadcs[i][islot].e1 = dcrbs[i][islot].chan(28,16);
+					  fadcs[i][islot].t1 = dcrbs[i][islot].chan(31,29);
+					  fadcs[i][islot].e2 = dcrbs[i][islot].chan(44,32);
+					  fadcs[i][islot].t2 = dcrbs[i][islot].chan(47,45);
+					  fadcs[i][islot].e3 = dcrbs[i][islot].chan(60,48);
+					  fadcs[i][islot].t3 = dcrbs[i][islot].chan(63,61);
+					  fadcs[i][islot].e4 = dcrbs[i][islot].chan(76,64);
+					  fadcs[i][islot].t4 = dcrbs[i][islot].chan(79,77);
+					  fadcs[i][islot].e5 = dcrbs[i][islot].chan(92,80);
+					  fadcs[i][islot].t5 = dcrbs[i][islot].chan(95,93);
+					}
+				}
+
+				}
+
+
+				//printf("fadcs 2\n");fflush(stdout);
+
+
+				/* write into output streams (one stream per slot, one write per stream) */
+				for (i = 0; i < DCRBTIMES; i++) {
+					for (islot = 0; islot < nslot; islot++) {
+				      s_fadc_words[islot].write(fadcs[i][islot]);
+					}
+				}
+
+
+
+
+				//printf("fadcs 3\n");fflush(stdout);
+
+
+
+
+				}
+                else
+				{
+
+                /* FADC section */
+
 				while (b08 < end) {
 #ifdef DEBUG_0
 					printf("fadcs: begin while: b08=0x%08x\n",b08);fflush(stdout);
@@ -588,6 +791,17 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 					}
 				}
 
+
+				} /* FADC section */
+
+
+
+
+
+
+
+
+
 				bank_not_found = 0;
 				break; /* if we found bank, exit from 'banknum' loop */
 			} else {
@@ -719,4 +933,40 @@ fadcs_to_onestream(int nslot, hls::stream<fadc_16ch_t> s_fadc_in[NFADCS], hls::s
 		fadcs_out.fadc[ii] = fadcs_in;
 	}
 	s_fadc_out.write(fadcs_out);
+}
+
+void
+fadcs_32ns_to_dcrb_32ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<dcrb_96ch_t> &s_dcrb_out) {
+	fadc_16ch_t fadcs_in;
+	dcrb_96ch_t dcrbs_out;
+
+    if(!s_fadc_in.empty())
+    {
+	  fadcs_in = s_fadc_in.read();
+
+	  //cout<<"fadcs_in="<<hex<<fadcs_in.e5<<fadcs_in.t5<<fadcs_in.e4<<fadcs_in.t4<<fadcs_in.e3<<fadcs_in.t3<<fadcs_in.e2<<fadcs_in.t2<<fadcs_in.e1<<fadcs_in.t1<<fadcs_in.e0<<fadcs_in.t0<<dec<<endl;
+
+	  dcrbs_out.chan(12,0)  = fadcs_in.e0;
+      dcrbs_out.chan(15,13) = fadcs_in.t0;
+	  dcrbs_out.chan(28,16) = fadcs_in.e1;
+	  dcrbs_out.chan(31,29) = fadcs_in.t1;
+	  dcrbs_out.chan(44,32) = fadcs_in.e2;
+	  dcrbs_out.chan(47,45) = fadcs_in.t2;
+	  dcrbs_out.chan(60,48) = fadcs_in.e3;
+	  dcrbs_out.chan(63,61) = fadcs_in.t3;
+	  dcrbs_out.chan(76,64) = fadcs_in.e4;
+	  dcrbs_out.chan(79,77) = fadcs_in.t4;
+	  dcrbs_out.chan(92,80) = fadcs_in.e5;
+      dcrbs_out.chan(95,93) = fadcs_in.t5;
+    }
+    else /* if no data, send 0s */
+    {
+      dcrbs_out.chan(95,0) = 0;
+    }
+
+#ifdef DEBUG_0
+	cout<<"dcrbs_out="<<hex<<dcrbs_out.chan<<dec<<endl;
+#endif
+
+	s_dcrb_out.write(dcrbs_out);
 }

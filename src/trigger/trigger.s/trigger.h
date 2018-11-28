@@ -3,13 +3,14 @@
 
 #include "hls_fadc_sum.h"
 
-#define MAXTIMES   13 /*8 for data, 1 for GEMC*/   /* maximum number of the time slices */
-#define NTICKS     8    /* the number of ticks in one timing slice */
+#define MAXTIMES   13   /*13 for FADCs, 48 for DCRBs */ /*8 for data, 1 for GEMC*/   /* maximum number of the time slices */
+#define DCRBTIMES  1/*48*/  /* maximum number of the time slices for DCRB */
+#define NTICKS     8    /* the number of 4-ns ticks in one timing slice */
 #define TIME2TICKS 4000 /* conversion factor from FADC250 integral time to 4ns ticks */
 
 #if 0 /*was for PCAL*/
 #define MAXTIMES   12/*0*/   /* maximum number of the time slices */
-#define NTICKS     8    /* the number of ticks in one timing slice */
+#define NTICKS     8    /* the number of 4-ns ticks in one timing slice */
 #define TIME2TICKS 4 /* conversion factor from FADC250 integral time to 4ns ticks */
 #endif
 
@@ -18,7 +19,7 @@
 #define ECOUT 1
 #define ECAL  2
 #define PCAL  3
-#define DCRB  4
+#define DC    4
 #define HTCC  5
 #define FTOF  6
 #define CTOF  7
@@ -81,6 +82,7 @@ int fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int detector,
 void fadcs_32ns_to_8ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_4ch_t> &s_fadc_out);
 void fadcs_32ns_to_4ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_2ch_t> &s_fadc_out);
 void fadcs_to_onestream(int nslot, hls::stream<fadc_16ch_t> s_fadc_in[NFADCS], hls::stream<fadc_256ch_t> &s_fadc_out);
+void fadcs_32ns_to_dcrb_32ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<dcrb_96ch_t> &s_dcrb_out);
 
 int trigbank_open(uint32_t *bufptr, int fragtag, int banktag, int iev, unsigned long long timestamp);
 int trigbank_write(uint32_t *data);
@@ -91,6 +93,7 @@ void pclib(unsigned int *bufptr, uint16_t threshold[3], uint16_t nframes, uint16
 void htcclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_);
 void ftoflib(uint32_t *bufptr, uint16_t threshold[3], uint16_t nframes);
 void pculib(uint32_t *bufptr, uint16_t threshold[3], uint16_t nframes);
+void dclib(uint32_t *bufptr, uint16_t threshold[3], uint16_t nframes);
 void ctoflib(uint32_t *bufptr, uint16_t threshold[3], uint16_t nframes);
 void cndlib(uint32_t *bufptr, uint16_t threshold[3], uint16_t nframes);
 void ftlib(uint32_t *bufptr, uint16_t calo_seed_threshold, uint16_t hodo_hit_threshold, uint16_t calo_dt, uint16_t hodo_dt);

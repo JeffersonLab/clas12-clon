@@ -10,6 +10,7 @@
 
 
 #define NFADCS 16 /* max possible number of fadcs in crate */
+#define NDCRBS 14 /* max possible number of dcrbs in crate */
 
 #define ECPEAK_TAG     0x4
 #define ECHIT_TAG      0x5
@@ -19,6 +20,9 @@
 #define CTOFHIT_TAG    0x9
 #define CNDHIT_TAG     0xA
 #define PCUHIT_TAG     0xB
+#define DC1HIT_TAG     0xC
+#define DC1SEGM_TAG    0xC0
+#define DC1ROAD_TAG    0xC0
 
 typedef struct
 {
@@ -48,6 +52,7 @@ typedef struct
   ap_uint<3>	t3;
 
 } fadc_4ch_t;
+
 
 typedef struct
 {
@@ -86,11 +91,23 @@ typedef struct
 
 } fadc_16ch_t;
 
+
 typedef struct
 {
   fadc_16ch_t fadc[NFADCS];
 
 } fadc_256ch_t;
+
+
+
+
+typedef struct
+{
+  ap_uint<96> chan;
+
+} dcrb_96ch_t;
+
+
 
 /* stream to initiate readout */
 typedef struct
@@ -111,5 +128,11 @@ typedef struct
   ap_uint<32> data[3];
   ap_uint<1>  end;
 } eventdata3_t;
+
+typedef struct
+{
+  ap_uint<32> data[5];
+  ap_uint<1>  end;
+} eventdata5_t;
 
 #endif

@@ -51,16 +51,16 @@ ctofhiteventreader(hls::stream<eventdata3_t> &event_stream, CTOFHit_8slices &hit
       break;
     }
 
-    *bufptr++ = eventdata.data[0];  
+    *bufptr++ = eventdata.data[0];
     word_first = eventdata.data[0](31,31); /* 1 for the first word in hit, 0 for followings */
     tag = eventdata.data[0](30,27); /* must be 'CTOFHIT_TAG' */
     j = eventdata.data[0](18,16); /* 3 lowest bits of timing */
 
     *bufptr++ = eventdata.data[1];
-	hit.output[j](47,31) = eventdata.data[1](16,0);
+	hit.output[j](47,31) = eventdata.data[1](16,0); /* 17 bits */
 
     *bufptr++ = eventdata.data[2];
-	hit.output[j](30,0) = eventdata.data[2](30,0);
+	hit.output[j](30,0) = eventdata.data[2](30,0); /* 31 bits */
   }
 
 }
@@ -68,9 +68,9 @@ ctofhiteventreader(hls::stream<eventdata3_t> &event_stream, CTOFHit_8slices &hit
 
 
 void
-ctof_buf_ram_to_event_buf_ram(hit_ram_t buf_ram[512], event_ram_t event_buf_ram[4096])
+ctof_buf_ram_to_event_buf_ram(hit_ram_t buf_ram[(NRAM/8)], event_ram_t event_buf_ram[NRAM])
 {
-  for(int i=0; i<512; i++)
+  for(int i=0; i<(NRAM/8); i++)
   {
     event_buf_ram[i*8+0].output = buf_ram[i].output[0];
     event_buf_ram[i*8+1].output = buf_ram[i].output[1];
@@ -80,6 +80,7 @@ ctof_buf_ram_to_event_buf_ram(hit_ram_t buf_ram[512], event_ram_t event_buf_ram[
     event_buf_ram[i*8+5].output = buf_ram[i].output[5];
     event_buf_ram[i*8+6].output = buf_ram[i].output[6];
     event_buf_ram[i*8+7].output = buf_ram[i].output[7];
+	/*cout<<"buf_ram["<<i<<"]: "<<hex<<buf_ram[i].output[0]<<buf_ram[i].output[1]<<buf_ram[i].output[2]<<buf_ram[i].output[3]<<buf_ram[i].output[4]<<buf_ram[i].output[5]<<buf_ram[i].output[6]<<buf_ram[i].output[7]<<dec<<endl;*/
   }
 }
 
@@ -105,25 +106,35 @@ ctoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
   volatile ap_uint<1> hit_scaler_inc;
 
   hls::stream<trig_t> trig_stream;
-  hit_ram_t buf_ram[512];
-  event_ram_t event_buf_ram[4096];
+  hit_ram_t buf_ram[(NRAM/8)];
+  event_ram_t event_buf_ram[NRAM];
   hls::stream<eventdata3_t> event_stream;
   CTOFHit_8slices hit;
 
-  uint32_t bufout[2048];
+  uint32_t bufout[NRAM];
 
   int detector = CTOF;
 
+#ifdef DEBUG
+  cout<<"ctoflib: threshold="<<threshold[0]<<" "<<threshold[1]<<" "<<threshold[2]<<endl;
+#endif
+
   for(sec=0; sec<1/*NSECTOR*/; sec++)
   {
+printf("1\n");
     ret = fadcs(bufptr, threshold[0], sec, detector, s_fadc_words, 0, 0, &iev, &timestamp);
+	printf("2 ret=%d\n",ret);
     if(ret<=0) continue;
 
     trig.t_stop = trig.t_start + MAXTIMES*NH_READS; /* set readout window MAXTIMES*32ns in 4ns ticks */
+	cout<<"trig_start="<<trig.t_start<<" trig_stop="<<trig.t_stop<<endl;
     trig_stream.write(trig);
 
     for(int it=0; it<MAXTIMES; it++)
     {
+#ifdef DEBUG
+	  printf("\n==> ctoflib: timing slice = %d\n",it);fflush(stdout);
+#endif
       fadcs_to_onestream(NSLOT, s_fadc_words, s_fadcs);
       ctof(threshold, nframes, s_fadcs, s_hits, hit_scaler_inc, buf_ram);
 

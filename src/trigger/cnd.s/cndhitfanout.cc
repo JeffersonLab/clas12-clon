@@ -33,6 +33,13 @@ cndhitfanout(CNDHit hitin[NH_READS], hls::stream<CNDOut_8slices> &s_hits, CNDHit
   ap_uint<1> scaler[NH_READS];
   ap_uint<1> scaler_tmp = 0;
 
+  static int first = 0;
+  if(first==0)
+  {
+    first = 1;
+    return;
+  }
+
 #ifdef DEBUG
     cout<<"cndhitfanout =="<<endl;
 #endif

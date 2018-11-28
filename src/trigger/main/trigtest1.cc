@@ -19,12 +19,14 @@
 /* uncomment desired detectors */ 
 //#define USE_ECAL
 //#define USE_PCAL
-//#define USE_HTCC
-#define USE_FTOF
-//#define USE_CTOF
-//#define USE_CND
+#define USE_HTCC
+//#define USE_FTOF
+#define USE_CTOF
+#define USE_CND
 //#define USE_FT
 //#define USE_PCU
+//#define USE_DC
+
 
 using namespace std;
 
@@ -34,6 +36,7 @@ using namespace std;
 #include <CCDB/SQLiteCalibration.h>
 using namespace ccdb;
 #endif
+
 
 #define ENCORR 10000. /* sergey: clara applies 1/10000 to ADC values */ 
 
@@ -71,13 +74,16 @@ static uint16_t pc_dalitzmax = (480.)/*PC_DALITZ_MAX*/;
 static uint16_t pc_nstripmax = 0;
 
 static uint16_t htcc_threshold[3] = { 1, 1, 3 };
-static uint16_t htcc_nframes = 0;
+static uint16_t htcc_nframes = 3;
 
 static uint16_t ftof_threshold[3] = { 1, 1, 0 }; /* strip, sqrt(L*R) */
 static uint16_t ftof_nframes = 5;
 
 static uint16_t pcu_threshold[3] = { 1, 1, 65000}; /* strip, emin, emax */
 static uint16_t pcu_nframes = 0;
+
+static uint16_t dc_threshold[3] = { 0, 4, 5}; /* n/a, segment multiplicity, road multiplicity */
+static uint16_t dc_nframes = 0;
 
 static uint16_t ctof_threshold[3] = { 1, 1, 3 }; /* strip, sqrt(L*R) */
 static uint16_t ctof_nframes = 4;
@@ -95,13 +101,12 @@ static uint16_t hodo_dt = FT_HODO_DT;
 unsigned int buf[MAXBUF];
 unsigned int *bufptr;
 
-/* 0,1,2 - segfauil on event 905; 3 and more - Ok */
-#define SKIPEVENTS 0
+#define SKIPEVENTS 40
+#define MAXEVENTS 100
 
-//#define MAXEVENTS 38
-#define MAXEVENTS 200
-
-int main(int argc, char **argv) {
+int
+main(int argc, char **argv)
+{
 	int run = 11; /* sergey: was told to use 11, do not know why .. */
 	int ii, ind, fragtag, fragnum, tag, num, nbytes, ind_data;
 	int nhitp, nhiti, nhito, nhitp_offline, nhiti_offline, nhito_offline;
@@ -198,7 +203,7 @@ int main(int argc, char **argv) {
 	while (iev < maxevents) {
 		iev++;
 
-		/*if(!(iev%1000))*/printf("\n\n\nEvent %d\n\n", iev);
+		/*if(!(iev%1000))*/ /*printf("\n\n\nEvent %d\n\n", iev);*/
 
 		status = evRead(handlerin, buf, MAXBUF);
 
@@ -247,6 +252,10 @@ int main(int argc, char **argv) {
 
 #ifdef USE_PCU
 		pculib(bufptr, pcu_threshold, pcu_nframes);
+#endif
+
+#ifdef USE_DC
+		dclib(bufptr, dc_threshold, dc_nframes);
 #endif
 
 #ifdef USE_ECAL

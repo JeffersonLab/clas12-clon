@@ -136,23 +136,23 @@ ftoflib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
       if(!s_hits_empty) hit_tmp = s_hits.read();
     }
 
-  if(!s_hits_empty)
-  {
-    ftof_buf_ram_to_event_buf_ram(buf_ram, event_buf_ram);
-    ftofhiteventwriter(trig_stream, event_stream, event_buf_ram);
-    ftofhiteventreader(event_stream, hit, bufout);
+    if(!s_hits_empty) /* error ? s_hits_empty overwritten on every 'it' itteration above, so value here from last itteration .. */
+    {
+      ftof_buf_ram_to_event_buf_ram(buf_ram, event_buf_ram);
+      ftofhiteventwriter(trig_stream, event_stream, event_buf_ram);
+      ftofhiteventreader(event_stream, hit, bufout);
 #ifdef DEBUG
-    for(int i=0; i<=bufout[0]; i++) printf("FTOF bufout[%d]=0x%08x\n",i,bufout[i]);
+      for(int i=0; i<=bufout[0]; i++) printf("FTOF bufout[%d]=0x%08x\n",i,bufout[i]);
 #endif
-    if(bufout[0]>0) /*bufout contains something */
-	{
-      int fragtag = 60094+sec; /* ftof vtp rocid range is 94-99 */
-      int banktag = 0xe122;
-      trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
-      trigbank_write(bufout);
-      trigbank_close(bufout[0]);
-	}
-  }
+      if(bufout[0]>0) /*bufout contains something */
+	  {
+        int fragtag = 60094+sec; /* ftof vtp rocid range is 94-99 */
+        int banktag = 0xe122;
+        trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
+        trigbank_write(bufout);
+        trigbank_close(bufout[0]);
+	  }
+    }
 
     trig.t_start += MAXTIMES*8; /* in preparation for next event, step up MAXTIMES*32ns in 4ns ticks */
   }

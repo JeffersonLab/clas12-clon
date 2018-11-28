@@ -16,8 +16,10 @@ using namespace std;
 #include "hls_fadc_sum.h"
 
 void
-ctof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<CTOFOut_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512])
+ctof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<CTOFOut_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[(NRAM/8)])
 {
+//#pragma HLS DATAFLOW
+
 #pragma HLS INTERFACE ap_stable port=threshold
 #pragma HLS ARRAY_PARTITION variable=threshold dim=1
 #pragma HLS INTERFACE ap_stable port=nframes
@@ -35,24 +37,22 @@ ctof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fa
 
 #pragma HLS PIPELINE II=1
 
-  static int first = 0;
-
   CTOFStrip_s s_strip;
+  CTOFStrip_s s_clust;
   CTOFHit hit1[NH_READS];
   CTOFHit hit2[NH_READS];
-  ap_uint<32> thresh;
+  static int skip = 0;
 
-  if(nframes>NPER) nframes = NPER;
-  thresh = threshold[1]*threshold[1];
+  ctofstrips(threshold[0], nframes, s_fadcs, s_strip, s_clust);
+  ctofhit(threshold[1], threshold[2], nframes, s_strip, s_clust, hit1);
 
-  ctofstrips(threshold[0], s_fadcs, s_strip);
-  ctofhit(thresh, nframes, s_strip, hit1);
-
-  if(first==0)
+#ifdef __SYNTHESIS__
+  if(skip<2)
   {
-    first = 1;
+    skip ++;
     return;
   }
+#endif
 
   ctofhitfanout(hit1, s_hits, hit2, hit_scaler_inc);
   ctofhiteventfiller(hit2, buf_ram);

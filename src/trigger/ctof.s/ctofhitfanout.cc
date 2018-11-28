@@ -34,13 +34,17 @@ ctofhitfanout(CTOFHit hitin[NH_READS], hls::stream<CTOFOut_8slices> &s_hits, CTO
   ap_uint<1> scaler[NH_READS];
   ap_uint<1> scaler_tmp = 0;
 
+
   for(int i=0; i<NH_READS; i++)
   {
     /* every bit in out.out corresponds to 3 counters */
     for(int j=0; j<NBIT_OUT; j++)
 	{
+      /*was for 16-bit output when every bit in out.out corresponds to 3 counters
       int k=j*3;
       out.out[i](j,j) = hitin[i].output(k,k) | hitin[i].output(k+1,k+1) | hitin[i].output(k+2,k+2);
+	  */
+      out.out[i](j,j) = hitin[i].output(j,j);
 	}
 
 #ifdef DEBUG
@@ -51,7 +55,7 @@ ctofhitfanout(CTOFHit hitin[NH_READS], hls::stream<CTOFOut_8slices> &s_hits, CTO
     if(out.out[i] != 0) scaler[i] = 1;
 
     hitout[i].output = hitin[i].output;
-    hitout[i].standalone = hitin[i].standalone;
+    /*hitout[i].standalone = hitin[i].standalone;*/
   }
 
   s_hits.write(out);

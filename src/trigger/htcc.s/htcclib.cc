@@ -1,4 +1,6 @@
 
+/* htcclib.cc */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -18,53 +20,68 @@ using namespace std;
 #include "trigger.h"
 
 
-//#define DEBUG
+#define DEBUG
 
 
 #define MAX(a,b)    (a > b ? a : b)
 #define MIN(a,b)    (a < b ? a : b)
 
+static int the_number_of_banks = 0;
 
 void
-htcchiteventreader(hls::stream<eventdata_t> &event_stream, HTCCHit &hit, uint32_t *bufout)
+htcchiteventreader(hls::stream<eventdata3_t> &event_stream, HTCCHit_8slices &hit, uint32_t *bufout)
 {
-  eventdata_t eventdata;
+  eventdata3_t eventdata;
   uint32_t data_end, word_first, tag, inst, view, data, *bufptr = bufout + 1;
+  int j;
   while(1)
   {
-    if(event_stream.empty()) {bufout[0]=0;printf("htcchiteventreader: EMPTY STREAM ERROR1\n");break;}
-
-    eventdata = event_stream.read();
-    if(eventdata.end == 1)
+    if(event_stream.empty())
     {
-      bufout[0] = bufptr - bufout - 1;
-      /*printf("htcchiteventreader: END_OF_DATA\n");*/
+      bufout[0] = 0;
+      printf("htcchiteventreader: EMPTY STREAM ERROR1\n");
       break;
     }
 
-    *bufptr++ = eventdata.data;
-    data_end = eventdata.end;           /* 0 for all words except last one when it is 1 */
-    word_first = eventdata.data(31,31); /* 1 for the first word in hit, 0 for followings */
-    tag = eventdata.data(30,27); /* must be 'HTCCHIT_TAG' */
-
-    if(event_stream.empty()) {printf("htcchiteventreader: EMPTY STREAM ERROR2\n");break;}
     eventdata = event_stream.read();
-    *bufptr++ = eventdata.data;
-    data_end = eventdata.end;
-	hit.output(47,31) = eventdata.data(16,0);
-    /*cout<<"htcchiteventreader: output="<<hit.output<<endl;*/
+    if(eventdata.end == 1) /* 0 for all words except last one when it is 1 */
+    {
+      bufout[0] = bufptr - bufout - 1;
+      //printf("htcchiteventreader: END_OF_DATA\n");
+      break;
+    }
 
-    if(event_stream.empty()) {printf("htcchiteventreader: EMPTY STREAM ERROR2\n");break;}
-    eventdata = event_stream.read();
-    *bufptr++ = eventdata.data;
-    data_end = eventdata.end;
-	hit.output(30,0) = eventdata.data(30,0);
-    /*cout<<"htcchiteventreader: output="<<hit.output<<endl;*/
+    *bufptr++ = eventdata.data[0];  
+    word_first = eventdata.data[0](31,31); /* 1 for the first word in hit, 0 for followings */
+    tag = eventdata.data[0](30,27); /* must be 'HTCCHIT_TAG' */
+    j = eventdata.data[0](18,16); /* 3 lowest bits of timing */
+
+    *bufptr++ = eventdata.data[1];
+	hit.output[j](47,31) = eventdata.data[1](16,0);
+
+    *bufptr++ = eventdata.data[2];
+	hit.output[j](30,0) = eventdata.data[2](30,0);
   }
+
 }
 
 
 
+void
+htcc_buf_ram_to_event_buf_ram(hit_ram_t buf_ram[512], event_ram_t event_buf_ram[4096])
+{
+  for(int i=0; i<512; i++)
+  {
+    event_buf_ram[i*8+0].output = buf_ram[i].output[0];
+    event_buf_ram[i*8+1].output = buf_ram[i].output[1];
+    event_buf_ram[i*8+2].output = buf_ram[i].output[2];
+    event_buf_ram[i*8+3].output = buf_ram[i].output[3];
+    event_buf_ram[i*8+4].output = buf_ram[i].output[4];
+    event_buf_ram[i*8+5].output = buf_ram[i].output[5];
+    event_buf_ram[i*8+6].output = buf_ram[i].output[6];
+    event_buf_ram[i*8+7].output = buf_ram[i].output[7];
+  }
+}
 
 
 
@@ -74,69 +91,78 @@ static trig_t trig; /* assumed to be cleaned up because of 'static' */
 void
 htcclib(uint32_t *bufptr, uint16_t threshold_[3], uint16_t nframes_)
 {
-  ap_uint<16> threshold[3] = {threshold_[0], threshold_[1], threshold_[2]};
-  nframe_t nframes = nframes_;
-
-  int status, ret;
+  int status, ret, sec;
   int iev;
   unsigned long long timestamp;
 
-  uint32_t bufout[NRAM];
+  ap_uint<16> threshold[3] = {threshold_[0], threshold_[1], threshold_[2]};
+  nframe_t nframes = nframes_;
 
-  hls::stream<fadc_16ch_t> s_fadcs[NFADCS];
-  hls::stream<fadc_2ch_t> s_fadc_words[NFADCS];
-hls::stream<HTCCHit> s_hits;
-  HTCCHit hit_tmp;
+  hls::stream<fadc_16ch_t> s_fadc_words[NSLOT];
+  hls::stream<fadc_256ch_t> s_fadcs;
+  hls::stream<HTCCOut_8slices> s_hits;
+  HTCCOut_8slices hit_tmp;
+  volatile ap_uint<1> hit_scaler_inc;
 
-hls::stream<trig_t> trig_stream;
-  hit_ram_t buf_ram[NRAM];
-hls::stream<eventdata_t> event_stream;
-  HTCCHit hit;
+  hls::stream<trig_t> trig_stream;
+  hit_ram_t buf_ram[512];
+  event_ram_t event_buf_ram[4096];
+  hls::stream<eventdata3_t> event_stream;
+  HTCCHit_8slices hit;
+
+  uint32_t bufout[2048];
 
   int detector = HTCC;
-  int sec = 0;
-  int nslot = 3;
 
 #ifdef DEBUG
   cout<<"htcclib: threshold="<<threshold[0]<<" "<<threshold[1]<<" "<<threshold[2]<<endl;
 #endif
 
-  ret = fadcs(bufptr, threshold[0], sec, detector, s_fadcs, 0, 0, &iev, &timestamp);
-  if(ret<=0) return;
-
-  trig.t_stop = trig.t_start + MAXTIMES*NH_READS; /* set readout window MAXTIMES*32ns in 4ns ticks */
-#ifdef DEBUG
-  cout<<"-htcclib-> t_start="<<trig.t_start<<" t_stop="<<trig.t_stop<<endl;
-#endif
-  trig_stream.write(trig);
-
-  for(int it=0; it<MAXTIMES; it++)
+  for(sec=0; sec<1/*NSECTOR*/; sec++)
   {
+    ret = fadcs(bufptr, threshold[0], sec, detector, s_fadc_words, 0, 0, &iev, &timestamp);
+    if(ret<=0) continue;
+
+    trig.t_stop = trig.t_start + MAXTIMES*NH_READS; /* set readout window MAXTIMES*32ns in 4ns ticks */
 #ifdef DEBUG
- 	printf("htcclib: timing slice = %d\n",it);fflush(stdout);
+	cout<<"-htcclib-> t_start="<<trig.t_start<<" t_stop="<<trig.t_stop<<endl;
 #endif
-    /* adjust to 4ns domain */
-    for(int i=0; i<nslot; i++) fadcs_32ns_to_4ns(s_fadcs[i], s_fadc_words[i]); /* 1 read, 8 writes */
+    trig_stream.write(trig);
 
-    htcc(threshold, nframes, s_fadc_words, s_hits, buf_ram);
+    for(int it=0; it<MAXTIMES; it++)
+    {
+#ifdef DEBUG
+	  printf("\n==> htcclib: timing slice = %d\n",it);fflush(stdout);
+#endif
+      fadcs_to_onestream(NSLOT, s_fadc_words, s_fadcs);
+      htcc(threshold, nframes, s_fadcs, s_hits, hit_scaler_inc, buf_ram);
 
-    /* read hits to avoid 'leftover' warnings */
-    for(int i=0; i<NH_READS; i++) hit_tmp = s_hits.read();
+      /* read hits to avoid 'leftover' warnings */
+      if(!s_hits.empty()) hit_tmp = s_hits.read();
+    }
+
+    htcc_buf_ram_to_event_buf_ram(buf_ram, event_buf_ram);
+    htcchiteventwriter(trig_stream, event_stream, event_buf_ram);
+    htcchiteventreader(event_stream, hit, bufout);
+#ifdef DEBUG
+    for(int i=0; i<=bufout[0]; i++) printf("HTCC bufout[%d]=0x%08x\n",i,bufout[i]);fflush(stdout);
+#endif
+    if(bufout[0]>0) /*bufout contains something */
+	{
+#ifdef DEBUG
+      printf("HTCC BANK %d\n",the_number_of_banks++);fflush(stdout);
+#endif
+      int fragtag = 61093;
+      int banktag = 0xe122;
+      trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
+      trigbank_write(bufout);
+      trigbank_close(bufout[0]);
+	}
+
+
+    trig.t_start += MAXTIMES*8; /* in preparation for next event, step up MAXTIMES*32ns in 4ns ticks */
   }
 
-  htcchiteventwriter(trig_stream, event_stream, buf_ram);
-  htcchiteventreader(event_stream, hit, bufout);
-
-  if(bufout[0]>0)
-  {
-    int fragtag = 60093;
-    int banktag = 0xe122;
-    trigbank_open(bufptr, fragtag, banktag, iev, timestamp);
-    trigbank_write(bufout);
-    trigbank_close(bufout[0]);
-  }
-
-  trig.t_start += MAXTIMES*8; /* in preparation for next event, step up MAXTIMES*32ns in 4ns ticks */
 
   return;
 }

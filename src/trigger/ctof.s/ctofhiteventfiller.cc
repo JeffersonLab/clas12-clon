@@ -21,19 +21,27 @@ using namespace std;
 /* 2.66/4/4/0%/0%/(194)~0%/(102)~0% II=4 */
 
 void
-ctofhiteventfiller(CTOFHit s_hitin[NH_READS], hit_ram_t buf_ram[512])
+ctofhiteventfiller(CTOFHit s_hitin[NH_READS], hit_ram_t buf_ram[(NRAM/8)])
 {
 //#pragma HLS DATA_PACK variable=buf_ram
 ////#pragma HLS ARRAY_PARTITION variable=buf_ram block factor=8 dim=1
 #pragma HLS PIPELINE II=1
 
   static ap_uint<8> itime = 0;
-
+#ifdef DEBUG
+  cout<<endl;
+#endif
   for(int i=0; i<NH_READS; i++)
   {
     buf_ram[itime].output[i] = s_hitin[i].output;
-    buf_ram[itime].standalone[i] = s_hitin[i].standalone;
+    /*buf_ram[itime].standalone[i] = s_hitin[i].standalone;*/
+#ifdef DEBUG
+    cout<<"ctofhiteventfiller: buf_ram["<<itime<<"].output["<<i<<"]="<<hex<<buf_ram[itime].output[i]<<dec<<endl;
+#endif
   }
+#ifdef DEBUG
+  cout<<endl;
+#endif
 
   itime ++;
 }

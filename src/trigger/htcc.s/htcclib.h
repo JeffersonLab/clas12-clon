@@ -1,3 +1,6 @@
+
+/* htcclib.h */
+
 #ifndef _HTCCLIB_
 
 #include <ap_int.h>
@@ -5,78 +8,89 @@
 
 #include "hls_fadc_sum.h"
 
+
 #ifdef	__cplusplus
 extern "C" {
 #endif
 
-/* htcclib.h */
+#define NSECTOR 1
 
 #define NSLOT 3
-#define NH_READS  8   /* the number of reads-write for streams, AND the number of 4ns intervals inside 32ns interval */
-
-/* event ram dimension in 4ns ticks: 11 bits, 2048 size */
-#define NRAM 2048
-#define RAM_BITS 11
 
 #define NSTRIP 48
+
 #define NCHAN 48
 #define NCLSTR 36
-#define NHIT NCLSTR
+#define NHIT NSTRIP
 
+#define NBIT_OUT NCHAN /* the number of bits in output */
+
+#define NH_READS  8   /* the number of reads-write for streams, AND the number of 4ns intervals inside 32ns interval */
 
 #define TIMECORR 7 /*TEMPORARY !!!!!!!!!!!!!!!! */
 
 /* strip persistency */
 #define NPER 8
-typedef ap_uint<3> nframe_t;
+typedef ap_uint<6> nframe_t;
 
-typedef struct htccstrip
-{
-  ap_uint<13> energy;       /* strip energy */
-} HTCCStrip;
 
-#define N1 6 /* the number of elements in following struct */
-#define NSTREAMS1 (NCHAN/N1)
+
 typedef struct htccstrip_s
 {
-  ap_uint<13> energy00;
-  ap_uint<13> energy01;
-  ap_uint<13> energy02;
-  ap_uint<13> energy03;
-  ap_uint<13> energy04;
-  ap_uint<13> energy05;
+  ap_uint<13> en[NSTRIP];
+  ap_uint<3>  tm[NSTRIP];
 } HTCCStrip_s;
 
 
 
 typedef struct htcchit
 {
-  ap_uint<NCHAN> output;
+  ap_uint<NSTRIP> output;
 } HTCCHit;
+
+typedef struct
+{
+  ap_uint<NSTRIP> output[NPER];
+} HTCCHit_8slices;
+
+
+typedef struct
+{
+  ap_uint<NBIT_OUT> out[NPER];
+} HTCCOut_8slices;
 
 
 
 #define NBIT_HIT_ENERGY 16
 #define NBIT_COORD_EB 10 /*in event builder coordinates always 10 bits*/
 
+
+
+
+/* will be asymetric ram in vhdl */
 typedef struct
 {
-  ap_uint<NCHAN> output;
+  ap_uint<NSTRIP> output[NPER];
 } hit_ram_t;
 
+typedef struct
+{
+  ap_uint<NSTRIP> output;
+} event_ram_t;
+/* will be asymetric ram in vhdl */
 
 
 
-void htcchiteventreader(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, HTCCHit &hit, uint32_t *bufout);
 
-void htcc(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_2ch_t> s_fadc_words[NFADCS], hls::stream<HTCCHit> &s_hits1, hit_ram_t buf_ram[NRAM]);
+void htcchiteventreader(hls::stream<eventdata_t> &event_stream, HTCCHit_8slices &hit, uint32_t *bufout);
 
-void htccstrips(ap_uint<16> strip_threshold, hls::stream<fadc_2ch_t> s_fadc_words[NSLOT], hls::stream<HTCCStrip_s> s_strip0[NSTREAMS1]);
-void htccstripspersistence(nframe_t nframes, hls::stream<HTCCStrip_s> &s_stripin, hls::stream<HTCCStrip_s> &s_stripout, ap_uint<3> jj);
-void htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> cluster_threshold, hls::stream<HTCCStrip_s> s_strip[NSTREAMS1], hls::stream<HTCCHit> &s_hit);
-void htcchitfanout(hls::stream<HTCCHit> &s_hit, hls::stream<HTCCHit> &s_hit1, hls::stream<HTCCHit> &s_hit2, volatile ap_uint<1> &hit_scaler_inc);
-void htcchiteventfiller(hls::stream<HTCCHit> &s_hitin, hit_ram_t buf_ram[NRAM]);
-void htcchiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata_t> &event_stream, hit_ram_t buf_ram_read[NRAM]);
+void htcc(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<HTCCOut_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512]);
+
+void htccstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, HTCCStrip_s &s_strip);
+void htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> cluster_threshold, nframe_t nframes, HTCCStrip_s s_strip, HTCCHit s_hit[NH_READS]);
+void htcchitfanout(HTCCHit s_hit[NH_READS], hls::stream<HTCCOut_8slices> &s_hits, HTCCHit s_hit2[NH_READS], volatile ap_uint<1> &hit_scaler_inc);
+void htcchiteventfiller(HTCCHit s_hitin[NH_READS], hit_ram_t buf_ram[512]);
+void htcchiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata3_t> &event_stream, event_ram_t buf_ram_read[2048]);
 
 #ifdef	__cplusplus
 }

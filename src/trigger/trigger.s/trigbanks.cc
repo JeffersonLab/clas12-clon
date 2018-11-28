@@ -167,9 +167,8 @@ trigbank_close(int nwords)
 	PUT32(word);
 	b08out_save = b08out;
 
-	printf("11\n");fflush(stdout);
     ret = evCloseBank(bufptr_save, fragtag_save, fragnum, banktag_save, BANKNUM, b08out_save);
-	printf("12\n");fflush(stdout);
+
 	return (ret);
 }
 

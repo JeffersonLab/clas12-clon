@@ -18,6 +18,8 @@ using namespace std;
 void
 ftof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<FTOFHit_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512])
 {
+//#pragma HLS DATAFLOW
+
 #pragma HLS INTERFACE ap_stable port=threshold
 #pragma HLS ARRAY_PARTITION variable=threshold dim=1
 #pragma HLS INTERFACE ap_stable port=nframes
@@ -47,6 +49,7 @@ ftof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fa
 
   ftofstrips(threshold[0], s_fadcs, s_strip);
   ftofhit(thresh, nframes, s_strip, hit1);
+
 
   if(first==0)
   {

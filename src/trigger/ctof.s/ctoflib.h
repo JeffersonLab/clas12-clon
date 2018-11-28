@@ -22,7 +22,7 @@ extern "C" {
 #define NCHAN 48
 #define NHIT NSTRIP
 
-#define NBIT_OUT 16 /* the number of bits in output */
+#define NBIT_OUT NCHAN /* the number of bits in output */
 
 #define NH_READS  8   /* the number of reads-write for streams, AND the number of 4ns intervals inside 32ns interval */
 
@@ -32,9 +32,9 @@ extern "C" {
 #define NPER 8
 typedef ap_uint<6> nframe_t;
 
-
+  /*
 #define NSTANDALONEBITS 16
-
+  */
 
 #define NLR 2 /* the number of 'left-rights' */
 typedef struct ctofstrip_s
@@ -50,13 +50,13 @@ typedef struct ctofstrip_s
 typedef struct ctofhit
 {
   ap_uint<NSTRIP> output;
-  ap_uint<NSTANDALONEBITS> standalone;
+  /*ap_uint<NSTANDALONEBITS> standalone;*/
 } CTOFHit;
 
 typedef struct
 {
   ap_uint<NSTRIP> output[NPER];
-  ap_uint<NSTANDALONEBITS> standalone[NPER];
+  /*ap_uint<NSTANDALONEBITS> standalone[NPER];*/
 } CTOFHit_8slices;
 
 
@@ -77,28 +77,28 @@ typedef struct
 typedef struct
 {
   ap_uint<NSTRIP> output[NPER];
-  ap_uint<NSTANDALONEBITS> standalone[NPER];
+  /*ap_uint<NSTANDALONEBITS> standalone[NPER];*/
 } hit_ram_t;
 
 typedef struct
 {
   ap_uint<NSTRIP> output;
-  ap_uint<NSTANDALONEBITS> standalone;
+  /*ap_uint<NSTANDALONEBITS> standalone;*/
 } event_ram_t;
 /* will be asymetric ram in vhdl */
 
 
-
+#define NRAM 2048
 
 void ctofhiteventreader(hls::stream<eventdata_t> &event_stream, CTOFHit_8slices &hit, uint32_t *bufout);
 
-void ctof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<CTOFOut_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512]);
+void ctof(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<CTOFOut_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[(NRAM/8)]);
 
-void ctofstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, CTOFStrip_s &s_strip);
-void ctofhit(ap_uint<32> threshold, nframe_t nframes, CTOFStrip_s s_strip, CTOFHit s_hit[NH_READS]);
+void ctofstrips(ap_uint<16> strip_threshold, nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, CTOFStrip_s &s_strip, CTOFStrip_s &s_clust);
+void ctofhit(ap_uint<16> threshold1, ap_uint<16> threshold2, nframe_t nframes, CTOFStrip_s s_strip, CTOFStrip_s s_clust, CTOFHit s_hit[NH_READS]);
 void ctofhitfanout(CTOFHit s_hit[NH_READS], hls::stream<CTOFOut_8slices> &s_hits, CTOFHit s_hit2[NH_READS], volatile ap_uint<1> &hit_scaler_inc);
-void ctofhiteventfiller(CTOFHit s_hitin[NH_READS], hit_ram_t buf_ram[512]);
-void ctofhiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata3_t> &event_stream, event_ram_t buf_ram_read[2048]);
+void ctofhiteventfiller(CTOFHit s_hitin[NH_READS], hit_ram_t buf_ram[(NRAM/8)]);
+void ctofhiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata3_t> &event_stream, event_ram_t buf_ram_read[NRAM]);
 
 #ifdef	__cplusplus
 }

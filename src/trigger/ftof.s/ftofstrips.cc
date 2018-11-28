@@ -31,6 +31,8 @@ using namespace std;
     timetmp[lr][str] = timexxx;	\
     energytmp[lr][str] = energyxxx; \
   }
+
+
   /*if(lay==0 && energy>0) cout<<"ftofstrips: energy[lay="<<lay<<"][str="<<str<<"][lr="<<lr<<"]="<<energy<<endl; \
 	if(lay==0) cout<<"ftofstrips: timetmp[lr="<<lr<<"][str="<<str<<"]="<<timetmp[lr][str]<<endl*/
 
