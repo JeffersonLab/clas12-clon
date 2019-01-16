@@ -16,158 +16,101 @@ using namespace std;
 
 
 #include "htcctrans.h"
-#include "hls_fadc_sum.h"
 #include "htcclib.h"
 
+#define MIN(a,b)    (a < b ? a : b)
+
+#define TRANSLATE(ch_m) \
+  energy = fadcs.fadc[isl].e##ch_m; \
+  chan = ch_m; \
+  str    = adcstrip[isl][chan] - 1; \
+  timexxx = ((energy >= strip_threshold) ? ((uint16_t)fadcs.fadc[isl].t##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
+  energyxxx = ((energy >= strip_threshold) ? ((uint16_t)fadcs.fadc[isl].e##ch_m) : 0); /* error in '?' without (uint16_t) ...*/ \
+  timetmp[str] = timexxx; \
+  energytmp[str] = energyxxx
 
 
-/* 1.96/19/8/0%/0%/~0%(4131)/~2%(8396) II=8 */
+/* 1.96/16/8/0%/0%/~0%(638)/~0%(519) II=8 */
 
-/* reads one timing slice, do 8 reads and 8 writes */
+/* reads one 32-ns timing slice */
 void
-htccstrips(ap_uint<16> strip_threshold, hls::stream<fadc_2ch_t> s_fadc_words[/*NSLOT*/NFADCS], hls::stream<HTCCStrip_s> s_strip0[NSTREAMS1])
+htccstrips(ap_uint<16> strip_threshold, hls::stream<fadc_256ch_t> &s_fadcs, HTCCStrip_s &s_strip)
 {
-#pragma HLS INTERFACE ap_stable port=strip_threshold
-#pragma HLS DATA_PACK variable=s_fadc_words
-#pragma HLS INTERFACE axis register both port=s_fadc_words
-#pragma HLS ARRAY_PARTITION variable=s_fadc_words complete dim=1
-#pragma HLS DATA_PACK variable=s_strip0
-#pragma HLS INTERFACE axis register both port=s_strip0
-#pragma HLS ARRAY_PARTITION variable=s_strip0 complete dim=1
-#pragma HLS PIPELINE II=8
+//#pragma HLS INTERFACE ap_stable port=strip_threshold
+//#pragma HLS DATA_PACK variable=s_fadcs
+//#pragma HLS INTERFACE axis register both port=s_fadcs
+#pragma HLS PIPELINE II=1
 
   ap_uint<13> energy;
   ap_uint<4> chan; /*0-15*/
   ap_uint<6> str; /*0-47*/
 
-  fadc_2ch_t fadcs;
+  fadc_256ch_t fadcs;
 
+  ap_uint<3> timexxx;
+  ap_uint<13> energyxxx;
+
+  ap_uint<3> timetmp[NSTRIP]; /* 3 low bits for time interval (0-7) */
+#pragma HLS ARRAY_PARTITION variable=timetmp complete dim=1
   ap_uint<13> energytmp[NSTRIP];
 #pragma HLS ARRAY_PARTITION variable=energytmp complete dim=1
-  ap_uint<3> timetmp[NSTRIP];
-#pragma HLS ARRAY_PARTITION variable=timetmp complete dim=1
-  ap_uint<13> energyout[NSTRIP];
-#pragma HLS ARRAY_PARTITION variable=energyout complete dim=1
+  ap_uint<13> out[NSTRIP];
+#pragma HLS ARRAY_PARTITION variable=out complete dim=1
 
 
 
 #ifdef DEBUG
-  printf("== htccstrips starts ==\n");fflush(stdout);
+  printf("== htccstrips starts: strip_threshold=%d ==\n",(uint16_t)strip_threshold);fflush(stdout);
 #endif
 
 
-  for(int i=0; i<NSTRIP; i++)
-  {
-    energytmp[i] = 0;
-    timetmp[i] = 0;
-    energyout[i] = 0;
-  }
+  for(int j=0; j<NSTRIP; j++) timetmp[j] = 0;
+  for(int j=0; j<NSTRIP; j++) energytmp[j] = 0;
+  for(int j=0; j<NSTRIP; j++) out[j] = 0;
 
-  /*
-  for(int isl=0; isl<NSLOT; isl++)
-  {
-  */
 
-for(int j=0; j<NH_READS; j++)
-{
-fadcs = s_fadc_words[0].read();
-fadcs = s_fadc_words[1].read();
-fadcs = s_fadc_words[2].read();
-fadcs = s_fadc_words[3].read();
-fadcs = s_fadc_words[4].read();
-fadcs = s_fadc_words[5].read();
-fadcs = s_fadc_words[6].read();
-fadcs = s_fadc_words[7].read();
 
-fadcs = s_fadc_words[11].read();
-fadcs = s_fadc_words[12].read();
-fadcs = s_fadc_words[13].read();
-fadcs = s_fadc_words[14].read();
-fadcs = s_fadc_words[15].read();
-}
+  /********************************************************************/
+  /* get FADC data for 32-ns interval, and fill timetmp[2][NSTRIP] array */
 
+  fadcs = s_fadcs.read();
   for(int ii=0; ii<NSLOT; ii++)
   {
     int isl = ii + 8; /* 8 is first FADC after switch slot (slot 13), see fadcs.cc, for other dets it happens to be from 0 */
 
-    /* read one timing slice */
-	for(int j=0; j<NH_READS; j++)
-	{
-	  fadcs = s_fadc_words[isl].read();
-#ifdef DEBUG
-      if(fadcs.e0>0 || fadcs.e1>0) cout<<"fadcs[slot="<<isl<<"][read="<<j<<"]="<<fadcs.e0<<" "<<fadcs.e1<<endl;
-#endif
-
-      energy = fadcs.e0;
-      chan = j*2;
-      str   = adcstrip[isl][chan] - 1; /* from 0 */
-	  //printf("isl=%d chan=%d -> str=%d\n",isl,(uint16_t)chan,(uint16_t)str);
-      energytmp[str] = ((energy >= strip_threshold) ? ((uint16_t)energy) : 0); /* error in '?' without (uint16_t) ...*/
-      timetmp[str] = fadcs.t0;
-#ifdef DEBUG
-      if(energytmp[str]>0) cout<<"   str="<<str<<" -> e0="<<energytmp[str]<<" t0="<<timetmp[str]<<endl;
-#endif
-
-
-      energy = fadcs.e1;
-      chan = j*2+1;
-      str   = adcstrip[isl][chan] - 1; /* from 0 */
-	  //printf("isl=%d chan=%d -> str=%d\n",isl,(uint16_t)chan,(uint16_t)str);
-      energytmp[str] = ((energy >= strip_threshold) ? ((uint16_t)energy) : 0);
-      timetmp[str] = fadcs.t1;
-#ifdef DEBUG
-      if(energytmp[str]>0) cout<<"   str="<<str<<" -> e1="<<energytmp[str]<<" t1="<<timetmp[str]<<endl;
-#endif
-	}
+    TRANSLATE(0);
+    TRANSLATE(1);
+    TRANSLATE(2);
+    TRANSLATE(3);
+    TRANSLATE(4);
+    TRANSLATE(5);
+    TRANSLATE(6);
+    TRANSLATE(7);
+    TRANSLATE(8);
+    TRANSLATE(9);
+    TRANSLATE(10);
+    TRANSLATE(11);
+    TRANSLATE(12);
+    TRANSLATE(13);
+    TRANSLATE(14);
+    TRANSLATE(15);
   }
 
-#ifdef DEBUG
-  //for(int i=0; i<NSTRIP; i++) cout<<"==> str="<<i<<" - "<<energytmp[i]<<" "<<timetmp[i]<<endl;
-#endif
+  /************************************/
+  /************************************/
 
-  /* filling 4ns-slices using 3 timing bits, and send it over slice by slice */
 
-  HTCCStrip_s fifo;
+  /* sending translated signals */
 
-  for(int j=0; j<NH_READS; j++)
+  for(int i=0; i<NSTRIP; i++)
   {
-    for(int i=0; i<NSTRIP; i++)
-	{
+    s_strip.en[i] = energytmp[i];
+    s_strip.tm[i] = timetmp[i];
 #ifdef DEBUG
-      //cout<<j<<" "<<i<<" - "<<energytmp[i]<<" "<<timetmp[i]<<endl;
+    cout<<"htccstrips: s_strip.en["<<i<<"]="<<s_strip.en[i]<<endl;
+    cout<<"htccstrips: s_strip.en["<<i<<"]="<<s_strip.en[i]<<endl;
 #endif
-      if(energytmp[i]>0 && timetmp[i]==j)
-	  {
-        energyout[i] = energytmp[i];
-	  }
-      else
-	  {
-        energyout[i] = 0;
-	  }
-	}
-
-    for(int k=0; k<NSTREAMS1; k++)
-    {
-      fifo.energy00 = energyout[k*N1+0];
-      fifo.energy01 = energyout[k*N1+1];
-      fifo.energy02 = energyout[k*N1+2];
-      fifo.energy03 = energyout[k*N1+3];
-      fifo.energy04 = energyout[k*N1+4];
-      fifo.energy05 = energyout[k*N1+5];
-#ifdef DEBUG
-      if(fifo.energy00>0) cout<<"time="<<j<<" strip="<<k*N1+0<<" -> energy="<<fifo.energy00<<endl;
-      if(fifo.energy01>0) cout<<"time="<<j<<" strip="<<k*N1+1<<" -> energy="<<fifo.energy01<<endl;
-      if(fifo.energy02>0) cout<<"time="<<j<<" strip="<<k*N1+2<<" -> energy="<<fifo.energy02<<endl;
-      if(fifo.energy03>0) cout<<"time="<<j<<" strip="<<k*N1+3<<" -> energy="<<fifo.energy03<<endl;
-      if(fifo.energy04>0) cout<<"time="<<j<<" strip="<<k*N1+4<<" -> energy="<<fifo.energy04<<endl;
-      if(fifo.energy05>0) cout<<"time="<<j<<" strip="<<k*N1+5<<" -> energy="<<fifo.energy05<<endl;
-#endif
-	  s_strip0[k].write(fifo);
-	}
-
   }
-
-
 
 #ifdef DEBUG
   printf("== htccstrips ends ==\n");fflush(stdout);

@@ -15,33 +15,34 @@ using namespace std;
 
 #include "hls_fadc_sum.h"
 
-
-/* this code works on 4ns clock */
-
 void
-htcc(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_2ch_t> s_fadc_words[NFADCS], hls::stream<HTCCHit> &s_hits1, hit_ram_t buf_ram[NRAM])
+htcc(ap_uint<16> threshold[3], nframe_t nframes, hls::stream<fadc_256ch_t> &s_fadcs, hls::stream<HTCCOut_8slices> &s_hits, volatile ap_uint<1> &hit_scaler_inc, hit_ram_t buf_ram[512])
 {
-  ap_uint<16> strip_threshold = threshold[0];
-  ap_uint<16> mult_threshold = threshold[1];
-  ap_uint<16> cluster_threshold = threshold[2];
+//#pragma HLS DATAFLOW
 
-  hls::stream<HTCCStrip_s> s_strip0[NSTREAMS1];
-  hls::stream<HTCCStrip_s> s_strip[NSTREAMS1];
-  hls::stream<HTCCHit> s_hits;
-  hls::stream<HTCCHit> s_hits2;
-  volatile ap_uint<1> hit_scaler_inc;
+#pragma HLS INTERFACE ap_stable port=threshold
+#pragma HLS ARRAY_PARTITION variable=threshold dim=1
+#pragma HLS INTERFACE ap_stable port=nframes
 
-  htccstrips(strip_threshold, s_fadc_words, s_strip0); /* 8 reads, 8 writes */
-  for(int ii=0; ii<NH_READS; ii++)
-  {
-    for(int jj=0; jj<NSTREAMS1; jj++)
-	{
-      htccstripspersistence(nframes, s_strip0[jj], s_strip[jj], jj);
-	}
-    htcchit(strip_threshold, mult_threshold, cluster_threshold, s_strip, s_hits);
-    htcchitfanout(s_hits, s_hits1, s_hits2, hit_scaler_inc); /* 1 read, 1 write */
+#pragma HLS DATA_PACK variable=s_fadcs
+#pragma HLS INTERFACE axis register both port=s_fadcs
 
-    htcchiteventfiller(s_hits2, buf_ram); /* every 4 ns */
-  }
+#pragma HLS DATA_PACK variable=s_hits
+#pragma HLS INTERFACE axis register both port=s_hits
 
+#pragma HLS INTERFACE ap_none port=hit_scaler_inc
+
+#pragma HLS DATA_PACK variable=buf_ram
+//#pragma HLS ARRAY_PARTITION variable=buf_ram block factor=8 dim=1
+
+#pragma HLS PIPELINE II=1
+
+  HTCCStrip_s s_strip;
+  HTCCHit hit1[NH_READS];
+  HTCCHit hit2[NH_READS];
+
+  htccstrips(threshold[0], s_fadcs, s_strip);
+  htcchit(threshold[0], threshold[1], threshold[2], nframes, s_strip, hit1);
+  htcchitfanout(hit1, s_hits, hit2, hit_scaler_inc);
+  htcchiteventfiller(hit2, buf_ram);
 }
