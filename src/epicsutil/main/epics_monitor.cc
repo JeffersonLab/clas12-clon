@@ -196,9 +196,11 @@ main(int argc,char **argv)
   // get event destination
   sprintf(dest,"evt_bosbank/%s",session);
 
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "control", (char *)"epics_monitor");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "control", "*");
 
-  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", (char *)"epics_monitor");
-  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "bank2et", "*");
+
   status = server.Open();
   if(status<0) {
     cerr << "\n?Unable to connect to server...probably duplicate unique id\n"

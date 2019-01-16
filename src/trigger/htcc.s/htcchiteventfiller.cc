@@ -18,21 +18,27 @@ using namespace std;
 //#define DEBUG
 
 
-/* 2.66/4/4/0%/0%/(194)~0%/(102)~0% II=4 */
+/* 2.66/1/1/0%/0%/(135)~0%/(58)~0% II=1 */
+
+/* called every 4ns */
 
 void
-htcchiteventfiller(HTCCHit s_hitin[NH_READS], hit_ram_t buf_ram[512])
+htcchiteventfiller(hls::stream<HTCCHit> &s_hitin, hit_ram_t buf_ram[NRAM])
 {
-//#pragma HLS DATA_PACK variable=buf_ram
-////#pragma HLS ARRAY_PARTITION variable=buf_ram block factor=8 dim=1
+#pragma HLS INTERFACE axis register both port=s_hitin
+#pragma HLS DATA_PACK variable=s_hitin
+#pragma HLS DATA_PACK variable=buf_ram
+//#pragma HLS ARRAY_PARTITION variable=buf_ram block factor=4 dim=1
 #pragma HLS PIPELINE II=1
 
-  static ap_uint<8> itime = 0;
+  HTCCHit fifo;
 
-  for(int i=0; i<NH_READS; i++)
-  {
-    buf_ram[itime].output[i] = s_hitin[i].output;
-  }
+  static ap_uint<RAM_BITS> itime = 0;
 
+  fifo = s_hitin.read();
+  buf_ram[itime].output = fifo.output;
+#ifdef DEBUG
+  cout<<"htcchiteventfiller: itime="<<itime<<endl;
+#endif
   itime ++;
 }

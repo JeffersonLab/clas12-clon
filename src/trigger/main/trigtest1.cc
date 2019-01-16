@@ -21,8 +21,8 @@
 //#define USE_PCAL
 #define USE_HTCC
 //#define USE_FTOF
-#define USE_CTOF
-#define USE_CND
+//#define USE_CTOF
+//#define USE_CND
 //#define USE_FT
 //#define USE_PCU
 //#define USE_DC
@@ -172,7 +172,7 @@ main(int argc, char **argv)
 	nfile = 0;
 
 	/* input evio file */
-	sprintf(fnamein, "%s.%d", argv[1], nfile);
+	sprintf(fnamein, "%s.%05d", argv[1], nfile);
 	printf("opening input file >%s<\n", fnamein);
 	status = evOpen(fnamein, "r", &handlerin);
 	printf("status=%d\n", status);
@@ -182,7 +182,7 @@ main(int argc, char **argv)
 	}
 
 	/* output evio file */
-	sprintf(fnameout, "%s_out.%d", argv[1], nfile);
+	sprintf(fnameout, "%s_out.%05d", argv[1], nfile);
 	printf("opening output file >%s<\n", fnameout);
 	status = evOpen(fnameout, "w", &handlerout);
 	printf("status=%d\n", status);

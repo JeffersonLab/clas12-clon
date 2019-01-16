@@ -128,8 +128,11 @@ main(int argc, char **argv)
   if(debug==0)
   {
 	//dbr_init(uniq_dgrp,application,"run log files");
-    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", (char *)"run_log_files");
-    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "control", (char *)"run_log_files");
+    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "control", "*");
+
+    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "runlog", (char *)"run_log_files");
+
     server.Open();
 
   }

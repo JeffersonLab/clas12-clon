@@ -216,8 +216,11 @@ create_sql(rlb_string);
 #ifdef USE_ACTIVEMQ
 
       // connect to ipc server
-      server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", (char *)"run_log_begin");
-      server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+      server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "control", "run_log_begin");
+      server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "control", "*");
+
+      server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "runlog", (char *)"run_log_begin");
+
       server.Open();
 
       // ship to database router

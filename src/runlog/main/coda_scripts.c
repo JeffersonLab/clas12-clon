@@ -49,8 +49,8 @@ main(int argc, char *argv[])
     sprintf (queryString, "delete from `%s_option` WHERE CONVERT(`%s_option`.`name` USING utf8) = 'End'\n",config,config); MY_CHECK;
     sprintf(queryString, "insert into %s_option ( `name` , `value` ) VALUES ( 'End', '$CODA/common/rcscripts/run_dispatch end end main' )\n",config); MY_CHECK;
 	
-    sprintf (queryString, "delete from `%s_script` WHERE CONVERT(`%s_script`.`name` USING utf8) = 'ERFC'\n",config,config); MY_CHECK;
-    sprintf(queryString, "insert into %s_script ( `name` , `state` , `script` ) VALUES ( 'ERFC', 'prestart', '$CODA/common/rcscripts/run_dispatch prestart er main' )\n",config); MY_CHECK;
+    sprintf (queryString, "delete from `%s_script` WHERE CONVERT(`%s_script`.`name` USING utf8) = 'ERDAQ6'\n",config,config); MY_CHECK;
+    sprintf(queryString, "insert into %s_script ( `name` , `state` , `script` ) VALUES ( 'ERDAQ6', 'prestart', '$CODA/common/rcscripts/run_dispatch prestart er main' )\n",config); MY_CHECK;
   }
   
   if(!strcmp(action,"remove"))
@@ -59,7 +59,7 @@ main(int argc, char *argv[])
 	
     sprintf (queryString, "delete from `%s_option` WHERE CONVERT(`%s_option`.`name` USING utf8) = 'End'\n",config,config); MY_CHECK;
 	
-    sprintf (queryString, "delete from `%s_script` WHERE CONVERT(`%s_script`.`name` USING utf8) = 'ERFC'\n",config,config); MY_CHECK;
+    sprintf (queryString, "delete from `%s_script` WHERE CONVERT(`%s_script`.`name` USING utf8) = 'ERDAQ6'\n",config,config); MY_CHECK;
   }
 
   

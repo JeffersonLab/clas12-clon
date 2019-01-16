@@ -111,6 +111,8 @@ char *backlog_dir_name   = (char*)"./backlog_%s";
 char *backlog_file       = (char*)"msgcount.dat";
 int debug            	 = 0;
 int done             	 = 0;
+static char expid[128]           = "";
+static char session[128]         = "";
 char temp[1000];
 char backlog_dir[256];
 char uniq_string[256];
@@ -217,8 +219,11 @@ main(int argc, char **argv)
 
 #ifdef USE_ACTIVEMQ
   // connect to ipc server
-  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
-  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "control", (char *)"dbrouter");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "control", "*");
+
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "runlog", "*");
+
   server.Open();
 
   MessageActionControl   *control = new MessageActionControl((char *)"dbrouter",debug);
@@ -231,7 +236,7 @@ main(int argc, char **argv)
 /*activemq: replace by ActiveMQ                          */
 
   // init ipc
-  ipc_set_application(application);   // topic "application.xxx.xxx"
+  ipc_set_application(application);   // topic "application.xxx.yyy.zzz"
   ipc_set_quit_callback(quit_callback);
   /*ipc_set_disconnect_mode("warm");*/
   ipc_set_user_status_poll_callback(status_poll_data);
@@ -1085,7 +1090,7 @@ decode_command_line(int argc, char **argv)
 {
 
   int i=1;
-  const char *help = "\nusage:\n\n   dbrouter [-a application] [-u uniq_name] [-host dbhost] [-user dbuser] [-d database]\n"
+  const char *help = "\nusage:\n\n   dbrouter [-a application] [-s session] [-u uniq_name] [-host dbhost] [-user dbuser] [-d database]\n"
     "            [-b backlog_dir_name] [-debug]\n\n";
 
 
@@ -1097,6 +1102,10 @@ decode_command_line(int argc, char **argv)
     }
     else if (strncasecmp(argv[i],"-a",2)==0) {
       application=strdup(argv[i+1]);
+      i=i+2;
+    }
+    else if (strncasecmp(argv[i],"-s",2)==0){
+      strcpy(session,argv[i+1]);
       i=i+2;
     }
     else if (strncasecmp(argv[i],"-host",5)==0) {

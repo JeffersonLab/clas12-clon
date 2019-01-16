@@ -1,7 +1,5 @@
 
-/* htcchit.c - 
-
-strip_pipe[] - single counters
+/* htcchit.c - first stage HTCC trigger
 
   input:  
 
@@ -32,7 +30,6 @@ using namespace std;
 #define MIN(a,b)    (a < b ? a : b)
 #define ABS(x)      ((x) < 0 ? -(x) : (x))
 
-#define NPIPE 3 /* the number of 32ns slices to keep and use in htcchit logic; will be shifted 1 element right on every call */
 
 /*xc7vx550tffg1158-1*/
 
@@ -95,7 +92,7 @@ input:
   threshold - individual channel energy threshold
   mult_threshold - cluster multiplicity threshold
   cluster_threshold - cluster energy threshold
-  d[][] - input adc values
+  d[] - input adc values
 
 output:
   mult[] - multiplicity for every cluster
@@ -107,285 +104,179 @@ return:
 
  */
 
+//#define SINGLES
 
-/* 1.96/46/8/0%/0%/(10270)1%/(5734)1% II=8 */
+
+/* 1.96/39/1/0%/0%/(15739)2%/(8352)2% II=1 */
 
 void
-htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> cluster_threshold, nframe_t nframes, HTCCStrip_s s_strip, HTCCHit s_hit[NH_READS])
+htcchit(ap_uint<16> strip_threshold, ap_uint<16> mult_threshold, ap_uint<16> cluster_threshold, hls::stream<HTCCStrip_s> s_strip[NSTREAMS1],
+        hls::stream<HTCCHit> &s_hit)
 {
-//#pragma HLS INTERFACE ap_stable port=nframes
+#pragma HLS INTERFACE ap_stable port=strip_threshold
+#pragma HLS INTERFACE ap_stable port=mult_threshold
+#pragma HLS INTERFACE ap_stable port=cluster_threshold
+#pragma HLS ARRAY_PARTITION variable=s_strip complete dim=1
+#pragma HLS DATA_PACK variable=s_strip
+#pragma HLS INTERFACE axis register both port=s_strip
+#pragma HLS DATA_PACK variable=s_hit
+#pragma HLS INTERFACE axis register both port=s_hit
 #pragma HLS PIPELINE II=1
 
-  int i, j, ii, it, it1, it2, tdif;
-
-  static HTCCStrip_s strip_pipe[NPIPE];
-#pragma HLS ARRAY_PARTITION variable=strip_pipe complete dim=1
 
   /* to become output */
-  ap_uint<1> output[NCHAN];
-#pragma HLS ARRAY_PARTITION variable=output complete dim=1
-  ap_uint<1> dmask[NCHAN];
-#pragma HLS ARRAY_PARTITION variable=dmask complete dim=1
-  ap_uint<1> cmask[NCHAN];
-#pragma HLS ARRAY_PARTITION variable=cmask complete dim=1
+  ap_uint<NCHAN> output;
+  ap_uint<NCHAN> dmask;
+  ap_uint<NCHAN> cmask;
 
-  ap_uint<1> maskEnergy[NCLSTR];
-#pragma HLS ARRAY_PARTITION variable=maskEnergy complete dim=1
-  ap_uint<1> maskMult[NCLSTR];
-#pragma HLS ARRAY_PARTITION variable=maskMult complete dim=1
-  ap_uint<1> mask[NCLSTR];
-#pragma HLS ARRAY_PARTITION variable=mask complete dim=1
+  int i, ii;
+  ap_uint<NCLSTR> maskEnergy, maskMult, mask;
 
-  ap_uint<13> d[NPER][NCHAN];
+  ap_uint<13> d[NCHAN];
 #pragma HLS ARRAY_PARTITION variable=d complete dim=1
-#pragma HLS ARRAY_PARTITION variable=d complete dim=2
   ap_uint<3> mult[NCLSTR];
 #pragma HLS ARRAY_PARTITION variable=mult complete dim=1
   ap_uint<16> clusters[NCLSTR];
 #pragma HLS ARRAY_PARTITION variable=clusters complete dim=1
 
-
-  if(nframes>NPER) nframes = NPER;
-
 #ifdef DEBUG
-  printf("== htcchit start ==\n");
-  cout<<" strip_threshold="<<strip_threshold<<", mult_threshold="<<mult_threshold<<", cluster_threshold="<<cluster_threshold<<endl;
-  for(int i=0; i<NSTRIP; i++)
-  {
-    if(s_strip.en[i]>0) cout<<"htcchit: s_strip.en["<<i<<"]="<<s_strip.en[i]<<", s_strip.tm["<<i<<"]="<<s_strip.tm[i]<<endl;
-  }
+  cout<<endl<<"htcchit reached: strip_threshold="<<strip_threshold<<" mult_threshold="<<mult_threshold<<" cluster_threshold="<<cluster_threshold<<endl;
 #endif
 
+  HTCCStrip_s fifo;
 
-  /* shift whole pipe to the right ([1]->[2], [0]->[1]) */
-  for(int j=(NPIPE-1); j>0; j--)
+  for(int j=0; j<NSTREAMS1; j++)
   {
-    for(int i=0; i<NSTRIP; i++)
-    {
-	  strip_pipe[j].en[i] = strip_pipe[j-1].en[i];
-	  strip_pipe[j].tm[i] = strip_pipe[j-1].tm[i];
-	}
+	fifo = s_strip[j].read();
+
+	d[j*N1+0]  = fifo.energy00;
+	d[j*N1+1]  = fifo.energy01;
+	d[j*N1+2]  = fifo.energy02;
+	d[j*N1+3]  = fifo.energy03;
+	d[j*N1+4]  = fifo.energy04;
+	d[j*N1+5]  = fifo.energy05;
   }
 
 
-  /* get NH_READS timing slices of new data and place in first interval of the pipe */
-  for(int i=0; i<NSTRIP; i++)
+  /* channel mask */
+  dmask = 0;
+  for(i=0; i<NCHAN; i++)
   {
-    strip_pipe[0].en[i] = s_strip.en[i];
-    strip_pipe[0].tm[i] = s_strip.tm[i];
-  }
-
-
-#ifdef DEBUG
-  for(int j=NPIPE-1; j>=0; j--)
-  {
-    for(int i=0; i<NSTRIP; i++)
-    {
-      if(strip_pipe[j].en[i]>0) cout<<"htcchit: strip_pipe["<<j<<"].en["<<i<<"]="<<strip_pipe[j].en[i]<<", strip_pipe["<<j<<"].tm["<<i<<"]="<<strip_pipe[j].tm[i]<<endl;
-	}
-  }
-#endif
-
-
-
-
-
-  /**************/
-  /* fill d[][] */
-  
-  for(int i=0; i<NSTRIP; i++)
-  {
-    const int add[NPIPE] = {16, 8, 0}; /* add 16 to interval [0] and 8 to interval [1], to get consequative numbering from 0 to 23 */
-    for(it=0; it<NPER; it++) d[it][i] = 0;
-
-    /* get hit from every interval (can be only one per interval) and persist over 'nframes' 4ns ticks */
-    for(ii=0; ii<NPIPE; ii++)
+	if(d[i] >= strip_threshold)
 	{
-      /* check if there is hit in 'ii'interval */
-      if( (strip_pipe[ii].en[i]) > 0)
-	  {
-        /* add hit from interval [1] to the sum */
-        it = strip_pipe[ii].tm[i];
-        it1 = it + add[ii];      /* first 4ns bin to fill (bins are numnbered from 23 to 0 ) */
-        it2 = it1 + nframes + 1; /* last 4ns bin to fill (bins are numnbered from 23 to 0 ); nframes=0 means one interval */
+      dmask(i,i) = 1;
 #ifdef DEBUG
-        cout<<"=> i="<<i<<", it="<<it<<", ii="<<ii<<" -> it1="<<it1<<", it2="<<it2<<endl;
+      printf("htcchit: chan=%d, energy=%d\n",i,(uint16_t)d[i]);
 #endif
-
-
-
-#if 1
-        /* fill bins overlaping with middle interval */
-        for(int k=add[1]; k<add[0]; k++)
-		{
-          if( (k>=it1) && (k<it2) )
-		  {
-            d[k-add[1]][i] = strip_pipe[ii].en[i];
+	}
+  }
 #ifdef DEBUG
-            cout<<" d["<<k-add[1]<<"]["<<i<<"] = "<<d[k-add[1]][i]<<endl;
-#endif
-		  }
-		}
+  cout<<"htcchit: dmask="<<hex<<dmask<<dec<<endl;
 #endif
 
 
 
-#if 0 /* compatible with old version - using interval [0] instead of [1] */
-        for(int k=add[0]; k<24; k++)
-		{
-          if( (k>=it1) && (k<it2) )
-		  {
-            d[k-add[0]][i] = strip_pipe[ii].en[i];
-#ifdef DEBUG
-            cout<<" d["<<k-add[0]<<"]["<<i<<"] = "<<d[k-add[0]][i]<<endl;
-#endif
-		  }
-		}
-#endif
 
 
+#ifdef SINGLES
 
-	  }
+  output = dmask;
+
+#else
+
+  /* clusters energy sums */
+
+  for(i=0; i<NCLSTR; i++) clusters[i] = 0;
+  for(i=0; i<NCLSTR; i++)
+  {
+    for(ii=0; ii<4; ii++)
+	{
+      clusters[i] += d[cl2d[i][ii]];
 	}
   }
 
 
+  /* clusters multiplicity */
 
-  /****************************************/
-  /* go through NH_READS(=NPER) intervals */
-
-  for(int jj=0; jj<NH_READS; jj++)
+  for(i=0; i<NCLSTR; i++) mult[i] = 0;
+  for(i=0; i<NCLSTR; i++)
   {
-#ifdef DEBUG
-    printf(" Processing %d-th 4ns interval\n",jj);
-    int print = 0;
-#endif
-
-    /* channel mask */
-    for(i=0; i<NCHAN; i++)
-    {
-      dmask[i] = 0;
-	  if(d[jj][i] >= strip_threshold)
-	  {
-        dmask[i] = 1;
-#ifdef DEBUG
-        printf(" d[%d][%d] = %d\n",jj,i,(uint16_t)d[jj][i]);
-        print=1;
-#endif
-	  }
-    }
-#ifdef DEBUG
-    if(print) {printf("     dmask=");for(i=NCHAN-1; i>=0; i--) printf("%1d",(uint8_t)dmask[i]);printf("\n");}
-#endif
-
-
-
-
-
-    /* clusters energy sums */
-
-    for(i=0; i<NCLSTR; i++) clusters[i] = 0;
-    for(i=0; i<NCLSTR; i++)
-    {
-      for(ii=0; ii<4; ii++)
-	  {
-        clusters[i] += d[jj][ cl2d[i][ii] ];
-	  }
-    }
-
-
-    /* clusters multiplicity */
-
-    for(i=0; i<NCLSTR; i++) mult[i] = 0;
-    for(i=0; i<NCLSTR; i++)
-    {
-      for(ii=0; ii<4; ii++)
-	  {
-	    if(d[jj][cl2d[i][ii]] >= strip_threshold) mult[i] ++;
-	  }
-    }
-
-
-    /* trigger solution */
-#ifdef DEBUG
-    print = 0;
-#endif
-    for(i=0; i<NCLSTR; i++)
-    {
-      maskEnergy[i] = 0;
-      maskMult[i] = 0;
-      if(clusters[i] >= cluster_threshold)
-	  {
-        maskEnergy[i] = 1;
-#ifdef DEBUG
-        printf("  cluster[%d]: energy=%d\n",i,(uint16_t)clusters[i]);
-        print=1;
-#endif
-	  }
-      if(mult[i] >= mult_threshold)
-	  {
-        maskMult[i] = 1;
-#ifdef DEBUG
-        printf("  cluster[%d]: mult=%d\n",i,(uint16_t)mult[i]);
-        print=1;
-#endif
-	  }
-      mask[i] = maskEnergy[i] & maskMult[i];
-    }
-#ifdef DEBUG
-    if(print)
+    for(ii=0; ii<4; ii++)
 	{
-      printf("maskEnergy=");for(i=NCLSTR-1; i>=0; i--) printf("%1d",(uint8_t)maskEnergy[i]);printf("\n");
-      printf("  maskMult=");for(i=NCLSTR-1; i>=0; i--) printf("%1d",(uint8_t)maskMult[i]);printf("\n");
-      printf("      mask=");for(i=NCLSTR-1; i>=0; i--) printf("%1d",(uint8_t)mask[i]);printf("\n");
+	  if(d[cl2d[i][ii]] >= strip_threshold) mult[i] ++;
 	}
-#endif
-
-    for(i=0; i<NCHAN; i++) cmask[i] = 0;
-#ifdef DEBUG
-    //printf("CMASK befor=");for(i=NCHAN-1; i>=0; i--) printf("%1d",(uint8_t)cmask[i]);printf("\n");
-    print=0;
-#endif
-    for(int i=0; i<NCLSTR; i++)
-    {
-      if(mask[i]==1)
-	  {
-        for(int j=0; j<4; j++)
-	    {
-          cmask[ cl2d[i][j] ] = 1;
-#ifdef DEBUG
-          cout<<"FOUND CLUSTER "<<i<<" -> ADD BIT " << cl2d[i][j] <<" to CMASK" << endl;
-          print=1;
-#endif
-	    }
-	  }
-    }
-#ifdef DEBUG
-    if(print) {printf("CMASK after=");for(i=NCHAN-1; i>=0; i--) printf("%1d",(uint8_t)cmask[i]);printf("\n");}
-#endif
-
-    for(i=0; i<NCHAN; i++) output[i] = dmask[i] & cmask[i];
+  }
 
 
+  /* trigger solution */
 
-
-
-
-
-#ifdef DEBUG
-	if(print)
+  maskEnergy = 0;
+  maskMult = 0;
+  for(i=0; i<NCLSTR; i++)
+  {
+    if(clusters[i] >= cluster_threshold)
 	{
-      cout<<endl;
-      printf("   dmask=");for(i=NCHAN-1; i>=0; i--) printf("%1d",(uint8_t)dmask[i]);printf("\n");
-      printf("   cmask=");for(i=NCHAN-1; i>=0; i--) printf("%1d",(uint8_t)cmask[i]);printf("\n");
-      printf("  output=");for(i=NCHAN-1; i>=0; i--) printf("%1d",(uint8_t)output[i]);printf("\n");
+      maskEnergy |= ((ap_uint<NCLSTR>)1<<i);
+#ifdef DEBUG
+      printf("htcchit: cluster[%d]: energy=%d\n",i,(uint16_t)clusters[i]);
+#endif
 	}
+    if(mult[i] >= mult_threshold)
+	{
+      maskMult |= ((ap_uint<NCLSTR>)1<<i);
+#ifdef DEBUG
+      printf("htcchit: cluster[%d]: mult=%d\n",i,(uint16_t)mult[i]);
+#endif
+	}
+  }
+  mask = maskEnergy & maskMult;
+#ifdef DEBUG
+  cout<<"htcchit: maskEnergy="<<hex<<maskEnergy<<dec<<endl;
+  cout<<"htcchit:   maskMult="<<hex<<maskMult<<dec<<endl;
+  cout<<"htcchit:       mask="<<hex<<mask<<dec<<endl;
 #endif
 
+  cmask = 0;
+#ifdef DEBUG
+  cout<<"htcchit: CMASK BEFOR="<<hex<<cmask<<dec<<endl;
+#endif
+  for(int i=0; i<NCLSTR; i++)
+  {
+    if( (mask>>i)&0x1 )
+	{
+      for(int j=0; j<4; j++)
+	  {
+        cmask(cl2d[i][j],cl2d[i][j]) = 1;
+#ifdef DEBUG
+        cout<<"FOUND CLUSTER "<<i<<" -> ADD BIT " << cl2d[i][j] <<" to CMASK" << endl;
+#endif
+	  }
+	}
+  }
+#ifdef DEBUG
+  cout<<"htcchit: CMASK AFTER="<<hex<<cmask<<dec<<endl;
+#endif
 
-    for(i=0; i<NCHAN; i++) s_hit[jj].output[i] = output[i];
+  output = dmask & cmask;
 
-  } /* NH_READS */
 
+#endif /*SINGLES*/
+
+
+
+
+
+#ifdef DEBUG
+  cout<<endl;
+  cout<<"htcchit:  dmask="<<hex<<dmask<<dec<<endl;
+  cout<<"htcchit:  cmask="<<hex<<cmask<<dec<<endl;
+  cout<<"htcchit: output="<<hex<<output<<dec<<endl<<endl;
+#endif
+
+  /* output stream */
+
+  HTCCHit fifo1;
+  fifo1.output = output;
+  s_hit.write(fifo1);
 
 }

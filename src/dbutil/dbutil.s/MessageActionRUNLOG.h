@@ -172,6 +172,20 @@ class MessageActionJSON : public MessageAction {
 		std::string timestring;
         int icond;
 
+        {
+          time_t timer;
+          char buffer[26];
+          struct tm *tm_info;
+
+          time(&timer);
+          tm_info = localtime(&timer);
+
+          strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+          printf("\nTime right now ");
+          puts(buffer);
+          printf("\n\n");
+        }
+
         auto exist1 = j1.find("run_start_time");
         if(exist1 != j1.end())
         {
@@ -269,8 +283,13 @@ class MessageActionJSON : public MessageAction {
 	  }
 
 
-      cout<<endl<<j2.dump()<<endl<<endl;
-      if(!j2.empty()) connection.AddCondition(run_number, "json_cnd", j2.dump());
+      if(!j2.empty())
+	  {
+        cout<<endl<<"adding j2: "<<j2.dump()<<endl<<endl;
+        connection.AddCondition(run_number, "json_cnd", j2.dump());
+	  }
+
+      fflush(stdout);
 
 #if 0
 	

@@ -47,7 +47,10 @@ static int slot2isl[NDET][22] = {
  -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7, -1, -1,  8,  9, 10, 11, 12, 13, -1, -1, -1, /* ECAL slots: 3-10, 13-18 */
  -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7, -1, -1,  8,  9, 10, 11, -1, -1, -1, -1, -1, /* PCAL slots: 3-10, 13-16 */
  -1, -1, -1,  0,  1,  2,  3,  4,  5,  6, -1, -1, -1, -1,  7,  8,  9, 10, 11, 12, 13, -1, /* DCRB slots: 3-9, 14-20 */
- -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  0,  1,  2, -1, -1, -1, -1, -1, -1, /* HTCC slots: 13-15 */
+
+ /* -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  0,  1,  2, -1, -1, -1, -1, -1, -1,*/ /* HTCC slots: 13-15 */
+ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  8,  9, 10, -1, -1, -1, -1, -1, -1, /* HTCC slots: 13-15 */
+
  -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7, -1, -1,  8,  9, 10, 11, -1, -1, -1, -1, -1, /* FTOF slots: 3-10, 13-16 */
  -1, -1, -1,  0,  1,  2,  3,  4,  5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* CTOF slots: 3-8 */
  -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7, -1, -1,  8, -1, -1, -1, -1, -1, -1, -1, -1, /* CND slots: 3-10, 13 */
@@ -580,6 +583,7 @@ HUCK*/
 
 					GET8(slot);
 					isl = slot2isl[det][slot];
+					printf("slot=%d ->isl=%d\n",slot,isl);
 					GET32(trig);
 					GET64(time); /* time stamp for FADCs 2 counts bigger then for VTPs */
 					time = ((time & 0xFFFFFF) << 24) | ((time >> 24) & 0xFFFFFF); /* UNTILL FIXED IN ROL2 !!!!!!!!!!!!!!!!! */
@@ -786,7 +790,7 @@ HUCK*/
 
 				/* write into output streams (one stream per slot, one write per stream) */
 				for (i = 0; i < MAXTIMES; i++) {
-					for (isl = 0; isl < nslot; isl++) {
+				  for (isl = 0; isl < NFADCS/*nslot*/; isl++) {
 				      s_fadc_words[isl].write(fadcs[i][isl]);
 					}
 				}

@@ -511,8 +511,11 @@ void button_callback (Widget w, XtPointer client_data, XtPointer call_data)
   {
     // connect to server
     //dbr_init(uniq_subj,application,id_string);
-    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", (char *)"run_log_comment");
-    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "control", (char *)"run_log_comment");
+    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "control", "*");
+
+    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "runlog", (char *)"run_log_comment");
+
     server.Open();
 
     // ship to database router
