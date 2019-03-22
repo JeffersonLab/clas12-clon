@@ -73,7 +73,7 @@ static uint16_t pc_dalitzmin = (440.)/*PC_DALITZ_MIN*/;
 static uint16_t pc_dalitzmax = (480.)/*PC_DALITZ_MAX*/;
 static uint16_t pc_nstripmax = 0;
 
-static uint16_t htcc_threshold[3] = { 1, 1, 3 };
+static uint16_t htcc_threshold[3] = { 1, 0, 20 };
 static uint16_t htcc_nframes = 3;
 
 static uint16_t ftof_threshold[3] = { 1, 1, 0 }; /* strip, sqrt(L*R) */
@@ -101,8 +101,9 @@ static uint16_t hodo_dt = FT_HODO_DT;
 unsigned int buf[MAXBUF];
 unsigned int *bufptr;
 
-#define SKIPEVENTS 40
-#define MAXEVENTS 100
+
+#define SKIPEVENTS 10439
+#define MAXEVENTS 10441
 
 int
 main(int argc, char **argv)
@@ -111,7 +112,6 @@ main(int argc, char **argv)
 	int ii, ind, fragtag, fragnum, tag, num, nbytes, ind_data;
 	int nhitp, nhiti, nhito, nhitp_offline, nhiti_offline, nhito_offline;
 	float tmp;
-
 
 
 	cout<<"PC_DALITZ_MAX = "<<PC_DALITZ_MAX<<endl;
@@ -166,13 +166,32 @@ main(int argc, char **argv)
 
 	int runnum = 0;
 
+    char str[1024];
+    char configfile[1024];
+    char hosthost[1024];
 	char fnamein[1024];
 	char fnameout[1024];
 	int nfile, status, handlerin, handlerout, maxevents, iev;
 	nfile = 0;
 
+    strcpy(str,argv[1]);
+    printf("Requested input file name >%s<, last 5 symbols is >%s<\n",str,&str[strlen(str)-5]);
+    if(isdigit(str[strlen(str)-1]))
+	{
+      printf("requested input file ended by digit, file extension will be >%s<\n",&str[strlen(str)-5]);
+      nfile = atoi(&str[strlen(str)-5]);
+      str[strlen(str)-6] = '\0';
+      printf("Input file name will be >%s<, extension %d\n",str,nfile);
+
+      strcpy(configfile,"/usr/clas12/release/1.3.2/parms/trigger/rgb_v2.cnf");
+      strcpy(hosthost,"adcctof1");
+      printf("\nUsing config file >%s<, host >%s<\n",configfile,hosthost);
+      fadcs_config(configfile,hosthost);
+	}
+
 	/* input evio file */
-	sprintf(fnamein, "%s.%05d", argv[1], nfile);
+	sprintf(fnamein, "%s.%05d", str, nfile);
+
 	printf("opening input file >%s<\n", fnamein);
 	status = evOpen(fnamein, "r", &handlerin);
 	printf("status=%d\n", status);
@@ -182,7 +201,7 @@ main(int argc, char **argv)
 	}
 
 	/* output evio file */
-	sprintf(fnameout, "%s_out.%05d", argv[1], nfile);
+	sprintf(fnameout, "%s_out.%05d", str, nfile);
 	printf("opening output file >%s<\n", fnameout);
 	status = evOpen(fnameout, "w", &handlerout);
 	printf("status=%d\n", status);

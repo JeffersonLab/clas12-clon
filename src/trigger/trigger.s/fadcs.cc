@@ -19,6 +19,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
+#include <unistd.h>
 
 #include <iostream>
 using namespace std;
@@ -29,6 +30,7 @@ using namespace std;
 
 #include "evio.h"
 #include "evioBankUtil.h"
+#include "fadc_decompress.h"
 
 #include "hls_fadc_sum.h"
 #include "trigger.h"
@@ -37,7 +39,7 @@ using namespace std;
 #define MIN(a,b)    (a < b ? a : b)
 
 //#define DEBUG_0
-//#define DEBUG_1
+#define DEBUG_1
 //#define DEBUG_3
 
 static int nslots[NDET] = { 7, 7, 14, 12, 14, 3, 12, 6, 9, 11, 10, 15, 5};
@@ -77,7 +79,15 @@ static int fragtags[NDET][18] = {
   3,  9, 15, 21, 27, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0  /*PCU*/
 };
 
+
+#if 1
+/*unpacked*/
 static int banktags[NDET] = { 0xe101, 0xe101, 0xe101, 0xe101, 0xe116, 0xe101, 0xe101, 0xe101, 0xe101, 0xe101, 0xe101, 0xe101, 0xe101 };
+#else
+/*packed*/
+static int banktags[NDET] = { 0xe126, 0xe126, 0xe126, 0xe126, 0xe116, 0xe126, 0xe126, 0xe126, 0xe126, 0xe126, 0xe126, 0xe126, 0xe126 };
+#endif
+
 
 static int config_loaded[18]; /* 18 for DC crates, 6 for others */
 /* det, sec, slot, chan */
@@ -90,29 +100,66 @@ static int nsb[NDET][6][22]; /* NSB */
 static int dcrb_hit_trig_width[NDET][18][22]; /* DCRB_HIT_TRIG_WIDTH in 4ns ticks */
 
 
+/* read fadc config information from config file and set appropriate config_loaded[] */
+#define OFFLINE
+/*#include "fadc250Config.h"*/
+#include "/usr/clas12/release/1.3.2/coda/src/rol/code.s/fadc250Config.c"
+int
+fadcs_config(char *filename, char *host)
+{
+  int det = HTCC;
+  int ii,jj;
+
+  fadc250Sethost(host);
+  fadc250ReadConfigFile(filename);
+  fadc250GetParamsForOffline(ped[det], tet[det], gain[det], nsa[det], nsb[det]);
+
+
+  for(jj=13; jj<16; jj++)
+  {
+    printf("nsa[%d]=%d\n",jj,nsa[det][0][jj]);
+	printf("nsb[%d]=%d\n",jj,nsb[det][0][jj]);
+
+    for(ii=0; ii<16; ii++)
+    {
+      //gain[det][0][jj][ii] -= 0.003;
+	  printf("ped[0][%d][%d]=%f\n",jj,ii,ped[det][0][jj][ii]);
+	  printf("tet[0][%d][%d]=%d\n",jj,ii,tet[det][0][jj][ii]);
+	  printf("gain[0][%d][%d]=%f\n",jj,ii,gain[det][0][jj][ii]);
+    }
+  }
+
+
+  config_loaded[0] = 1;
+printf("\n===> config_loaded[0]=%d\n\n",config_loaded[0]);
+}
+
+
 int
 fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS], int dtimestamp, int dpulsetime,
 		int *iev, unsigned long long *timestamp) {
   int i, j, k, ind, nhits, error, ii, jj, nbytes, ind_data, nn, mm, isample, isam1, isam2, itmp, ievent;
 	int summing_in_progress;
 	int datasaved[1000];
+	short datapacked[1000];
 	int energy, it;
 	unsigned short strip_threshold;
 	unsigned long long itime, ptime, offset;
 	GET_PUT_INIT;
-	int fragtag,
-	fragnum, banktag, banknum;
+	int fragtag, fragnum, banktag, banknum;
 	unsigned short pulse_time, pulse_min, pulse_max, dat16, tdc;
 	unsigned int pulse_integral;
 	unsigned char *end;
 	unsigned long long time;
-	int crate, slot, trig, nchan, chan, npulses, nsamples, notvalid, edge, data, count, ncol1, nrow1;
+	int crate, slot, trig, nchan, chan, npulses, nsamples, npacked, notvalid, edge, data, count, ncol1, nrow1;
 	int ndata0[22], data0[21][8];
 	int baseline, sum, channel;
 	char *ch, str_tmp[256];
 	int dd[16];
 	float fsum, fped, ff[16];
 	int bank_not_found = 1;
+	uint64_t tstime;
+    uint32_t tstime1, tstime2;
 
 	fadc_16ch_t fadcs[MAXTIMES][NFADCS];
     dcrb_96ch_t dcrbs[MAXTIMES][NDCRBS];
@@ -201,14 +248,14 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
       b08 = (unsigned char *) &bufptr[ind_data];
       GET32(itmp);
       GET32(ievent);
-      //printf("Event number = %d =====================================================================================\n",ievent);
+      GET32(tstime1);
+      GET32(tstime2);
+
+      tstime = ((uint64_t)tstime2<<32) | (uint64_t)tstime1;
+      printf("Event number = %d =====================================================================================\n",ievent);
 
 	  //if(ievent>/*11189566*/1967427) exit(0);
 	}
-
-
-
-
 
 
 
@@ -380,7 +427,7 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
     /* do not process anything until have configuration parameters */
     if(config_loaded[sec]==0)
 	{
-      //printf("DET=%d: CONFIG FOR sec=%d IS NOT LOADED YET - DO NOTHING FOR THAT SECTOR\n",det,sec);
+      printf("DET=%d: CONFIG FOR sec=%d IS NOT LOADED YET - DO NOTHING FOR THAT SECTOR\n",det,sec);
       return(0);
 	}
 
@@ -397,9 +444,12 @@ fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int det, hls::str
 	banktag = banktags[det];
 	banknum = fragtags[det][sec];
 
-	if (bank_not_found) {
-		for (banknum = 0; banknum < 40; banknum++) {
-			if ((ind = evLinkBank(bufptr, fragtag, fragnum, banktag, banknum, &nbytes, &ind_data)) > 0) {
+	if (bank_not_found)
+    {
+		for (banknum = 0; banknum < 40; banknum++)
+        {
+			if ((ind = evLinkBank(bufptr, fragtag, fragnum, banktag, banknum, &nbytes, &ind_data)) > 0)
+            {
 #ifdef DEBUG_0
 				printf("\n\nevLinkBank: ind=%d ind_data=%d\n",ind, ind_data);fflush(stdout);
 #endif
@@ -584,33 +634,77 @@ HUCK*/
 					GET8(slot);
 					isl = slot2isl[det][slot];
 					printf("slot=%d ->isl=%d\n",slot,isl);
-					GET32(trig);
-					GET64(time); /* time stamp for FADCs 2 counts bigger then for VTPs */
-					time = ((time & 0xFFFFFF) << 24) | ((time >> 24) & 0xFFFFFF); /* UNTILL FIXED IN ROL2 !!!!!!!!!!!!!!!!! */
+					if(banktag==0xe101)
+					{
+					  GET32(trig);
+					  GET64(time); /* time stamp for FADCs 2 counts bigger then for VTPs */
+					  time = ((time & 0xFFFFFF) << 24) | ((time >> 24) & 0xFFFFFF); /* UNTILL FIXED IN ROL2 !!!!!!!!!!!!!!!!! */
+					  *iev = trig;
+					  *timestamp = time/*0x12345678abcd*/;
+					  GET32(nchan);
+					}
+					else if(banktag==0xe126)
+					{
+                      trig = ievent;
+					  *iev = ievent;
+                      tstime --; /* ADCCTOF1 time one count less then TS */
+                      time = tstime;
+					  *timestamp = tstime;
+					  GET8(nchan);
+					}
+                    else
+					{
+                      printf("fadcs: unknown FADC banktag=0x%04x - exit\n",banktag);
+                      exit(0);
+					}
 
-					*iev = trig;
-					*timestamp = time/*0x12345678abcd*/;
-
-					GET32(nchan);
 #ifdef DEBUG_0
-					printf("slot=%d, trig=%d, time=%lld(0x%016x) nchan=%d\n",slot,trig,time,time,nchan);fflush(stdout);
+					printf("slot=%d, trig=%d, time=%lld(0x%llx) nchan=%d\n",slot,trig,time,time,nchan);fflush(stdout);
 #endif
-					for (nn = 0; nn < nchan; nn++) {
-						GET8(chan);
+
+					for (nn = 0; nn < nchan; nn++)
+                    {
+                      unsigned int data;
+                      unsigned short *psdata = (unsigned short *)&data;
+                      int ns, ll;
+                      unsigned short bbb[1000];
+
+					  GET8(chan);
+
+                      if(banktag==0xe101)
+					  {
 						GET32(nsamples);
-#ifdef DEBUG_0
-						printf("==> det=%d, sec=%d, slot=%d, chan=%d, nsamples=%d\n",det,sec,slot,chan,nsamples);fflush(stdout);
-#endif
-
-						/*save data*/
-						for (mm = 0; mm < nsamples; mm++) {
+						for (mm = 0; mm < nsamples; mm++)
+                        {
 							GET16(dat16);
 							datasaved[mm] = dat16;
 						}
+					  }
+					  else
+					  {
+
+                        GET8(npacked);
+                        decompress_reset();
+                        nsamples = 0;
+                        for (mm = 0; mm < npacked; mm+=2)
+						{
+                          GET16(dat16);
+                          psdata[0] = dat16;
+                          GET16(dat16);
+                          psdata[1] = dat16;
+                          ns = decompress(data, bbb);
+                          //printf("ns=%d\n",ns);
+						}
+
+                        for(ll=0; ll<ns; ll++) datasaved[ll] = bbb[ll];
+                        nsamples = ns;
+
+                        //printf("nsamples=%d\n\n",nsamples);
+					  }
 
 #ifdef DEBUG_0
 						printf("data[sl=%2d][ch=%2d]:\n",slot,chan);
-						for(mm=0; mm<100/*69*/; mm++)
+						for(mm=0; mm<nsamples; mm++)
 						{
 						  printf(" [%2d]%4d,",mm,datasaved[mm]);
                           if(((mm+1)%10)==0) printf("\n");
@@ -699,7 +793,7 @@ HUCK*/
 							pulse_integral = 0;
 						}
 
-						/* now we have pulse - put it in array fadcs[time_slice][slot][channel] */
+						/* now we have pulse - will put it in array fadcs[time_slice][slot][channel] */
 						ee = pulse_integral & 0x1FFF;
 #ifdef DEBUG_1
 						cout<<"fadcs: ee="<<ee<<", itime="<<itime<<", isl="<<isl<<", chan="<<chan<<", it="<<it<<", tt="<<tt<<endl;
@@ -719,7 +813,7 @@ HUCK*/
 						  printf("fadcs: WARN: isl=%d (slot=%d) - ignore the hit\n", isl, slot);
 						} else {
 #ifdef DEBUG_1
-						    cout<<"fadcs: ACCEPT HIT: it="<<it<<", isl="<<isl<<", chan="<<chan<<", ee="<<ee<<", tt="<<tt<<endl;
+						    cout<<endl<<"===> fadcs: ACCEPT HIT: slot="<<slot<<"(isl="<<isl<<"), chan="<<chan<<", ee="<<ee<<", tt="<<tt<<", it="<<it<<endl<<endl;
 #endif
 							if (chan == 0) {
 								fadcs[it][isl].e0 = ee;

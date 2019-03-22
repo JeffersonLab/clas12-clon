@@ -55,6 +55,7 @@ echiteventwriter(ap_uint<1> inst, hls::stream<trig_t> &trig_stream, hls::stream<
   ap_uint<8> addr = 0;
 #endif*/
   {
+#pragma HLS PIPELINE II=1 enable_flush
     for(int i=0; i<NHIT; i++)
 	{
       hit_ram_t buf_ram_val = buf_ram_read[i][addr];

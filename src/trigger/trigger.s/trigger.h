@@ -77,6 +77,7 @@
 extern "C" {
 #endif
 
+int fadcs_config(char *filename, char *host);
 int fadcs(unsigned int *bufptr, unsigned short threshold, int sec, int detector, hls::stream<fadc_16ch_t> s_fadc_words[NFADCS],
           int dtimestamp, int dpulsetime, int *iev, unsigned long long *timestamp);
 void fadcs_32ns_to_8ns(hls::stream<fadc_16ch_t> &s_fadc_in, hls::stream<fadc_4ch_t> &s_fadc_out);

@@ -40,6 +40,7 @@ htcchiteventwriter(hls::stream<trig_t> &trig_stream, hls::stream<eventdata3_t> &
 
   while(addr != stop_addr)
   {
+#pragma HLS PIPELINE II=1 enable_flush
     event_ram_t buf_ram_val = buf_ram_read[addr];
 
 #ifdef DEBUG
