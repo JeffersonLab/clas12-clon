@@ -349,7 +349,7 @@ main (int argc, char *argv[])
 	  }
       else if(!strcmp(labels[i],"Target"))
 	  {
-        values[i] = strdup("LD2");
+        values[i] = strdup("LH2");
         XmTextFieldSetString(text[i],values[i]);
 	  }
       else if(!strcmp(labels[i],"Operators"))
