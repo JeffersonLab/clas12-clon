@@ -48,7 +48,6 @@ setenv CLON_KUMAC         $CLON_BASE/kumac
 setenv CLON_FTP           $CLON_BASE/ftp
 setenv CLON_DOC           $CLON_BASE/doc
 
-setenv IMPORT_JAR         /usr/clas12/third-party-libs/jar
 setenv CLON_JAR           $CLON/common/jar
 setenv CLON_PERL          $CLON/common/perl
 if ($?PERLLIB) then
