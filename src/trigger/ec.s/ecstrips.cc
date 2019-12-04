@@ -387,6 +387,7 @@ ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADC
       cout<<"fadcs[slot="<<isl<<"][read="<<j<<"]="<<fadcs.e0<<" "<<fadcs.e1<<" "<<fadcs.e2<<" "<<fadcs.e3<<endl;
 #endif
 
+	  {
       energy = fadcs.e0;
       chan = j*NH_READS;
       layer = adclayerecal[isl][chan] - 1; /* from 0 */
@@ -422,7 +423,7 @@ ecstrips(ap_uint<16> strip_threshold, hls::stream<fadc_4ch_t> s_fadc_words[NFADC
 #ifdef DEBUG
       cout<<"   layer="<<layer<<" str="<<str<<" -> e3="<<energytmp[layer][str]<<endl;
 #endif
-
+	  }
 
 
 	  /* for ECAL only, add outer part to inner; translation table the same but slots 7-13 (inner 0-6) */
