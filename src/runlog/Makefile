@@ -36,10 +36,10 @@ endif
 CLON_FLAGS += -std=c++11 -DRCDB_MYSQL -I/usr/include/mysql -I$(RCDB_HOME)/cpp/include
 
 
-CLON_FLAGS += -I$(CODA)/common/include -I$(CLON)/common/include \
-				-I$(RTHOME)/include \
-				-I$(IPC_HOME)/src/main -I$(CODA)/src/ipc/ipc.s \
-				-I$(CLON)/src/epicsutil/epicsutil.s
+CLON_FLAGS += -I./$(MAIN).s -I$(CODA)/common/include -I$(CLON)/common/include \
+				-I$(CODA)/src/ipc/ipc.s \
+				-I$(CLON)/src/epicsutil/epicsutil.s \
+				-I$(IPC_HOME)/include/activemq-cpp-$(IPC_VER)
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   CLON_FLAGS += -I/usr/local/include/apr-1
@@ -48,12 +48,20 @@ else
 endif
 
 
-LIBNAMES = $(CLON)/src/epicsutil/$(OSTYPE_MACHINE)/lib/libepicsutil.a
+LIBNAMES += $(CLON)/src/epicsutil/$(OSTYPE_MACHINE)/lib/libepicsutil.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libcodautil.a
 LIBNAMES += $(CLON)/src/clonutil/$(OSTYPE_MACHINE)/lib/libclonutil.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
-LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
 
+ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+  LIBNAMES += /usr/lib/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
+    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+endif
 
 # EPICS libraries
 ##LIBNAMES += $(EPICS_BASE)/lib/linux-x86/libca.a
@@ -61,22 +69,18 @@ LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
 LIBNAMES += $(EPICS_BASE)/lib/linux-x86_64/libca.a
 LIBNAMES += $(EPICS_BASE)/lib/linux-x86_64/libCom.a
 
-
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
-  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
   LIBNAMES += /usr/local/lib/libapr-1.so
   LIBNAMES += -luuid -lrt -lcrypt -lssl -lcrypto -ldl -lz
   LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
 else
-  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
   LIBNAMES += -lapr-1
   LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
   LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
 endif
 
-
-
-#############################LIBNAMES += -lmysqlclient
 LIBNAMES += -lresolv
 
 ifeq ("$(OSTYPE)","Linux")

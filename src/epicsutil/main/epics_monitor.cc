@@ -419,6 +419,9 @@ channel_thread(void *param)
 
   }
   
+#endif /*if 0*/
+
+
 
   // dump to file
   if(no_file==0)
@@ -465,7 +468,6 @@ channel_thread(void *param)
     cout << endl;
   }
   
-#endif /*if 0*/
 
   return((void*)0);
 }
@@ -904,7 +906,7 @@ init_epics()
   ifstream file(fn.str());
   if(!file.is_open())
   {
-    cerr << "?unable to open " << fn << endl;
+    cerr << "?unable to open " << fn.str() << endl;
     exit(EXIT_FAILURE);
   }
   
@@ -935,7 +937,7 @@ init_epics()
 
     if(nepics>=MAX_EPICS)
     {
-      cerr << "Too many epics channels in " << fn << ", excess ignored" << endl;
+      cerr << "Too many epics channels in " << fn.str() << ", excess ignored" << endl;
       break;
     }
   }
@@ -992,7 +994,7 @@ init_epics()
   ifstream files(fns.str());
   if(!files.is_open())
   {
-    cerr << "?unable to open " << fns << endl;
+    cerr << "?unable to open " << fns.str() << endl;
     exit(EXIT_FAILURE);
   }
   
@@ -1023,7 +1025,7 @@ init_epics()
 
     if(nscalers>=MAX_EPICS)
     {
-      cerr << "Too many scaler channels in " << fns << ", excess ignored" << endl;
+      cerr << "Too many scaler channels in " << fns.str() << ", excess ignored" << endl;
       break;
     }
   }
@@ -1053,7 +1055,7 @@ init_epics()
   ifstream fileg(fng.str());
   if(!fileg.is_open())
   {
-    cerr << "?unable to open " << fng << endl;
+    cerr << "?unable to open " << fng.str() << endl;
     exit(EXIT_FAILURE);
   }
   
@@ -1084,7 +1086,7 @@ init_epics()
 
     if(ngamma>=MAX_EPICS)
     {
-      cerr << "Too many gamma channels in " << fng << ", excess ignored" << endl;
+      cerr << "Too many gamma channels in " << fng.str() << ", excess ignored" << endl;
       break;
     }
   }

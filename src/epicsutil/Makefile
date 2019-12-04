@@ -30,6 +30,8 @@ ifeq ("$(OSTYPE)","Linux")
   CLON_FLAGS += -I$(EPICS_BASE)/include -I$(EPICS_BASE)/include/os/Linux -I$(EPICS_BASE)/src/catools
 endif
 
+CLON_FLAGS += -I/usr/include/mysql
+
 CLON_FLAGS +=	-I$(CODA)/common/include \
 				-I$(CLON)/common/include
 
@@ -40,7 +42,7 @@ CLON_FLAGS +=	-I$(CODA)/common/include \
 
 ## activemq
 CLON_FLAGS += -std=c++11 
-CLON_FLAGS +=	-I$(IPC_HOME)/src/main -I$(CODA)/src/ipc/ipc.s
+CLON_FLAGS +=	-I$(IPC_HOME)/include/activemq-cpp-$(IPC_VER) -I$(CODA)/src/ipc/ipc.s
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   CLON_FLAGS += -I/usr/local/include/apr-1
 else
@@ -56,26 +58,35 @@ LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libcodautil.a
 LIBNAMES += $(CLON)/src/clonutil/$(OSTYPE_MACHINE)/lib/libclonutil.a
 
 ## activemq
-LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
+ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+  LIBNAMES += /usr/lib/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
+    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+endif
+
 
 LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libcas.a
 LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libca.a
 LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libgdd.a
 LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libCom.a
 
+
 ## activemq
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
-  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
   LIBNAMES += /usr/local/lib/libapr-1.so
   LIBNAMES += -luuid -lrt -lcrypt -lssl -lcrypto -ldl -lz
   LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
 else
-  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
   LIBNAMES += -lapr-1
   LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
   LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
 endif
-
 
 
 

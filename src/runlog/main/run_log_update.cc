@@ -80,7 +80,7 @@ static char *application      	 = (char*)"clastest";
 static char *uniq_dgrp        	 = (char*)"run_log_update";
 static char *id_string        	 = (char*)"run_log_update";
 static char *dest             	 = (char*)"dbrouter";
-static char *msql_database    	 = (char*)"clasrun";
+static char *msql_database    	 = (char*)NULL;
 static char expid[128]           = "";
 static char session[128]         = "";
 static int gmd_time           	 = 5;
@@ -158,7 +158,7 @@ char *env_name(const char *env, char *name);
 
 
 extern "C" {
-  void get_run_config(const char *msql_database, const char *session, int *run,
+  void get_run_config(char *msql_database, char *session, int *run,
                       char **config, char **conffile, char **datafile);
 }
 
@@ -222,6 +222,8 @@ main(int argc,char **argv)
 	{
 
       // get run number and config
+      if(msql_database==NULL) msql_database = getenv("EXPID");
+      printf("Use msql_database '%s'\n",msql_database);
       get_run_config(msql_database, session, &run_number, &configin, &conffilein, &datafilein);
 
       if(configin == NULL) strcpy(config,"No_configuration!");

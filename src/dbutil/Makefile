@@ -24,7 +24,7 @@ CLON_FLAGS += -std=c++11 -DRCDB_MYSQL -I/usr/include/mysql -I$(RCDB_HOME)/cpp/in
 
 CLON_FLAGS += -Imain -Idbutil.s \
 				-I$(CODA)/common/include -I$(CLON)/common/include \
-				-I$(IPC_HOME)/src/main 
+				-I$(IPC_HOME)/include/activemq-cpp-$(IPC_VER)
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   CLON_FLAGS += -I/usr/local/include/apr-1
@@ -37,16 +37,24 @@ endif
 
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libcodautil.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
-LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
 
+ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+  LIBNAMES += /usr/lib/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
+    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+endif
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
-  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
   LIBNAMES += /usr/local/lib/libapr-1.so
   LIBNAMES += -luuid -lrt -lcrypt -lssl -lcrypto -ldl -lz
   LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
 else
-  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
   LIBNAMES += -lapr-1
   LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
   LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib

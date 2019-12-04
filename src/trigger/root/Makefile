@@ -1,111 +1,110 @@
-# Makefile for the ROOT test programs.
-# This Makefile shows nicely how to compile and link applications
-# using the ROOT libraries on all supported platforms.
 #
-# Copyright (c) 2000 Rene Brun and Fons Rademakers
+# Makefile for clon/src/trigger/root
 #
-# Author: Fons Rademakers, 29/2/2000
 
-RC     := root-config
-ifeq ($(shell which $(RC) 2>&1 | sed -ne "s@.*/$(RC)@$(RC)@p"),$(RC))
-MKARCH := $(wildcard $(shell $(RC) --etcdir)/Makefile.arch)
-RCONFIG := $(wildcard $(shell $(RC) --incdir)/RConfigure.h)
-endif
-ifneq ($(MKARCH),)
-include $(MKARCH)
+#-----------------------------
+# mandatory definitions: MAIN
+#-----------------------------
+MAIN = cmroot
+
+
+#------------------
+# generic Makefile
+#------------------
+include $(CODA)/src/Makefile.include
+
+#temporary because of old root
+#CC = /apps/gcc/4.9.4/bin/gcc 
+#CXX = /apps/gcc/4.9.4/bin/g++ 
+#temporary because of old root
+
+
+ROOTCFLAGS   := $(shell root-config --cflags)
+ROOTLIBS     := $(shell root-config --libs) 
+ROOTGLIBS    := $(shell root-config --glibs)
+
+#-----------------------
+# customize definitions
+#-----------------------
+CLON_FLAGS += -std=c++11
+
+CLON_FLAGS += -I./src.s \
+				-I$(CODA)/common/include -I$(CODA)/common/include \
+				-I$(IPC_HOME)/include/activemq-cpp-$(IPC_VER) \
+				-I$(CODA)/src/ipc/ipc.s \
+				-I$(CODA)/src/codautil/codautil.s
+
+# for json.hpp
+CLON_FLAGS += -I$(RCDB_HOME)/cpp/include
+
+CLON_FLAGS += $(ROOTCFLAGS)
+
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+  CLON_FLAGS += -I/usr/local/include/apr-1
+else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
+  CLON_FLAGS += -I/usr/local/include/apr-1
 else
-ifeq ($(ROOTSYS),)
-ROOTSYS = ..
-endif
-include $(ROOTSYS)/etc/Makefile.arch
+  CLON_FLAGS += -I/usr/include/apr-1
 endif
 
-#------------------------------------------------------------------------------
 
-TRIGVIEWO    = trigview.$(ObjSuf) trigviewDict.$(ObjSuf)
-TRIGVIEWS    = trigview.$(SrcSuf) trigviewDict.$(SrcSuf)
-TRIGVIEW     = trigview$(ExeSuf)
+LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
+LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libcodautil.a
+LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libet.a
+LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libevio.a
 
-#------------------------------------------------------------------------------
+LIBNAMES += $(ROOTLIBS) $(ROOTGLIBS)
 
-.SUFFIXES: .$(SrcSuf) .$(ObjSuf) .$(DllSuf)
-.PHONY:    Aclock Hello Tetris
-
-
-
-ifeq ($(PLATFORM),macosx)
-# We need to make both the .dylib and the .so
-		$(LD) $(SOFLAGS)$@ $(LDFLAGS) $^ $(OutPutOpt) $@ $(EXPLLINKLIBS)
-ifneq ($(subst $(MACOSX_MINOR),,1234),1234)
-ifeq ($(MACOSX_MINOR),4)
-		ln -sf $@ $(subst .$(DllSuf),.so,$@)
-endif
-endif
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+  LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
+  LIBNAMES += /usr/local/lib/libapr-1.so
+  LIBNAMES += -luuid -lrt -lcrypt -lssl -lcrypto -ldl -lz
+  LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
 else
-		$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(OutPutOpt) $@ $(EXPLLINKLIBS)
-endif
-		@echo "$@ done"
-
-
-
-
-#sergey
-CXXFLAGS += -I$(CODA)/src/evio-4.3/src.s \
-			-I$(CLON)/src/trigger/trigger.s \
-			-I$(CLON)/src/trigger/ec.s \
-			-I$(CLON)/src/trigger/pc.s
-
-
-ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
-  CXXFLAGS +=	-I/apps/Xilinx/Vivado_HLS/2015.4/include
-else
-  CXXFLAGS +=	-I/apps/Xilinx/Vivado_HLS/2013.2/include
+  LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
+  LIBNAMES += -lapr-1
+  LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
+  LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
 endif
 
+#for old solaris only ???
+LIBNAMES += -lresolv
 
-GLIBS +=	$(CLON)/src/trigger/$(OSTYPE_MACHINE)/lib/libtrigger.a \
-			$(CODA)/src/evio-4.3/$(OSTYPE_MACHINE)/lib/libevio.a \
-			-lexpat -lpthread -lrt
-
-
-OBJS         = $(TRIGVIEWO)
-PROGRAMS     = $(TRIGVIEW)
+LIBNAMES += $(X11LIBS)
+LIBNAMES += $(SYSLIBS)
 
 
 
+#-------------------
+# customize targets
+#-------------------
+install: install_bin
 
-
-all: $(PROGRAMS)
-
-
-$(TRIGVIEW):   $(TRIGVIEWO)
-		$(LD) $(LDFLAGS) $^ $(GLIBS) $(OutPutOpt)$@
-		$(MT_EXE)
-		@echo "$@ done"
-
-
+#install: install_lib install_bin
+#	rm -rf tmp
+#	mkdir tmp
+#	cp $(MAIN).s/*.h tmp
+#	chmod 664 tmp/*
+#	cp tmp/* $(CODA)/common/include
+#	rm -rf tmp
 
 
 
 
-clean:
-		@rm -f $(OBJS) $(TRACKMATHSRC) core *Dict.*
 
-distclean:      clean
-###		-@(mv -f stressRooStats_ref.root stressRooStats_ref.root- >/dev/null 2>&1;true)
-		@rm -f $(PROGRAMS) *Dict.* *.def *.exp \
-		   *.root *.ps *.so *.lib *.dll *.d *.log .def so_locations \
-		   files/*
 
-.SUFFIXES: .$(SrcSuf)
 
-###
 
-trigview.$(ObjSuf): trigview.h
-trigviewDict.$(SrcSuf): trigview.h trigviewLinkDef.h
-	@echo "Generating dictionary $@..."
-	$(ROOTCINT) -f $@ -c $^
 
-.$(SrcSuf).$(ObjSuf):
-	$(CXX)  $(CXXFLAGS) -c $<
+
+
+
+
+
+
+
+
+
+
+
 

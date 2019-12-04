@@ -186,12 +186,24 @@ endif
     CXX = g++
 
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-    CC = /apps/gcc/4.9.4/bin/gcc
-    CXX = /apps/gcc/4.9.4/bin/g++
+    ##CC = /apps/gcc/4.9.4/bin/gcc 
+    ##CXX = /apps/gcc/4.9.4/bin/g++ 
+    CC = /apps/gcc/8.3.0/bin/gcc 
+    CXX = /apps/gcc/8.3.0/bin/g++ 
 endif
 ifeq ("$(OSTYPE_PLATFORM)","Linux_i686")
-    CC = /apps/gcc/4.9.4/bin/gcc
-    CXX = /apps/gcc/4.9.4/bin/g++
+    ##CC = /apps/gcc/4.9.4/bin/gcc
+    ##CXX = /apps/gcc/4.9.4/bin/g++ 
+    CC = /apps/gcc/8.3.0/bin/gcc
+    CXX = /apps/gcc/8.3.0/bin/g++ 
+    CFLAGS += -gdwarf-2
+    CXXFLAGS += -gdwarf-2
+endif
+ifeq ("$(OSTYPE_PLATFORM)","Linux_armv7l")
+    ##CC = /apps/gcc/4.9.4/bin/gcc 
+    ##CXX = /apps/gcc/4.9.4/bin/g++ 
+    CC = /apps/gcc/8.3.0/bin/gcc 
+    CXX = /apps/gcc/8.3.0/bin/g++ 
 endif
 
     CPP = $(CC) -E

@@ -24,10 +24,12 @@
 
 // misc
 using namespace std;
+
 #include <strstream>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+
 
 
 int find_tag_line(ifstream &file, const char *tag, char buffer[], int buflen);
@@ -40,7 +42,9 @@ epics_parse_config_file(char *clon_parms, char *epics_config_name, int max_epics
   char buffer[256];
   char temp[256];
   char *p1,*p2;
+
   strstream fn; 
+  //ostrstream fn;
 
   printf("epics_parse_config_file REACHED\n");
 
@@ -49,7 +53,7 @@ epics_parse_config_file(char *clon_parms, char *epics_config_name, int max_epics
   ifstream file(fn.str());
   if(!file.is_open())
   {
-    cerr << "?unable to open " << fn << endl;
+	cerr << "?unable to open " << fn.str() << endl;
     exit(EXIT_FAILURE);
   }
   else
@@ -86,7 +90,7 @@ epics_parse_config_file(char *clon_parms, char *epics_config_name, int max_epics
 
     if(nepics >= max_epics)
     {
-      cerr << "Too many epics channels in " << fn << ", excess ignored" << endl;
+      cerr << "Too many epics channels in " << fn.str() << ", excess ignored" << endl;
       break;
     }
   }

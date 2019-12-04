@@ -1009,7 +1009,7 @@ ecalgetevent(int handler, TCanvas *fCanvas, int sec, int dtimestamp, int dpulset
     {
       printf("CALLING ectrig, sec=%d\n",sec);
 
-      ret = ectrig(bufptr, sec, npeaks_trig, peaks_trig, &nhits_trig, hits_trig);
+      ret = ectrig(bufptr, sec, npeaks_trig, peaks_trig, &nhits_trig, hits_trig, 1);
       if(ret==0) return(0);
 
       for(ii=0; ii<NVIEW; ii++)

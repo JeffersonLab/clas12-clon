@@ -22,10 +22,7 @@ using namespace std;
 #include <strstream>
 #include <iostream>
 
-
-
-// for ipc
-#include "ipc_lib.h"
+#include "runlog.h"
 
 #ifdef USE_RCDB
 
@@ -37,7 +34,11 @@ using json = nlohmann::json;
 #endif
 
 
-/* motif */
+/* X11/motif */
+#include <X11/Xlib.h>
+#include <X11/Intrinsic.h>
+#include <X11/StringDefs.h>
+
 #include <Xm/Xm.h> 
 #include <Xm/Protocols.h>
 #include <Xm/TextF.h>
@@ -47,7 +48,7 @@ using json = nlohmann::json;
 #include <Xm/PushB.h>
 #include <Xm/PushBG.h>
 #include <Xm/ToggleBG.h>
-/* motif */
+/* X11/motif */
 
 
 // control params
@@ -61,6 +62,7 @@ static int filep               	 = 0;
 static int run_number;
 static int run_number_previous;
 static char *config;
+static char *target;
 
 
 #define MAXLABELS 16
@@ -98,10 +100,6 @@ static int fix       = 0;
 static int no_dbr    = 0;
 
 static int toggle_item_set;
-
-
-// ipc connection
-IpcServer &server = IpcServer::Instance();
 
 
 void
@@ -254,6 +252,45 @@ main (int argc, char *argv[])
     printf("config >%s<\n",config);
   }
 
+
+  /* target type (CLAS12: 'caget clas12:target:type', HPS: 'caget hps:target:type') */
+#define LENRES 256
+  {
+    FILE *cmd = popen("caget clas12:target:type", "r");
+    char result[LENRES];
+    int i, len, len1, len2;
+
+    for(i=0; i<LENRES; i++) result[i] = ' ';
+
+    while (fgets(result, sizeof(result), cmd) !=NULL)
+    {
+      //printf("result >%s<\n", result);
+
+      len = strlen("clas12:target:type");
+      for(i=0; i<len; i++) result[i] = ' ';
+      //printf("result1 >%s<\n", result);
+
+      len1 = 0;
+      while(result[len1]==' ' && len1<LENRES) len1++;
+      //printf("len1=%d\n",len1);
+      //printf("result2 >%s<\n", (char *)&result[len1]);
+
+      len2 = LENRES-3;
+      //printf("len2=%d\n",len2);
+      while(result[len2]==' ' && len2>0) len2--;
+      //printf("len2=%d\n",len2);
+      result[len2] = '\0';
+      //printf("result3 >%s<\n", (char *)&result[len1]);
+
+      target = strdup((char *)&result[len1]);
+      len = strlen(target);
+      target[len-1] = ' ';
+      printf("target >%s<\n", target);
+    }
+    pclose(cmd);
+  }
+
+
   /* open gui */
   XtSetLanguageProc (NULL, NULL, NULL);
   printf("run_log_comment: argc=%d argv[0]=%s\n",argc,argv[0]);fflush(stdout);
@@ -349,7 +386,7 @@ main (int argc, char *argv[])
 	  }
       else if(!strcmp(labels[i],"Target"))
 	  {
-        values[i] = strdup("LH2");
+        values[i] = target/*strdup("LH2")*/;
         XmTextFieldSetString(text[i],values[i]);
 	  }
       else if(!strcmp(labels[i],"Operators"))
@@ -506,31 +543,27 @@ void button_callback (Widget w, XtPointer client_data, XtPointer call_data)
   /* update database */
   create_sql(rlb_string);
 
+
+#ifdef USE_ACTIVEMQ
   /* make entries */
   if(debug==0)
   {
     // connect to server
-    //dbr_init(uniq_subj,application,id_string);
-    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "control", (char *)"run_log_comment");
-    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "control", "*");
-
-    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "runlog", (char *)"run_log_comment");
-
-    server.Open();
+    runlogMsgInit(getenv("EXPID"), getenv("SESSION"), (char *)"runlog", (char *)"run_log_comment");
 
     // ship to database router
     insert_into_database(rlb_string.str());
 
     // close ipc connection
-    //dbr_close();
-    server.Close();
+    runlogMsgClose();
   }
+
   else
   {
     // just print sql strings
     cout << "\nrlb for run " << run_number << " is:\n\n" << rlb_string.str() << endl << endl;
   }
-
+#endif
 
   exit(0); /*return;*/
 }
@@ -618,7 +651,7 @@ insert_into_database(const char *entry)
     printf("run_log_comment: QUERY >%s<\n",entry);
 
 #ifdef USE_ACTIVEMQ
-    server << clrm << "runlog" << (char *)entry << endm;
+    runlogMsgSend(entry);
 #else
 	/*
     // disable gmd timeout

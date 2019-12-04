@@ -91,7 +91,7 @@ static int debug     = 0;
 // control params
 static char *uniq_subj           = (char*)"run_log_begin";
 static char *id_string         	 = (char*)"run_log_begin";
-static char *msql_database     	 = (char*)"clasrun";
+static char *msql_database     	 = (char*)NULL;
 static int gmd_time              = 3;
 static int filep               	 = 0;
 
@@ -151,7 +151,7 @@ int epics_parse_config_file(char *, char *, int, EPICS_CONFIG *);
 
 char *name_only(char *x);
 extern "C" {
-  void get_run_config(const char *msql_database, const char *session, int *run,
+  void get_run_config(char *msql_database, char *session, int *run,
                       char **config, char **conffile, char **datafile);
   char *get_ts_name(char *mysql_database, char *session);
   int tcpClientCmd(char *roc, char *cmd, char *buf);
@@ -289,6 +289,8 @@ collect_data(void)
   get_epics_data();
 
   // get run number and config
+  if(msql_database==NULL) msql_database = getenv("EXPID");
+  printf("Use msql_database '%s'\n",msql_database);
   get_run_config(msql_database, session, &run, &configin, &conffilein, &datafilein);
 
   if(strlen(session)==0) strcpy(session,"No_session!");
