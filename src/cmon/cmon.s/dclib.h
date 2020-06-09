@@ -1,8 +1,36 @@
 #ifndef _DCLIB_
 
 
+typedef struct uthistf
+{
+  int entries;    /* total number of entries */
 
-#include "uthbook.h"
+  int ifi2_book; /* set to 1 in booking if I2 permitted */
+  int ifi2_fill; /* set to 1 in filling if I2 permitted */
+
+  int nbinx;
+  float xmin;
+  float xmax;
+  float xunderflow;
+  float xoverflow;
+
+  int nbiny;
+  float ymin;
+  float ymax;
+  float yunderflow;
+  float yoverflow;
+
+  int nwtitle;
+  char *title;
+
+  float dx;
+  float dy;
+
+  float *buf;
+  float **buf2;
+
+} UThistf;
+
 
 
 #ifdef	__cplusplus
