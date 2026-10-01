@@ -39,19 +39,17 @@ NOTE: directory 'backlog_dir' must exist and be writeable, or it should be permi
 
 #define USE_ACTIVEMQ
 
-//-------------------------------------------------------------------
-
 
 // for posix
 #define _POSIX_SOURCE 1
 #define __EXTENSIONS__
 
-#include <time.h>
 #include <stdio.h>
+#include <string.h>
+#include <time.h>
 #include <dirent.h>
 #include <stdarg.h>
 #include <unistd.h>
-#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -60,7 +58,7 @@ NOTE: directory 'backlog_dir' must exist and be writeable, or it should be permi
 
 /* sergey: add following*/
 using namespace std;
-#include <strstream>
+#include <sstream> //#include <strstream>
 #include <fstream>
 #include <iomanip>
 
@@ -106,7 +104,7 @@ char *application        = (char*)"clastest";
 char *uniq_name          = (char*)"dbrouter";
 char *dbhost             = (char*)"clondb1";
 char *dbuser             = (char*)"clasrun";
-char *database           = (char*)"clasprodtest";
+char *database           = (char*)"clasprodtest"; /* NOT USED, ALL WORK IN MessageActionRUNLOG.h !!!!!!!!!!!!!! */
 char *backlog_dir_name   = (char*)"./backlog_%s";
 char *backlog_file       = (char*)"msgcount.dat";
 int debug            	 = 0;
@@ -217,17 +215,18 @@ main(int argc, char **argv)
 
 
 
+
 #ifdef USE_ACTIVEMQ
   // connect to ipc server
-  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "control", (char *)"dbrouter");
-  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "control", "*");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"control", (char *)"dbrouter");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), (char *)"control", (char *)"*");
 
-  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "runlog", "*");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), (char *)"runlog", (char *)"*");
 
   server.Open();
 
-  MessageActionControl   *control = new MessageActionControl((char *)"dbrouter",debug);
-  MessageActionJSON         *json = new MessageActionJSON();
+  MessageActionControl   *control = new MessageActionControl((char *)"dbrouter",0/*debug*/);
+  MessageActionJSON         *json = new MessageActionJSON(debug);
   server.AddCallback(control);
   server.AddCallback(json);
 
@@ -286,10 +285,10 @@ main(int argc, char **argv)
   {
     status = mkdir (backlog_dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     if(status!=0)
-	{
+    {
       printf("Unable to create backlog directory >%s< - exit\n",backlog_dir);
       exit(Exit_Error("Unable to create backlog dir."));
-	}
+    }
     sprintf(filename,"%s/%s",backlog_dir,backlog_file);
     ofstream msgout(filename,ios::out);
     if(!msgout)exit (Exit_Error("Unable to create backlog msgcount file."));
@@ -750,9 +749,9 @@ process_message(T_IPC_MSG msg)
     // extract maxrow and SQL statement, count type, execute, check status, repeat
     // stop and rollback on any error
     if (!TipcMsgGetNumFields(msg,&nfield)) 
-	{
+    {
       exit (Exit_Error("GetNumFields failure."));
-	}
+    }
 
     // ignore if can't decode message
     for (i=1; i<=nfield; i+=2)

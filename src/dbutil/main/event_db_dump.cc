@@ -35,9 +35,9 @@ using namespace std;
 // local variables used by ingres
 static int runbeg        = 0;
 static int runend        = 0;
-static char *dbhost      = "clondb1";
-static char *dbuser      = "clasrun";
-static char *database    = "clasprod";
+static char *dbhost      = (char *)"clondb1";
+static char *dbuser      = (char *)"clasrun";
+static char *database    = (char *)"clasprod";
 static MYSQL *dbhandle   = NULL;
 static MYSQL_ROW row;
 static MYSQL_RES *res;
@@ -55,7 +55,7 @@ char *get_col_by_name(MYSQL_RES *res, MYSQL_ROW row, char *name);
 
 //------------------------------------------------------------------------------------
 
-
+int
 main(int argc, char **argv){
 
 
@@ -131,20 +131,20 @@ main(int argc, char **argv){
     while(row = mysql_fetch_row(res)) {
 
       // skip leading dir name
-      char *l1p = get_col_by_name(res,row,"l1_program");
+      char *l1p = get_col_by_name(res,row, (char *)"l1_program");
       char *p=strstr(l1p,"/home/trigger/");
       if(p==NULL)p=l1p; else p+=14;
       
-      cout << setw(6) 	<< get_col_by_name(res,row,"run") << " "
-	   << setw(7) 	<< get_col_by_name(res,row,"beam_energy") << " " 
-	   << setw(7) 	<< get_col_by_name(res,row,"beam_current_request") << " " 
-	   << setw(10)  << get_col_by_name(res,row,"target") << " " 
-	   << setw(7) 	<< setprecision(4) << get_col_by_name(res,row,"torus_current") << " " 
-	   << setw(7) 	<< get_col_by_name(res,row,"mini_current") << " " 
-	   << setw(5) 	<< get_col_by_name(res,row,"ec_total_hi") << " " 
-	   << setw(5) 	<< get_col_by_name(res,row,"ec_total_lo") << " " 
-	   << setw(5) 	<< get_col_by_name(res,row,"cc_hi") << " " 
-	   << setw(5) 	<< get_col_by_name(res,row,"cc_lo") << " " 
+      cout << setw(6) 	<< get_col_by_name(res,row, (char *)"run") << " "
+	   << setw(7) 	<< get_col_by_name(res,row, (char *)"beam_energy") << " " 
+	   << setw(7) 	<< get_col_by_name(res,row, (char *)"beam_current_request") << " " 
+	   << setw(10)  << get_col_by_name(res,row, (char *)"target") << " " 
+	   << setw(7) 	<< setprecision(4) << get_col_by_name(res,row, (char *)"torus_current") << " " 
+	   << setw(7) 	<< get_col_by_name(res,row, (char *)"mini_current") << " " 
+	   << setw(5) 	<< get_col_by_name(res,row, (char *)"ec_total_hi") << " " 
+	   << setw(5) 	<< get_col_by_name(res,row, (char *)"ec_total_lo") << " " 
+	   << setw(5) 	<< get_col_by_name(res,row, (char *)"cc_hi") << " " 
+	   << setw(5) 	<< get_col_by_name(res,row, (char *)"cc_lo") << " " 
 	   << p << " " 
 	   << endl;
     }
@@ -187,7 +187,7 @@ char *get_col_by_name(MYSQL_RES *res, MYSQL_ROW row, char *name) {
 void decode_command_line(int argc, char **argv){
 
    int i=1;
-   char *help = "\nUsage:\n\n   event_db_dump [-host dbhost] [-user dbuser] [-d database] [-debug]"
+   char *help = (char *)"\nUsage:\n\n   event_db_dump [-host dbhost] [-user dbuser] [-d database] [-debug]"
                 " first_run [last_run]\n";
 
 

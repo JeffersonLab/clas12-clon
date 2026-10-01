@@ -1,12 +1,12 @@
 
 /* getepics.c */
 
-// EPICS CA includes
 #include <stdio.h>
-#include <epicsStdlib.h>
 #include <string.h>
-
 #include <alarm.h>
+
+// EPICS CA includes
+#include <epicsStdlib.h>
 #include <cadef.h>
 #include <epicsGetopt.h>
 

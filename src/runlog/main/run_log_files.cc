@@ -54,8 +54,8 @@ static char *uniq_dgrp     = (char*)"run_log_files";
 static char *application   = (char*)"clastest";
 static char *dest          = (char*)"dbrouter";
 static char *msql_database = (char*)"clasrun";
-static char *session       = "";
-static char *clon_parms    = "";
+static char *session       = (char *)"";
+static char *clon_parms    = (char *)"";
 static char *dir           = (char*)"run_files";
 static int timeout         = 5;    // how long to wait for GMD reply
 static int run;
@@ -128,10 +128,10 @@ main(int argc, char **argv)
   if(debug==0)
   {
 	//dbr_init(uniq_dgrp,application,"run log files");
-    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "control", (char *)"run_log_files");
-    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "control", "*");
+    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"control", (char *)"run_log_files");
+    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), (char *)"control", (char *)"*");
 
-    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "runlog", (char *)"run_log_files");
+    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"runlog", (char *)"run_log_files");
 
     server.Open();
 

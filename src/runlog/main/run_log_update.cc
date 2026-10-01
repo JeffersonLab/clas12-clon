@@ -121,6 +121,7 @@ static int nevents;
 static int nevents_old = 100;
 static int ndata;
 
+static char *run_status;
 static char config[128]   = "";
 static char conffile[128] = "";
 static char datafile[128] = "";
@@ -128,7 +129,8 @@ static char *configin     = NULL;
 static char *conffilein   = NULL;
 static char *datafilein   = NULL;
 
-static char end_date[30];
+static char enddate[30];
+
 static char location[80];
 static long nfile  = 0;
 static long nevent = 0;
@@ -164,11 +166,11 @@ extern "C" {
 
 
 // program start time
-static time_t start=time(NULL);
+static time_t starttime=time(NULL);
 
-/* time from DAQ '_option' table; it must be bigger then 'start' to allow us to send update */
-static time_t newtime=start;
-static time_t oldtime=start;
+/* time from DAQ '_option' table; it must be bigger then 'starttime' to allow us to send update */
+static time_t newtime=starttime;
+static time_t oldtime=starttime;
 
 
 // ref to server (connection created later)
@@ -195,10 +197,10 @@ main(int argc,char **argv)
 
   //dbr_init(uniq_dgrp,application,id_string);
 
-  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "control", "run_log_update");
-  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "control", "*");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"control", (char *)"run_log_update");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), (char *)"control", (char *)"*");
 
-  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "runlog", (char *)"run_log_update");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"runlog", (char *)"run_log_update");
 
   server.Open();
 
@@ -219,51 +221,63 @@ main(int argc,char **argv)
 
 
     while(done==0)
-	{
-
+    {
       // get run number and config
       if(msql_database==NULL) msql_database = getenv("EXPID");
-      printf("Use msql_database '%s'\n",msql_database);
-      get_run_config(msql_database, session, &run_number, &configin, &conffilein, &datafilein);
+      printf("run_log_update: Use msql_database '%s'\n",msql_database);
 
-      if(configin == NULL) strcpy(config,"No_configuration!");
-      else                 strcpy(config,configin);
-
-      if(conffilein == NULL) strcpy(conffile,"No_conffile!");
-      else                   strcpy(conffile,conffilein);
-
-      if(datafilein == NULL) strcpy(datafile,"No_datafile!");
-      else                   strcpy(datafile,datafilein);
-
-      printf("run_log_update: session >%s<, run %d, configuration >%s<\n",session,run_number,config);fflush(stdout);
-
-      // collect data in normal mode (returns sql string)
-      strstream sql_string;
-      ret = collect_data(sql_string,0,NULL);
-
-
-      // ship sql string to database router and/or info_server
-      if(debug==0)
-	  {
-        if(ret) insert_into_ipc(sql_string.str());
-      }
-    
-      // debug...just print sql string
-      if(debug!=0)
+      // get run status, and do nothing if it is NOT 'active'
+      run_status = get_run_status(msql_database, session);
+      printf("run_log_update: Run status is '%s'\n",run_status);
+      if(!strcmp(run_status,"active"))
       {
-        cout << "\nsql string for normal run " << run_number << " is:\n\n" << sql_string.str() << endl;
-        cout << "oldtime=" << oldtime << ", newtime=" << newtime << endl;
-        if(ret==0) cout << "NOT SENDABLE !";
-        else cout << "SENDABLE !";
-        cout<<endl<<endl;
-      }
+	printf("run_log_update: preparing and sending message\n");
+	
+        get_run_config(msql_database, session, &run_number, &configin, &conffilein, &datafilein);
 
+        if(configin == NULL) strcpy(config,"No_configuration!");
+        else                 strcpy(config,configin);
+
+        if(conffilein == NULL) strcpy(conffile,"No_conffile!");
+        else                   strcpy(conffile,conffilein);
+
+        if(datafilein == NULL) strcpy(datafile,"No_datafile!");
+        else                   strcpy(datafile,datafilein);
+
+        printf("run_log_update: session >%s<, run %d, configuration >%s<\n",session,run_number,config);fflush(stdout);
+
+        // collect data in normal mode (returns sql string)
+        strstream sql_string;
+        ret = collect_data(sql_string,0,NULL);
+
+
+        // ship sql string to database router and/or info_server
+        if(debug==0)
+        {
+          if(ret) insert_into_ipc(sql_string.str());
+        }
+    
+        // debug...just print sql string
+        if(debug!=0)
+        {
+          cout << "\nsql string for normal run " << run_number << " is:\n\n" << sql_string.str() << endl;
+          cout << "oldtime=" << oldtime << ", newtime=" << newtime << endl;
+          if(ret==0) cout << "NOT SENDABLE !";
+          else cout << "SENDABLE !";
+          cout<<endl<<endl;
+        }
+      }
+      else
+      {
+	printf("run_log_update: doing nothing at that moment\n");
+      }
+      
       done = control->getDone();
-	  if(done)
-	  {
+      if(done)
+      {
         printf("received done=%d from Control\n",done);
         break;
-	  }
+      }
 
       sleep(wait_time); /* sleep before next update */
 
@@ -302,7 +316,6 @@ collect_data(strstream &sql, int recover, char *recovery_filename)
   long nevt, nlng, nerr;
   const char *comma = ",", *prime = "'";
   int i, status;
-  time_t eortime = start;
   char tablename[256];
 
   // read ER run file summary info and sum up stats
@@ -311,9 +324,10 @@ collect_data(strstream &sql, int recover, char *recovery_filename)
   ndata  = 0;
   nerror = 0;
 
-  tm *tstruct = localtime(&eortime);
-  strftime(end_date,25,"%Y-%m-%d %H:%M:%S",tstruct);
-
+  // form end date
+  tm *tstruct = localtime(&starttime);
+  strftime(enddate,25,"%Y-%m-%d %H:%M:%S",tstruct);
+  
   // read scalers from archive file
   get_scaler_data();
 
@@ -325,13 +339,13 @@ collect_data(strstream &sql, int recover, char *recovery_filename)
   // create sql string
   sql.setf(ios::showpoint);
   sql << "insert into " << tablename << " ("
-      << "run_number, end_date, end_ok, coda_config, trig_config, data_file, nfile, ndata, nevent, nerror,"
+      << "run_number, enddate, end_ok, coda_config, trig_config, data_file, nfile, ndata, nevent, nerror,"
       << "clock, clock_live, fcup, fcup_live";
   for(i=1; i<=6; i++) sql << comma << "trig_event_bit" << i;
 
   sql << ") values ("
       << run_number
-      << comma << prime << end_date << prime;
+      << comma << prime << enddate << prime;
   if(recover==0) {sql << ",'Y'";} else {sql << ",'N'";}
   sql << comma << prime << config << prime
       << comma << prime << conffile << prime
@@ -361,10 +375,10 @@ collect_data(strstream &sql, int recover, char *recovery_filename)
     ret = 1;
 
     if( (nevents-nevents_old)>0 )
-	{
+    {
       if(debug==1) printf("nevents=%d nevents_old=%d newtime=%d oldtime=%d\n",nevents,nevents_old,newtime,oldtime);
       event_rate = ((float)(nevents-nevents_old))/((float)(newtime-oldtime));
-	}
+    }
 
     nevents_old = nevents;
     oldtime = newtime;
@@ -377,8 +391,11 @@ collect_data(strstream &sql, int recover, char *recovery_filename)
   sql << ",\"evio_files_count\":"<<nfiles<<"";
   sql << ",\"event_count\":"<<nevents<<"";
   sql << ",\"megabyte_count\":"<<ndata<<"";
-  sql << ",\"events_rate\":"<<event_rate<<"";
+  //sql << ",\"events_rate\":"<<event_rate<<"";
+  sql << ",\"events_rate\":"<<std::fixed << std::setprecision(1)<<event_rate<<"";
 
+  //sergey: in c++, << prints floats weird way, for example drops '.' in 0.0; above we enforced '.' and one digit after,
+  // but it will effect << in following loop (if used), have to be careful ... 
   for(i=0; i<nlabels; i++)
   {
     sql << ",\""<<dbnames[i]<<"\":\""<<vals[i]<<"\"";
@@ -405,7 +422,6 @@ collect_data(strstream &sql, int recover, char *recovery_filename)
   long nevt, nlng, nerr;
   const char *comma = ",", *prime = "'";
   int i;
-  time_t eortime = start;
   char tablename[256];
 
   // read ER run file summary info and sum up stats
@@ -414,8 +430,8 @@ collect_data(strstream &sql, int recover, char *recovery_filename)
   ndata  = 0;
   nerror = 0;
 
-  tm *tstruct = localtime(&eortime);
-  strftime(end_date,25,"%Y-%m-%d %H:%M:%S",tstruct);
+  tm *tstruct = localtime(&starttime);
+  strftime(enddate,25,"%Y-%m-%d %H:%M:%S",tstruct);
 
   // read scalers from archive file
   get_scaler_data();
@@ -425,13 +441,13 @@ collect_data(strstream &sql, int recover, char *recovery_filename)
   // create sql string
   sql.setf(ios::showpoint);
   sql << "insert into " << tablename << " ("
-      << "run_number, end_date, end_ok, coda_config, trig_config, data_file, nfile, ndata, nevent, nerror,"
+      << "run_number, enddate, end_ok, coda_config, trig_config, data_file, nfile, ndata, nevent, nerror,"
       << "clock, clock_live, fcup, fcup_live";
   for(i=1; i<=6; i++) sql << comma << "trig_event_bit" << i;
 
   sql << ") values ("
       << run_number
-      << comma << prime << end_date << prime;
+      << comma << prime << enddate << prime;
   if(recover==0) {sql << ",'Y'";} else {sql << ",'N'";}
   sql << comma << prime << config << prime
       << comma << prime << conffile << prime
@@ -504,7 +520,7 @@ get_epics_data()
 		 vals[0],vals[1],vals[2],vals[3],vals[4],vals[5],vals[6],vals[7],vals[8],vals[9]);
 
     if(!strcmp(epics[i].chan,"hallb_dsc2_hps2_slot2"))
-	{
+    {
       /* CHECK ARRAY INDEXES !!!!!!!!!!!!!! */
       fcup_all =   (unsigned long)vals[1];
       fcup_live =  (unsigned long)vals[17];
@@ -512,9 +528,9 @@ get_epics_data()
       clock_live = (unsigned long)vals[18];
     }
     else if(!strcmp(epics[i].chan,"hallb_trig_event_bits"))
-	{
+    {
       for(j=0; j<6; j++) trig_event[j] = (unsigned long)vals[j];
-	}
+    }
   }
 
   return;

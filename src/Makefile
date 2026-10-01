@@ -27,8 +27,8 @@ all:
 	- cd epicsutil;                      $(MAKE) install
 	- cd runlog;                         $(MAKE)
 	- cd runlog;                         $(MAKE) install
-	- cd trigger;                        $(MAKE)
-	- cd trigger;                        $(MAKE) install
+##################	- cd trigger;                        $(MAKE)
+##################	- cd trigger;                        $(MAKE) install
 ##	- cd alarm;                          $(MAKE)
 ##	- cd alarm;                          $(MAKE) java
 ##	- cd alarm;                          $(MAKE) install
@@ -65,7 +65,7 @@ clean:
 	- cd dbutil;                         $(MAKE) clean
 	- cd epicsutil;                      $(MAKE) clean
 	- cd runlog;                         $(MAKE) clean
-	- cd trigger;                        $(MAKE) clean
+#################	- cd trigger;                        $(MAKE) clean
 #	- cd alarm;                          $(MAKE) clean
 ###	- cd scripts;                        $(MAKE) clean
 

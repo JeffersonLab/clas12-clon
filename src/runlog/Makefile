@@ -53,14 +53,15 @@ LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libcodautil.a
 LIBNAMES += $(CLON)/src/clonutil/$(OSTYPE_MACHINE)/lib/libclonutil.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
 
-ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+
+ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l_Arch")
   LIBNAMES += /usr/lib/libmysqlclient.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+else ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l_RHEL7")
+  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
-    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
-    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_i686")
+  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
 endif
 
 # EPICS libraries

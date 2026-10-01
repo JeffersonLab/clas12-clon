@@ -20,9 +20,9 @@ include $(CLON)/src/Makefile.include
 #-----------------------
 
 #RCDB
-CLON_FLAGS += -std=c++11 -DRCDB_MYSQL -I/usr/include/mysql -I$(RCDB_HOME)/cpp/include
+CLON_FLAGS += -Wno-deprecated -std=c++11 -DRCDB_MYSQL -I/usr/include/mysql -I$(RCDB_HOME)/cpp/include
 
-CLON_FLAGS += -Imain -Idbutil.s \
+CLON_FLAGS += -I./dbutil.s \
 				-I$(CODA)/common/include -I$(CLON)/common/include \
 				-I$(IPC_HOME)/include/activemq-cpp-$(IPC_VER)
 
@@ -38,15 +38,7 @@ endif
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libcodautil.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
 
-ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
-  LIBNAMES += /usr/lib/libmysqlclient.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
-  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
-    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
-    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
-endif
+LIBNAMES += $(MYSQLLIBS)
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
@@ -64,7 +56,7 @@ ifeq ("$(OSTYPE)","Linux")
   LIBNAMES += -lpthread
 endif
 
-##############################LIBNAMES += -lmysqlclient
+
 LIBNAMES += -lresolv
 LIBNAMES += $(X11LIBS)
 LIBNAMES += $(SYSLIBS)

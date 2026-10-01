@@ -96,10 +96,10 @@ main(int argc,char **argv)
       //TutOptionSetNum(opt,0.0);
     }
     //dbr_init(uniq_dgrp,application,id_string);
-    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "control", (char *)"run_log_end_update");
-    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "control", "*");
+    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"control", (char *)"run_log_end_update");
+    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), (char *)"control", (char *)"*");
 
-    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "runlog", (char *)"run_log_end_update");
+    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"runlog", (char *)"run_log_end_update");
 
     server.Open();
   }
@@ -136,7 +136,7 @@ collect_recovery_data(char *runnum)
   FILE *fd;
   static char sql[2000];
   char session_name[50];
-  char *comma = ",", *prime = "'";
+  //char *comma = ",", *prime = "'";
   int i, nfile, nlong, nevent, nerror;
   char *p, name_in[256];
   char tmp[1024], chrun[20], end_date[30];
@@ -399,7 +399,7 @@ void
 decode_command_line(int argc, char **argv)
 {
   int i=1;
-  char *help="\nusage:\n\n run_log_end_update [-a application] [-u uniq_dgrp] [-i id_string] [-debug]\n"
+  char *help = (char *)"\nusage:\n\n run_log_end_update [-a application] [-u uniq_dgrp] [-i id_string] [-debug]\n"
                "        [-d destination] [-no_dbr] \n"
                "        [-s session] [-g gmd_time] run1_number run2_number ...\n\n\n";
 

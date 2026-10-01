@@ -1,48 +1,41 @@
 #
 # Makefile.include - must be included in any Makefile
 #
+
 SHELL = /bin/sh
 
-# second target name is used to force VXWORKS cross-compiling
-ifeq ("$(filter VXWORKS,$(MAKECMDGOALS))","VXWORKS")
-  OSTYPE    = VXWORKS
-  MACHINE   = ppc
-else
-  OSTYPE    = $(shell uname)
-  MACHINE   = $(shell uname -m)
-  PLATFORM  = $(shell uname -p)
-endif
+## second target name is used to force cross-compiling
+#ifeq ("$(filter VXWORKS,$(MAKECMDGOALS))","VXWORKS")
+#  OSTYPE    = VXWORKS
+#  MACHINE   = ppc
+#else ifeq ("$(filter ARM,$(MAKECMDGOALS))","ARM")
+#  OSTYPE    = Linux
+#  MACHINE   = armv7l
+#  PLATFORM  = $(MACHINE)
+#else ifeq ("$(filter NIOS,$(MAKECMDGOALS))","NIOS")
+#  OSTYPE    = Linux
+#  MACHINE   = nios2
+#else
+#  OSTYPE    = $(shell uname)
+#  MACHINE   = $(shell uname -m)
+#  PLATFORM  = $(shell uname -p)
+#endif
 
-OSTYPE_PLATFORM = $(OSTYPE)_$(PLATFORM)
+## arm has 'uname -p'='unknown', set it the same as 'uname -m'
+#ifeq ("$(MACHINE)","armv7l")
+#  PLATFORM  = $(MACHINE)
+#endif
 
-# Darwin has funny -m, use -p instead
-ifeq ("$(OSTYPE)","Darwin")
-  MACHINE   = $(shell uname -p)
-endif
+#OSTYPE_PLATFORM = $(OSTYPE)_$(PLATFORM)
 
-#obtain Linux release number (works on RHEL at least ..)
-ifeq ("$(OSTYPE)","Linux")
-  OSRELEASE = $(shell cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 7)
-endif
 
-#redefine MACHINE for 64bit RHEL6, use different naming scheme
-ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-ifeq ("$(OSRELEASE)","6")
-  MACHINE = x86_64_RHEL6
-endif
-endif
+## Darwin has funny -m, use -p instead
+#ifeq ("$(OSTYPE)","Darwin")
+#  MACHINE   = $(shell uname -p)
+#endif
 
-OSTYPE_MACHINE = $(OSTYPE)_$(MACHINE)
 
-#check if we are on VME controller; if so, use extra 'vme' addition
-ifeq ("$(OSTYPE)","Linux")
-	FILE=vmeinfo
-	ifeq ($(findstring ${FILE},$(wildcard /proc/*)),)
-		OSTYPE_MACHINE = $(OSTYPE)_$(MACHINE)
-	else
-		OSTYPE_MACHINE = $(OSTYPE)_$(MACHINE)_vme
-	endif
-endif
+
 
 localobj = ./$(OSTYPE_MACHINE)/obj
 locallib = ./$(OSTYPE_MACHINE)/lib
@@ -166,11 +159,6 @@ ifeq ("$(OSTYPE)","Linux")
 #    FFLAGS = -O2
 #    CFLAGS = -O2
 
-#sergey: compile everything as 32bit until smarsockets replaced with something ...
-ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-#    FFLAGS += -m32
-#    CFLAGS += -m32
-endif
 
     FC = g77
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
@@ -178,32 +166,34 @@ ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
 	FFLAGS += -fPIC
 endif
 
-    FFLAGS += -fno-automatic -finit-local-zero -ffixed-line-length-none -fno-second-underscore -DLinux
+# disable warnings about deprecated stuff
+CFLAGS += -Wno-deprecated
 
+FFLAGS += -fno-automatic -finit-local-zero -ffixed-line-length-none -fno-second-underscore -DLinux
 
-#CC = gcc -rdynamic
-    CC = gcc
-    CXX = g++
-
-ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-    ##CC = /apps/gcc/4.9.4/bin/gcc 
-    ##CXX = /apps/gcc/4.9.4/bin/g++ 
-    CC = /apps/gcc/8.3.0/bin/gcc 
-    CXX = /apps/gcc/8.3.0/bin/g++ 
+ifeq ("$(GCC_DIR)","default")
+  CC = gcc
+  CXX = g++
+  FC = gfortran
+else
+  CC = $(GCC_DIR)/gcc/$(GCC_VER)/bin/gcc
+  CXX = $(GCC_DIR)/gcc/$(GCC_VER)/bin/g++
+  FC = $(GCC_DIR)/gcc/$(GCC_VER)/bin/gfortran
 endif
-ifeq ("$(OSTYPE_PLATFORM)","Linux_i686")
-    ##CC = /apps/gcc/4.9.4/bin/gcc
-    ##CXX = /apps/gcc/4.9.4/bin/g++ 
-    CC = /apps/gcc/8.3.0/bin/gcc
-    CXX = /apps/gcc/8.3.0/bin/g++ 
+
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686_RHEL5_vme")
     CFLAGS += -gdwarf-2
     CXXFLAGS += -gdwarf-2
 endif
+
+ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
+    CFLAGS += -gdwarf-4
+    CXXFLAGS += -gdwarf-4
+endif
+
 ifeq ("$(OSTYPE_PLATFORM)","Linux_armv7l")
-    ##CC = /apps/gcc/4.9.4/bin/gcc 
-    ##CXX = /apps/gcc/4.9.4/bin/g++ 
-    CC = /apps/gcc/8.3.0/bin/gcc 
-    CXX = /apps/gcc/8.3.0/bin/g++ 
+    CFLAGS += -gdwarf-4
+    CXXFLAGS += -gdwarf-4
 endif
 
     CPP = $(CC) -E
@@ -285,8 +275,16 @@ endif
 #endif
 
 
-
-
+## mysql
+ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l_Arch")
+  MYSQLLIBS = /usr/lib/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l_RHEL7")
+  MYSQLLIBS = /usr/lib/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
+  MYSQLLIBS = /usr/lib64/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_i686")
+  MYSQLLIBS = /usr/lib/mysql/libmysqlclient.so
+endif
 
 
 

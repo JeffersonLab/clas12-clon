@@ -30,15 +30,15 @@ using namespace std;
 #define MAX(a,b)  ( (a) > (b) ? (a) : (b) )
 
 // mysql variables
-static char *dbhost      = "clondb1";
-static char *dbuser      = "clasrun";
-static char *database    = "clasprod";
+static char *dbhost      = (char *)"clondb1";
+static char *dbuser      = (char *)"clasrun";
+static char *database    = (char *)"clasprod";
 static MYSQL *dbhandle   = NULL;
 static MYSQL_ROW row;
 static MYSQL_RES *res;
 
 
-static char *session     = "clasprod";
+static char *session     = (char *)"clasprod";
 static int begin_run     = 0;
 static int end_run       = 999999;
 static int run;
@@ -303,7 +303,7 @@ void
 decode_command_line(int argc, char **argv)
 {
    int i=1;
-   char *help = "\nUsage:\n\n   run_checker [-s session] [-host dbhost] [-user dbuser] [-d database]\n"
+   char *help = (char *)"\nUsage:\n\n   run_checker [-s session] [-host dbhost] [-user dbuser] [-d database]\n"
      "               [-no_mult] [-no_miss] [-all_runs] begin_run end_run\n";
 
   // decode command line...loop over all arguments, except the 1st (which is program name)

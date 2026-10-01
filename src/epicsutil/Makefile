@@ -22,23 +22,17 @@ CLON_FLAGS += -std=c++11 -I$(RCDB_HOME)/cpp/include
 
 CLON_FLAGS += -I./$(MAIN).s -I$(EPICS_BASE)/include
 
-ifeq ("$(OSTYPE)","SunOS")
-  CFLAGS = -g -DSunOS -DOSTYPE="SunOS" -DSunOS_sun4u
-  CLON_FLAGS += -I$(EPICS_BASE)/include/os/solaris
-endif
+#
+# EPICS version 7 !!!
+#
+
 ifeq ("$(OSTYPE)","Linux")
-  CLON_FLAGS += -I$(EPICS_BASE)/include -I$(EPICS_BASE)/include/os/Linux -I$(EPICS_BASE)/src/catools
+  CLON_FLAGS += -I$(EPICS_BASE)/include -I$(EPICS_BASE)/include/os/Linux -I$(EPICS_SUPPORT)/pcas/include
 endif
 
 CLON_FLAGS += -I/usr/include/mysql
 
-CLON_FLAGS +=	-I$(CODA)/common/include \
-				-I$(CLON)/common/include
-
-
-
-## smartsockets
-##CLON_FLAGS += -I$(RTHOME)/include
+CLON_FLAGS +=	-I$(CODA)/common/include -I$(CLON)/common/include
 
 ## activemq
 CLON_FLAGS += -std=c++11 
@@ -49,29 +43,16 @@ else
   CLON_FLAGS += -I/usr/include/apr-1
 endif
 
-
-
-
-
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libcodautil.a
 LIBNAMES += $(CLON)/src/clonutil/$(OSTYPE_MACHINE)/lib/libclonutil.a
 
-## activemq
-ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
-  LIBNAMES += /usr/lib/libmysqlclient.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
-  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
-    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
-    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
-endif
+LIBNAMES += $(MYSQLLIBS)
 
+LIBNAMES += $(EPICS_SUPPORT)/pcas/lib/$(EPICS_HOST_ARCH)/libcas.a
+LIBNAMES += $(EPICS_SUPPORT)/pcas/lib/$(EPICS_HOST_ARCH)/libgdd.a
 
-LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libcas.a
 LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libca.a
-LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libgdd.a
 LIBNAMES += $(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)/libCom.a
 
 
@@ -89,10 +70,6 @@ else
 endif
 
 
-
-
-
-
 ifeq ("$(OSTYPE)","Linux")
   LIBNAMES += -lreadline
   LIBNAMES += -lcurses
@@ -100,9 +77,7 @@ ifeq ("$(OSTYPE)","Linux")
   LIBNAMES += -lrt
 endif
 
-##LIBNAMES += -lmysqlclient
 LIBNAMES += -lresolv
-##LIBNAMES += -lCrun
 LIBNAMES += $(X11LIBS)
 LIBNAMES += $(SYSLIBS)
 

@@ -185,10 +185,10 @@ main(int argc,char **argv)
     }
 
     //dbr_init(uniq_dgrp,application,id_string);
-    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "control", (char *)"run_log_end");
-    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "control", "*");
+    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"control", (char *)"run_log_end");
+    server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), (char *)"control", (char *)"*");
 
-    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "runlog", (char *)"run_log_end");
+    server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"runlog", (char *)"run_log_end");
 
     server.Open();
   }

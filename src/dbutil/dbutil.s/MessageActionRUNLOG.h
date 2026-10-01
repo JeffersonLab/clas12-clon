@@ -1,12 +1,13 @@
 #ifndef __MESSAGE_ACTION_JSON__
 #define __MESSAGE_ACTION_JSON__
 
-#include <iostream>     // std::cin, std::cout
-#include <iomanip>      // std::get_time
-#include <ctime>        // struct std::tm
+//#include <iostream>     // std::cin, std::cout
+//#include <iomanip>      // std::get_time
+//#include <ctime>        // struct std::tm
 
 #include "MessageAction.h"
 
+#include "RCDB/Connection.h"
 #include "RCDB/WritingConnection.h"
 #include "json/json.hpp"
 using json = nlohmann::json;
@@ -28,30 +29,30 @@ class MessageActionJSON : public MessageAction {
 
     MessageActionJSON() {debug = 0;}
 
-    MessageActionJSON(int debug_) {debug = debug_;}
+  MessageActionJSON(int debug_) {debug = debug_; printf("Set debug = %d\n",debug);}
 
     ~MessageActionJSON() {}
 
     int check(std::string fmt)
     {
-	  if(debug) printf("\ncheckJSON: fmt >%s<\n",fmt.c_str());
-	  /*
+      //if(debug) printf("\ncheckJSON: fmt >%s<\n",fmt.c_str());
+      /*
       std::vector<std::string> list = fmtsplit(fmt, std::string(":"));
       for(std::vector<std::string>::const_iterator s=list.begin(); s!=list.end(); ++s)
-	  {
-		std::cout << *s << " ";
-	  }
-	  std::cout << endl;
-	  */
+      {
+	std::cout << *s << " ";
+      }
+      std::cout << endl;
+      */
       for(int i=0; i<NFORMATS; i++)
-	  {
+      {
         std::string f = formats[i];
         if( !strncmp(f.c_str(),fmt.c_str(),strlen(f.c_str())) )
-		{
+        {
           formatid = i;
           return(1);
-		}
-	  }
+	}
+      }
 
       formatid = 0;
       return(0);
@@ -59,10 +60,9 @@ class MessageActionJSON : public MessageAction {
 
     void decode(IpcConsumer& recv)
     {
-	  recv >> str;
+      recv >> str;
 
-	  if(debug) printf("\nMessageActionJSON received >%s<\n",str.c_str());
-
+      if(debug) printf("\nMessageActionJSON received >%s<\n",str.c_str());
     }
 
 
@@ -82,7 +82,7 @@ class MessageActionJSON : public MessageAction {
       int run_number;
       int ich;
       char *ch, runstr[20];
-	  std::string json_string;
+      std::string json_string;
 
       json_string = str;
       /* extract json 
@@ -90,20 +90,20 @@ class MessageActionJSON : public MessageAction {
       //printf("ch >%s<\n",ch);
       ich = -1;
       for(int i=0; i<strlen(ch); i++)
-	  {
+      {
         if(ch[i]=='[')
-	    {
+	{
           ich = i;
           //printf("ich=%d\n",ich);
           break;
-	    }
+	}
       }
       if(ich==-1) printf("ERROR: json string does not contains any '{'\n");
-	  else
-	  {
-	    json_string = (char *)&ch[ich];
-	  }
-	  */
+      else
+      {
+	json_string = (char *)&ch[ich];
+      }
+      */
       cout << "json_string>" << json_string << endl;
 
 
@@ -117,7 +117,7 @@ class MessageActionJSON : public MessageAction {
         std::cout << element << '\n';
       }
 
-	  /* get name */
+      /* get name */
       string name = j1["name"];
       printf("name >%s<\n",name.c_str());
 
@@ -126,13 +126,13 @@ class MessageActionJSON : public MessageAction {
       printf("run_number=%d\n",run_number);
 
 
-	  /*
+      /*
       cout << endl << "run_start_time: " << j1["run_start_time"] << endl << endl;
-	  */
+      */
 
 
 
-      char *cond[] = {
+      const char *cond[] = {
             "event_count",
             "events_rate",
             "evio_files_count",
@@ -157,19 +157,20 @@ class MessageActionJSON : public MessageAction {
             "status",
             "run_type",
             "target",
-			"beam_current_request",
-			"operators"
+	    
+	    "beam_current_request",
+	    "operators"
 	  };
 
 
       /* for 'run_log', add conditions one by one */
       if(!strncmp(name.c_str(),"run_log",7))
-	  {
+      {
         connection.AddRun(run_number);
 
         struct tm start_time;
         struct tm end_time;
-		std::string timestring;
+	std::string timestring;
         int icond;
 
         {
@@ -186,42 +187,63 @@ class MessageActionJSON : public MessageAction {
           printf("\n\n");
         }
 
+	
+	/* update start of run time */
+printf("11\n");
         auto exist1 = j1.find("run_start_time");
         if(exist1 != j1.end())
         {
-		  timestring = j1["run_start_time"];
+printf("12\n");
+	  timestring = j1["run_start_time"];
           strptime(timestring.c_str(), "%Y-%m-%d %H:%M:%S", &start_time);
           connection.AddRunStartTime(run_number, start_time);
-		} 
+	} 
 
+	/* update end of run time */
+printf("13\n");
         auto exist2 = j1.find("run_end_time");
         if(exist2 != j1.end())
         {
-		  timestring = j1["run_end_time"];
+printf("14\n");fflush(stdout);
+	  timestring = j1["run_end_time"];
           strptime(timestring.c_str(), "%Y-%m-%d %H:%M:%S", &end_time);
+printf("141\n");fflush(stdout);
           connection.AddRunEndTime(run_number, end_time);
-		}
 
-        /* untill 'boolean' fixed below */
+
+ 
+	  //printf("142\n");fflush(stdout);
+	  // connection.AddCondition(run_number, "run_end_time", /*(std::tm)*/end_time);
+	  //printf("143\n");fflush(stdout);
+
+
+
+	}
+
+	printf("15\n");fflush(stdout);
+        /* until 'boolean' fixed below */
         auto exist3 = j1.find("is_valid_run_end");
         if(exist3 != j1.end())
         {
-		  icond = j1["is_valid_run_end"];
+printf("16\n");
+	  icond = j1["is_valid_run_end"];
           if(icond)
-		  {
+	  {
             printf("Add boolean condition 'is_valid_run_end=true'\n");
-            connection.AddCondition(run_number, "is_valid_run_end", true);
-		  }
+            connection.AddCondition(run_number, (char *)"is_valid_run_end", true);
+	  }
           else
-		  {
-            printf("Add boolean condition 'is_valid_run_end=false'\n");
-            connection.AddCondition(run_number, "is_valid_run_end", false);
-		  }
-		}
+	  {
+            printf("Adding boolean condition 'is_valid_run_end=false'\n");fflush(stdout);
+            connection.AddCondition(run_number, (char *)"is_valid_run_end", false);
+	    printf("done\n");fflush(stdout);
+	  }
+	}
 
 
-	    for(int i=0; i<(sizeof(cond)/sizeof(char *)); i++)
-	    {
+	printf("sizeof(cond) = %d, (sizeof(cond)/sizeof(char *)) = %d\n",sizeof(cond),(sizeof(cond)/sizeof(char *)));
+	for(int i=0; i<(sizeof(cond)/sizeof(char *)); i++)
+	{
           if (j1[cond[i]].type() == json::value_t::number_float)
           {
             printf("Add float condition >%s<\n",cond[i]);
@@ -245,14 +267,12 @@ class MessageActionJSON : public MessageAction {
             connection.AddCondition(run_number, cond[i], j1[cond[i]].get<std::string>());
           }
           else
-		  {
-            printf("Cannot add condition >%s< - unknown type\n",cond[i]);
-		  }
-	    }
-	  
+	  {
+            printf("Did not add condition >%s< - was not requested in received message\n",cond[i]);
+	  }
+	}
 
-
-	    /*
+	/*
         beam_current  number     7
         beam_energy   number     7
         daq_comment   string     3
@@ -277,17 +297,16 @@ class MessageActionJSON : public MessageAction {
                    << std::left<< std::setw (10)<< it.value().type_name() <<" "
                    << (int)it.value().type() << '\n';
         }
-	    */
+	*/
 
-
-	  }
+      }
 
 
       if(!j2.empty())
-	  {
+      {
         cout<<endl<<"adding j2: "<<j2.dump()<<endl<<endl;
         connection.AddCondition(run_number, "json_cnd", j2.dump());
-	  }
+      }
 
       fflush(stdout);
 

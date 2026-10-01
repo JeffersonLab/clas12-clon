@@ -20,7 +20,7 @@
 /* include files */
 
 using namespace std;
-#include <strstream>
+#include <sstream> //#include <strstream>
 #include <iostream>
 #include <iomanip>
 #include <fstream>

@@ -28,12 +28,12 @@ using namespace std;
 #include <mysql/mysql.h>
 
 static char *session        = (char*)"clasprod";
-static char *msql_database  = "clasrun";
+static char *msql_database  = (char *)"clasrun";
 static int run              = 0;
 static int runend           = 0;
-static char *dbhost         = "clondb1";
-static char *dbuser         = "clasrun";
-static char *database       = "clasprod";
+static char *dbhost         = (char *)"clondb1";
+static char *dbuser         = (char *)"clasrun";
+static char *database       = (char *)"clasprod";
 static MYSQL *dbhandle      = NULL;
 
 
@@ -57,7 +57,7 @@ int get_run_number(char *msql_database, char *session);
 
 //------------------------------------------------------------------------------------
 
-
+int
 main(int argc, char **argv){
 
 
@@ -70,7 +70,7 @@ main(int argc, char **argv){
   
 
   // set session name if not specified via env variable or on command line
-  if(session==NULL)session="clasprod";
+  if(session==NULL) session = (char *)"clasprod";
 
   
   // if no run specified just dump current run
@@ -170,32 +170,32 @@ void process_run(int &run, ostream &file) {
   file << "-------------------------------------------------------" << endl << endl;
 
   if(nbegin>0) {
-    file << setw(25) << "Begin:       " << get_col_by_name(bRes,bRow,"start_date") << endl;
-    file << setw(25) << "End:         " << ((nend>0)?get_col_by_name(eRes,eRow,"end_date"):" ") << endl;
-    file << setw(25) << "Config:      " << get_col_by_name(bRes,bRow,"configuration") << endl;
-    file << setw(25) << "Trig config: " << get_col_by_name(bRes,bRow,"trigger_config") << endl;
-    file << setw(25) << "Chan config: " << get_col_by_name(bRes,bRow,"channel_config") << endl << endl;
+    file << setw(25) << "Begin:       " << get_col_by_name(bRes,bRow, (char *)"start_date") << endl;
+    file << setw(25) << "End:         " << ((nend>0)?get_col_by_name(eRes,eRow, (char *)"end_date"):" ") << endl;
+    file << setw(25) << "Config:      " << get_col_by_name(bRes,bRow, (char *)"configuration") << endl;
+    file << setw(25) << "Trig config: " << get_col_by_name(bRes,bRow, (char *)"trigger_config") << endl;
+    file << setw(25) << "Chan config: " << get_col_by_name(bRes,bRow, (char *)"channel_config") << endl << endl;
 
     // misc files		 
-    file << setw(25) << "L1:     " << get_col_by_name(bRes,bRow,"l1_program") << endl;
-    file << setw(25) << "TS:     " << get_col_by_name(bRes,bRow,"ts_file") << endl;
+    file << setw(25) << "L1:     " << get_col_by_name(bRes,bRow, (char *)"l1_program") << endl;
+    file << setw(25) << "TS:     " << get_col_by_name(bRes,bRow, (char *)"ts_file") << endl;
     
     // sparsification files
-    file << setw(25) << "SC:    " << get_col_by_name(bRes,bRow,"sc_spar") << endl;
-    file << setw(25) << "CC:    " << get_col_by_name(bRes,bRow,"cc_spar") << endl;
-    file << setw(25) << "EC1:   " << get_col_by_name(bRes,bRow,"ec1_spar") << endl;
-    file << setw(25) << "EC2:   " << get_col_by_name(bRes,bRow,"ec2_spar") << endl;
-    file << setw(25) << "LAC:   " << get_col_by_name(bRes,bRow,"lac_spar") << endl << endl;
+    file << setw(25) << "SC:    " << get_col_by_name(bRes,bRow, (char *)"sc_spar") << endl;
+    file << setw(25) << "CC:    " << get_col_by_name(bRes,bRow, (char *)"cc_spar") << endl;
+    file << setw(25) << "EC1:   " << get_col_by_name(bRes,bRow, (char *)"ec1_spar") << endl;
+    file << setw(25) << "EC2:   " << get_col_by_name(bRes,bRow, (char *)"ec2_spar") << endl;
+    file << setw(25) << "LAC:   " << get_col_by_name(bRes,bRow, (char *)"lac_spar") << endl << endl;
   }
 
   if(ncomment>0){
-    file << setw(25) << "run type:             " << get_col_by_name(cRes,cRow,"run_type") << endl;
-    file << setw(25) << "target:               " << get_col_by_name(cRes,cRow,"target") << endl;
-    file << setw(25) << "beam current request: " << get_col_by_name(cRes,cRow,"beam_current_request") << endl;
-    file << setw(25) << "operators:            " << get_col_by_name(cRes,cRow,"operators") << endl;
-    file << setw(25) << "logbook book:         " << get_col_by_name(cRes,cRow,"logbook_book") << endl;
-    file << setw(25) << "logbook page:         " << get_col_by_name(cRes,cRow,"logbook_page") << endl << endl;
-    file << setw(25) << "comment:              " << get_col_by_name(cRes,cRow,"comment") << endl << endl;
+    file << setw(25) << "run type:             " << get_col_by_name(cRes,cRow, (char *)"run_type") << endl;
+    file << setw(25) << "target:               " << get_col_by_name(cRes,cRow, (char *)"target") << endl;
+    file << setw(25) << "beam current request: " << get_col_by_name(cRes,cRow, (char *)"beam_current_request") << endl;
+    file << setw(25) << "operators:            " << get_col_by_name(cRes,cRow, (char *)"operators") << endl;
+    file << setw(25) << "logbook book:         " << get_col_by_name(cRes,cRow, (char *)"logbook_book") << endl;
+    file << setw(25) << "logbook page:         " << get_col_by_name(cRes,cRow, (char *)"logbook_page") << endl << endl;
+    file << setw(25) << "comment:              " << get_col_by_name(cRes,cRow, (char *)"comment") << endl << endl;
   }      
 
 
@@ -206,14 +206,14 @@ void process_run(int &run, ostream &file) {
   file << "1       2       3       4       5       6       7       8" << endl;
   file << "-       -       -       -       -       -       -       -" << endl;
   if(nbegin>0) {
-    file << setw(8) << get_col_by_name(bRes,bRow,"prescale_1");
-    file << setw(8) << get_col_by_name(bRes,bRow,"prescale_2");
-    file << setw(8) << get_col_by_name(bRes,bRow,"prescale_3");
-    file << setw(8) << get_col_by_name(bRes,bRow,"prescale_4");
-    file << setw(8) << get_col_by_name(bRes,bRow,"prescale_5");
-    file << setw(8) << get_col_by_name(bRes,bRow,"prescale_6");
-    file << setw(8) << get_col_by_name(bRes,bRow,"prescale_7");
-    file << setw(8) << get_col_by_name(bRes,bRow,"prescale_8");
+    file << setw(8) << get_col_by_name(bRes,bRow,(char *)"prescale_1");
+    file << setw(8) << get_col_by_name(bRes,bRow,(char *)"prescale_2");
+    file << setw(8) << get_col_by_name(bRes,bRow,(char *)"prescale_3");
+    file << setw(8) << get_col_by_name(bRes,bRow,(char *)"prescale_4");
+    file << setw(8) << get_col_by_name(bRes,bRow,(char *)"prescale_5");
+    file << setw(8) << get_col_by_name(bRes,bRow,(char *)"prescale_6");
+    file << setw(8) << get_col_by_name(bRes,bRow,(char *)"prescale_7");
+    file << setw(8) << get_col_by_name(bRes,bRow,(char *)"prescale_8");
     file << endl;
   }
 
@@ -225,16 +225,16 @@ void process_run(int &run, ostream &file) {
   file << "------- ------- ------- ------- ------- ------- ------- ------- ------- -------" << endl;
   if(nbegin>0) {
     file << "  " 
-	 << setw(8) << get_col_by_name(bRes,bRow,"ec_inner_lo") 
-	 << setw(8) << get_col_by_name(bRes,bRow,"ec_inner_hi") 
-	 << setw(8) << get_col_by_name(bRes,bRow,"ec_outer_lo")
-	 << setw(8) << get_col_by_name(bRes,bRow,"ec_outer_hi")
-	 << setw(8) << get_col_by_name(bRes,bRow,"ec_total_lo")
-	 << setw(8) << get_col_by_name(bRes,bRow,"ec_total_hi")
-	 << setw(8) << get_col_by_name(bRes,bRow,"cc_hi")
-	 << setw(8) << get_col_by_name(bRes,bRow,"cc_lo")
-	 << setw(8) << get_col_by_name(bRes,bRow,"sc_thresh")
-	 << setw(8) << get_col_by_name(bRes,bRow,"sc_width");
+	 << setw(8) << get_col_by_name(bRes,bRow,(char *)"ec_inner_lo") 
+	 << setw(8) << get_col_by_name(bRes,bRow,(char *)"ec_inner_hi") 
+	 << setw(8) << get_col_by_name(bRes,bRow,(char *)"ec_outer_lo")
+	 << setw(8) << get_col_by_name(bRes,bRow,(char *)"ec_outer_hi")
+	 << setw(8) << get_col_by_name(bRes,bRow,(char *)"ec_total_lo")
+	 << setw(8) << get_col_by_name(bRes,bRow,(char *)"ec_total_hi")
+	 << setw(8) << get_col_by_name(bRes,bRow,(char *)"cc_hi")
+	 << setw(8) << get_col_by_name(bRes,bRow,(char *)"cc_lo")
+	 << setw(8) << get_col_by_name(bRes,bRow,(char *)"sc_thresh")
+	 << setw(8) << get_col_by_name(bRes,bRow,(char *)"sc_width");
       file << endl;
   }
   
@@ -244,12 +244,12 @@ void process_run(int &run, ostream &file) {
   file << "End run information" << endl;
   file << "-------------------" << endl << endl;
   if(nend>0){
-    file << setw(25) << "end date           " << get_col_by_name(eRes,eRow,"end_date") << endl;
-    file << setw(25) << "file base          " << get_col_by_name(eRes,eRow,"filebase") << endl;
-    file << setw(25) << "nfile              " << get_col_by_name(eRes,eRow,"nfile") << endl;
-    file << setw(25) << "nevent	       	    " << get_col_by_name(eRes,eRow,"nevent") << endl;
-    file << setw(25) << "nerror             " << get_col_by_name(eRes,eRow,"nerror") << endl;
-    file << setw(25) << "nlong 	       	    " << get_col_by_name(eRes,eRow,"nlong") << endl << endl;
+    file << setw(25) << "end date           " << get_col_by_name(eRes,eRow,(char *)"end_date") << endl;
+    file << setw(25) << "file base          " << get_col_by_name(eRes,eRow,(char *)"filebase") << endl;
+    file << setw(25) << "nfile              " << get_col_by_name(eRes,eRow,(char *)"nfile") << endl;
+    file << setw(25) << "nevent	       	    " << get_col_by_name(eRes,eRow,(char *)"nevent") << endl;
+    file << setw(25) << "nerror             " << get_col_by_name(eRes,eRow,(char *)"nerror") << endl;
+    file << setw(25) << "nlong 	       	    " << get_col_by_name(eRes,eRow,(char *)"nlong") << endl << endl;
   }
 
 
@@ -266,9 +266,9 @@ void process_run(int &run, ostream &file) {
   if(fRes!=NULL) {
     while(fRow = mysql_fetch_row(fRes)) {
       nfiles++;
-      file << setw(32) << get_col_by_name(fRes,fRow,"filename") << setw(10) << get_col_by_name(fRes,fRow,"nlong") 
-	   << setw(10) << get_col_by_name(fRes,fRow,"nevent") << setw(10) << get_col_by_name(fRes,fRow,"nerror")
-	   << setw(27) << get_col_by_name(fRes,fRow,"location") << endl;
+      file << setw(32) << get_col_by_name(fRes,fRow,(char *)"filename") << setw(10) << get_col_by_name(fRes,fRow,(char *)"nlong") 
+	   << setw(10) << get_col_by_name(fRes,fRow,(char *)"nevent") << setw(10) << get_col_by_name(fRes,fRow,(char *)"nerror")
+	   << setw(27) << get_col_by_name(fRes,fRow,(char *)"location") << endl;
     }
   } else {
     cerr << "Unable to find run_log_files entries for session: " << session << "  run: " << run << endl;
@@ -281,31 +281,31 @@ void process_run(int &run, ostream &file) {
     file << endl << endl;
     file << "Epics data" << endl;
     file << "----------" << endl << endl;
-    file << setw(25) << "beam_energy:"        << get_col_by_name(bRes,bRow,"beam_energy") << endl;
-    file << setw(25) << "a_slit_position:"    << get_col_by_name(bRes,bRow,"a_slit_position") << endl;
-    file << setw(25) << "b_slit_position:"    << get_col_by_name(bRes,bRow,"b_slit_position") << endl;
-    file << setw(25) << "c_slit_position:"    << get_col_by_name(bRes,bRow,"c_slit_position") << endl;
-    file << setw(25) << "thermionic_gun:"     << get_col_by_name(bRes,bRow,"thermionic_gun") << endl;
-    file << setw(25) << "polarized_gun:"      << get_col_by_name(bRes,bRow,"polarized_gun") << endl << endl;
-    file << setw(25) << "torus_current:"      << get_col_by_name(bRes,bRow,"torus_current") << endl;
-    file << setw(25) << "mini_current:"       << get_col_by_name(bRes,bRow,"mini_current") << endl;
-    file << setw(25) << "tagger_current:"     << get_col_by_name(bRes,bRow,"tagger_current") << endl << endl;
-    file << setw(25) << "cryo_pressure:"      << get_col_by_name(bRes,bRow,"cryo_pressure") << endl;
-    file << setw(25) << "cryo_temperature:"   << get_col_by_name(bRes,bRow,"cryo_temperature") << endl;
-    file << setw(25) << "cryo_status:"        << get_col_by_name(bRes,bRow,"cryo_status") << endl << endl;
-    file << setw(25) << "upstream_beam_vac:"  << get_col_by_name(bRes,bRow,"upstream_beam_vac") << endl;
-    file << setw(25) << "target_vac:"         << get_col_by_name(bRes,bRow,"target_vac") << endl << endl;
+    file << setw(25) << "beam_energy:"        << get_col_by_name(bRes,bRow,(char *)"beam_energy") << endl;
+    file << setw(25) << "a_slit_position:"    << get_col_by_name(bRes,bRow,(char *)"a_slit_position") << endl;
+    file << setw(25) << "b_slit_position:"    << get_col_by_name(bRes,bRow,(char *)"b_slit_position") << endl;
+    file << setw(25) << "c_slit_position:"    << get_col_by_name(bRes,bRow,(char *)"c_slit_position") << endl;
+    file << setw(25) << "thermionic_gun:"     << get_col_by_name(bRes,bRow,(char *)"thermionic_gun") << endl;
+    file << setw(25) << "polarized_gun:"      << get_col_by_name(bRes,bRow,(char *)"polarized_gun") << endl << endl;
+    file << setw(25) << "torus_current:"      << get_col_by_name(bRes,bRow,(char *)"torus_current") << endl;
+    file << setw(25) << "mini_current:"       << get_col_by_name(bRes,bRow,(char *)"mini_current") << endl;
+    file << setw(25) << "tagger_current:"     << get_col_by_name(bRes,bRow,(char *)"tagger_current") << endl << endl;
+    file << setw(25) << "cryo_pressure:"      << get_col_by_name(bRes,bRow,(char *)"cryo_pressure") << endl;
+    file << setw(25) << "cryo_temperature:"   << get_col_by_name(bRes,bRow,(char *)"cryo_temperature") << endl;
+    file << setw(25) << "cryo_status:"        << get_col_by_name(bRes,bRow,(char *)"cryo_status") << endl << endl;
+    file << setw(25) << "upstream_beam_vac:"  << get_col_by_name(bRes,bRow,(char *)"upstream_beam_vac") << endl;
+    file << setw(25) << "target_vac:"         << get_col_by_name(bRes,bRow,(char *)"target_vac") << endl << endl;
   }
   if(nend>0){
     cout << endl << endl;
     file << "Scaler data" << endl;
     file << "-----------" << endl << endl;
-    file << setw(25) << "faraday cup        " << get_col_by_name(eRes,eRow,"fcup") << endl;
-    file << setw(25) << "faraday cup active " << get_col_by_name(eRes,eRow,"fcup_active") << endl;
-    file << setw(25) << "faraday cup live   " << get_col_by_name(eRes,eRow,"fcup_live") << endl;
-    file << setw(25) << "clock              " << get_col_by_name(eRes,eRow,"clock") << endl;
-    file << setw(25) << "clock active       " << get_col_by_name(eRes,eRow,"clock_active") << endl;
-    file << setw(25) << "clock live         " << get_col_by_name(eRes,eRow,"clock_live") << endl;
+    file << setw(25) << "faraday cup        " << get_col_by_name(eRes,eRow,(char *)"fcup") << endl;
+    file << setw(25) << "faraday cup active " << get_col_by_name(eRes,eRow,(char *)"fcup_active") << endl;
+    file << setw(25) << "faraday cup live   " << get_col_by_name(eRes,eRow,(char *)"fcup_live") << endl;
+    file << setw(25) << "clock              " << get_col_by_name(eRes,eRow,(char *)"clock") << endl;
+    file << setw(25) << "clock active       " << get_col_by_name(eRes,eRow,(char *)"clock_active") << endl;
+    file << setw(25) << "clock live         " << get_col_by_name(eRes,eRow,(char *)"clock_live") << endl;
   }
 
 
@@ -348,8 +348,8 @@ char *get_col_by_name(MYSQL_RES *res, MYSQL_ROW row, char *name) {
 void decode_command_line(int argc, char **argv){
 
    int i=1;
-   char *help = "\nUsage:\n\n   run_log_summary [-f filename] [-debug] [-m msql_database]\n"
-     "            [-host dbhost] [-user dbuser] [-d database] [-s session] first_run [last_run]\n";
+   char *help = (char *)"\nUsage:\n\n   run_log_summary [-f filename] [-debug] [-m msql_database]\n"
+                "            [-host dbhost] [-user dbuser] [-d database] [-s session] first_run [last_run]\n";
 
 
   // decode command line...loop over all arguments, except the 1st (which is program name)

@@ -216,10 +216,10 @@ create_sql(rlb_string);
 #ifdef USE_ACTIVEMQ
 
       // connect to ipc server
-      server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "control", "run_log_begin");
-      server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "control", "*");
+      server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"control", (char *)"run_log_begin");
+      server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), (char *)"control", (char *)"*");
 
-      server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "runlog", (char *)"run_log_begin");
+      server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"runlog", (char *)"run_log_begin");
 
       server.Open();
 
@@ -308,13 +308,13 @@ collect_data(void)
 
   // form start date
   tm *tstruct = localtime(&start);
-
   strftime(startdate,25,"%Y-%m-%d %H:%M:%S",tstruct);
-  
+
+  // get info from TS
   ts_name = get_ts_name(msql_database, session);
   if(ts_name==NULL)
   {
-	printf("collect_data: get_ts_name returns %d - cannot get info from TS\n",ts_name);
+    printf("collect_data: get_ts_name returns %d - cannot get info from TS\n",ts_name);
     return;
   }
   else
@@ -432,9 +432,12 @@ create_sql(strstream &rlb)
     float torus_current = epics_val[2];
     float torus_scale = torus_current / -3770.0;
     float solenoid_current = epics_val[3];
+// dec 2023: temporary for few days
+//solenoid_current = -solenoid_current;
     float solenoid_scale = solenoid_current / -2416.0;
     float target_position = 0.0;
     int32_t half_wave_plate = epics_val[4];
+    float target_polarization = epics_val[6];
 
     int32_t event_count = 0;
     float events_rate = 0.0;
@@ -503,6 +506,7 @@ create_sql(strstream &rlb)
             {"solenoid_current", solenoid_current},
             {"torus_scale", torus_scale},
             {"solenoid_scale", solenoid_scale},
+            {"target_polarization", target_polarization},
 
             {"run_config", daq_trigger},
             //{"target_position", target_position},

@@ -18,7 +18,7 @@ include $(CLON)/src/Makefile.include
 #-----------------------
 # customize definitions
 #-----------------------
-CLON_FLAGS += -std=c++11
+##CLON_FLAGS += -std=c++11
 
 CLON_FLAGS += -I./$(MAIN).s -I$(EPICS_BASE)/include \
 				-I$(EPICS_BASE)/include/os/solaris \
@@ -38,7 +38,6 @@ JFLAGS = -classpath $(IMPORT_JAR)/ss.jar
 
 
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
-LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libet.a
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libevio.a
 
